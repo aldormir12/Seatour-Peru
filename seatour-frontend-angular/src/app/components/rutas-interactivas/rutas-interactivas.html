@@ -1,0 +1,148 @@
+<section class="rutas-section">
+  <div class="rutas-overlay"></div>
+
+  <!-- RUTA Y PUNTOS SOBRE LA IMAGEN -->
+  <svg class="mapa-interactivo" viewBox="0 0 1600 760" preserveAspectRatio="none">
+    <!-- SOMBRA DE LA RUTA -->
+    <path class="ruta-brillo" [attr.d]="tourSeleccionado.ruta" />
+
+    <!-- RUTA DINÁMICA -->
+    <!-- RUTA PUNTEADA CON TRAZADO PROGRESIVO -->
+    <defs>
+      <mask id="mascaraRuta">
+        <path [attr.d]="tourSeleccionado.ruta" class="ruta-mascara">
+          <animate attributeName="stroke-dashoffset" from="1200" to="0" dur="2.2s" fill="freeze" />
+        </path>
+      </mask>
+    </defs>
+
+    <path class="ruta-principal" [attr.d]="tourSeleccionado.ruta" mask="url(#mascaraRuta)" />
+
+    <path class="ruta-principal" [attr.d]="tourSeleccionado.ruta" mask="url(#mascaraRuta)" />
+
+    <!-- TODOS LOS PUNTOS -->
+    @for (punto of puntos; track punto.id) {
+      <g
+        class="punto-interactivo"
+        [class.activo]="puntoEstaActivo(punto)"
+        (click)="seleccionarPunto(punto)"
+      >
+        <!-- Halo -->
+        <circle class="punto-halo" [attr.cx]="punto.x" [attr.cy]="punto.y" r="18" />
+
+        <!-- Anillo -->
+        <circle
+          class="punto-anillo"
+          [class.punto-mar]="punto.tipo === 'mar'"
+          [class.punto-costa]="punto.tipo === 'costa'"
+          [attr.cx]="punto.x"
+          [attr.cy]="punto.y"
+          r="8"
+        />
+
+        <!-- LUZ CENTRAL -->
+        <circle class="punto-luz" [attr.cx]="punto.x" [attr.cy]="punto.y" r="3" />
+
+        <!-- NOMBRE -->
+        <text [attr.x]="punto.x + 18" [attr.y]="punto.y + 5" class="etiqueta-mapa">
+          {{ punto.nombre }}
+        </text>
+      </g>
+    }
+  </svg>
+
+  <!-- BLOQUE IZQUIERDO -->
+  <div class="rutas-content">
+    <span class="eyebrow"> RUTAS Y DESTINOS </span>
+
+    <h2>Un litoral lleno de experiencias</h2>
+
+    <p>
+      Explora nuestros tours y descubre algunos de los lugares más increíbles del norte peruano.
+    </p>
+
+    <div class="lista-tours">
+      @for (tour of tours; track tour.id) {
+        <button
+          class="tour-card"
+          [class.activo]="tourSeleccionado.id === tour.id"
+          (click)="seleccionarTour(tour)"
+        >
+          <div class="tour-info">
+            <h3>
+              {{ tour.nombre }}
+            </h3>
+
+            <div class="tour-meta">
+              <span> ◷ {{ tour.duracion }} </span>
+
+              <span> ⌖ {{ tour.origen }} </span>
+            </div>
+          </div>
+
+          <div class="tour-precio">
+            <strong> S/ {{ tour.precio }} </strong>
+
+            <span class="tour-arrow"> › </span>
+          </div>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- TARJETA FLOTANTE -->
+  <aside class="tour-detalle">
+    <div class="tour-detalle-imagen">
+      <img [src]="tourSeleccionado.imagen" [alt]="tourSeleccionado.nombre" />
+
+      <div class="tour-detalle-gradient"></div>
+    </div>
+
+    <div class="tour-detalle-body">
+      <span class="detalle-label"> EXPERIENCIA SELECCIONADA </span>
+
+      <h3>
+        {{ tourSeleccionado.nombre }}
+      </h3>
+
+      <p>
+        {{ tourSeleccionado.descripcion }}
+      </p>
+
+      <div class="detalle-meta">
+        <span>◷ {{ tourSeleccionado.duracion }}</span>
+        <span>⌖ {{ tourSeleccionado.origen }}</span>
+      </div>
+
+      <div class="detalle-footer">
+        <strong> S/ {{ tourSeleccionado.precio }} </strong>
+
+        <button>→</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="oceano-label">OCÉANO PACÍFICO</div>
+
+  <div class="mapa-leyenda">
+    <div class="leyenda-item">
+      <span class="leyenda-punto puerto"></span>
+      <span>Puerto de salida</span>
+    </div>
+
+    <div class="leyenda-item">
+      <span class="leyenda-punto destino"></span>
+      <span>Destino costero</span>
+    </div>
+
+    <div class="leyenda-item">
+      <span class="leyenda-zona"></span>
+      <span>Zona de avistamiento</span>
+    </div>
+
+    <div class="leyenda-item">
+      <span class="leyenda-ruta"></span>
+      <span>Ruta marítima</span>
+    </div>
+  </div>
+</section>

@@ -32,11 +32,22 @@ build/
 ### VS Code ###
 .vscode/
 
+### Node / Angular ###
 node_modules/
 seatour-frontend-angular/node_modules/
-.angular/
-dist/
+seatour-frontend-angular/.angular/
+seatour-frontend-angular/dist/
+
+### Base de datos local H2 ###
+data/
+*.mv.db
+*.trace.db
+
+### Logs ###
+*.log
+
+### Variables y secretos ###
 .env
 .env.*
-
+!.env.example
 seatour-frontend-angular/public/videos/hero-seatour.mp4

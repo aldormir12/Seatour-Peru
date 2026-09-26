@@ -1,6 +1,6 @@
-package com.seatour.seatour.model;
+package com.seatour.seatour.dto;
 
-import jakarta.persistence.*;
+import com.seatour.seatour.model.EstadoSalida;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -8,57 +8,29 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-@Entity
-@Table(name = "salidas_programadas", indexes = {
-        @Index(name = "idx_salida_tour", columnList = "tour_id"),
-        @Index(name = "idx_salida_embarcacion", columnList = "embarcacion_id"),
-        @Index(name = "idx_salida_fecha", columnList = "fecha"),
-        @Index(name = "idx_salida_estado", columnList = "estado")
-})
-public class SalidaProgramada {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class SalidaProgramadaCreacion {
 
     @NotNull(message = "La fecha de salida es obligatoria")
     @FutureOrPresent(message = "La fecha de salida no puede estar en el pasado")
-    @Column(nullable = false)
     private LocalDate fecha;
 
     @NotNull(message = "La hora de salida es obligatoria")
-    @Column(name = "hora_salida", nullable = false)
     private LocalTime horaSalida;
 
     @NotNull(message = "Los cupos disponibles son obligatorios")
     @PositiveOrZero(message = "Los cupos disponibles no pueden ser negativos")
-    @Column(name = "cupos_disponibles", nullable = false)
     private Integer cuposDisponibles;
 
     @NotNull(message = "El estado de la salida es obligatorio")
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
     private EstadoSalida estado;
 
     @NotNull(message = "El tour es obligatorio")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "tour_id", nullable = false)
-    private Tour tour;
+    private Long tourId;
 
     @NotNull(message = "La embarcación es obligatoria")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "embarcacion_id", nullable = false)
-    private Embarcacion embarcacion;
+    private Long embarcacionId;
 
-    public SalidaProgramada() {
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
+    public SalidaProgramadaCreacion() {
     }
 
     public LocalDate getFecha() {
@@ -93,19 +65,19 @@ public class SalidaProgramada {
         this.estado = estado;
     }
 
-    public Tour getTour() {
-        return tour;
+    public Long getTourId() {
+        return tourId;
     }
 
-    public void setTour(Tour tour) {
-        this.tour = tour;
+    public void setTourId(Long tourId) {
+        this.tourId = tourId;
     }
 
-    public Embarcacion getEmbarcacion() {
-        return embarcacion;
+    public Long getEmbarcacionId() {
+        return embarcacionId;
     }
 
-    public void setEmbarcacion(Embarcacion embarcacion) {
-        this.embarcacion = embarcacion;
+    public void setEmbarcacionId(Long embarcacionId) {
+        this.embarcacionId = embarcacionId;
     }
 }

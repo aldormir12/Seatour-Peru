@@ -1,6 +1,19 @@
 import { Component, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
+type Coordenadas = [x: number, y: number];
+
+interface ControlesCurva {
+  control1: Coordenadas;
+  control2: Coordenadas;
+}
+
+interface RutaMapa {
+  puntosInteres?: PuntoMapa['id'][];
+  intermedios: (ControlesCurva & { hasta: Coordenadas })[];
+  final: ControlesCurva;
+}
+
 interface TourVisual {
   id: number;
   nombre: string;
@@ -10,8 +23,9 @@ interface TourVisual {
   descripcion: string;
   imagen: string;
 
-  ruta: string;
-  puntoActivo: string;
+  puntoSalida: PuntoMapa['id'];
+  puntoLlegada: PuntoMapa['id'];
+  ruta: RutaMapa;
 }
 interface TourBackend {
   id: number;
@@ -21,6 +35,9 @@ interface TourBackend {
   precioBase: number;
   activo: boolean;
 }
+type RolPuntoMapa = 'puerto' | 'interes' | 'destino';
+type IconoDestino = 'ballena' | 'tortuga' | 'pez' | 'arrecife';
+
 interface PuntoMapa {
   id: string;
   nombre: string;
@@ -29,8 +46,8 @@ interface PuntoMapa {
   y: number;
 
   tipo: 'costa' | 'mar';
-
-  tourId: number;
+  rol: RolPuntoMapa;
+  icono?: IconoDestino;
 }
 
 @Component({
@@ -57,11 +74,16 @@ export class RutasInteractivas {
       imagen:
         '/images/tours/ballena.jpg',
 
-      ruta:
-        'M1260 180 C1120 170 1010 220 920 310 C850 380 755 385 690 330 C620 270 650 190 735 145',
-
-      puntoActivo:
-        'ballenas'
+      puntoSalida: 'mancora',
+      puntoLlegada: 'ballenas',
+      ruta: {
+        puntosInteres: ['observacion-marina'],
+        intermedios: [
+          { control1: [1120, 170], control2: [1010, 220], hasta: [920, 310] },
+          { control1: [850, 380], control2: [755, 385], hasta: [690, 330] }
+        ],
+        final: { control1: [620, 270], control2: [650, 190] }
+      }
     },
 
     {
@@ -77,11 +99,14 @@ export class RutasInteractivas {
       imagen:
         '/images/tours/ruta-costera.jpg',
 
-      ruta:
-        'M1215 280 C1110 290 1010 340 930 415 C865 470 805 485 760 455',
-
-      puntoActivo:
-        'arrecifes'
+      puntoSalida: 'organos',
+      puntoLlegada: 'arrecifes',
+      ruta: {
+        intermedios: [
+          { control1: [1110, 290], control2: [1010, 340], hasta: [930, 415] }
+        ],
+        final: { control1: [865, 470], control2: [805, 485] }
+      }
     },
 
     {
@@ -97,12 +122,39 @@ export class RutasInteractivas {
       imagen:
         '/images/tours/pesca.jpg',
 
-      ruta:
-        'M1105 510 C1025 520 965 555 910 610 C870 650 825 660 790 630',
+      puntoSalida: 'cabo-blanco',
+      puntoLlegada: 'isla-foca',
+      ruta: {
+        intermedios: [
+          { control1: [1025, 520], control2: [965, 555], hasta: [910, 610] }
+        ],
+        final: { control1: [870, 650], control2: [825, 660] }
+      }
+    },
+    {
+  id: 4,
+  nombre: 'Nado con tortugas',
+  duracion: '3 horas',
+  origen: 'El Ñuro',
+  precio: 180,
 
-      puntoActivo:
-        'isla-foca'
+  descripcion:
+    'Disfruta una experiencia marítima de observación y nado con tortugas frente a las costas de El Ñuro.',
+
+  imagen:
+    '/images/tours/tortugas.jpg',
+
+  puntoSalida: 'nuro',
+  puntoLlegada: 'tortugas',
+
+  ruta: {
+    intermedios: [],
+    final: {
+      control1: [980, 400],
+      control2: [900, 420]
     }
+  }
+}
   ];
 
   puntos: PuntoMapa[] = [
@@ -112,40 +164,60 @@ export class RutasInteractivas {
     {
       id: 'mancora',
       nombre: 'Máncora',
-      x: 1260,
-      y: 180,
+      x: 1160,
+      y: 138,
       tipo: 'costa',
-      tourId: 1
+      rol: 'puerto'
     },
 
     {
       id: 'organos',
       nombre: 'Los Órganos',
-      x: 1215,
+      x: 1100,
       y: 280,
       tipo: 'costa',
-      tourId: 2
+      rol: 'puerto'
     },
 
     {
       id: 'nuro',
       nombre: 'El Ñuro',
-      x: 1165,
+      x: 1070,
       y: 385,
       tipo: 'costa',
-      tourId: 2
+      rol: 'puerto'
     },
 
     {
       id: 'cabo-blanco',
       nombre: 'Cabo Blanco',
-      x: 1105,
-      y: 510,
+      x: 960,
+      y: 550,
       tipo: 'costa',
-      tourId: 3
+      rol: 'puerto'
     },
 
     /* MAR */
+
+    {
+      id: 'observacion-marina',
+      nombre: 'Observación marina',
+      // Mitad de la segunda curva Bézier de la ruta de avistamiento.
+      x: 803.125,
+      y: 366.875,
+      tipo: 'mar',
+      rol: 'interes'
+    },
+
+    {
+      id: 'tortugas',
+      nombre: 'Zona de tortugas',
+      x: 850,
+      y: 385,
+      tipo: 'mar',
+      rol: 'destino',
+      icono: 'tortuga'
+    },
 
     {
       id: 'ballenas',
@@ -153,7 +225,8 @@ export class RutasInteractivas {
       x: 735,
       y: 145,
       tipo: 'mar',
-      tourId: 1
+      rol: 'destino',
+      icono: 'ballena'
     },
 
     {
@@ -162,7 +235,8 @@ export class RutasInteractivas {
       x: 760,
       y: 455,
       tipo: 'mar',
-      tourId: 2
+      rol: 'destino',
+      icono: 'arrecife'
     },
 
     {
@@ -171,11 +245,32 @@ export class RutasInteractivas {
       x: 790,
       y: 630,
       tipo: 'mar',
-      tourId: 3
+      rol: 'destino',
+      icono: 'pez'
     }
   ];
 
   tourSeleccionado = this.tours[0];
+
+  get rutaSeleccionada(): string {
+    const tour = this.tourSeleccionado;
+    const salida = this.puntos.find(punto => punto.id === tour.puntoSalida);
+    const llegada = this.puntos.find(punto => punto.id === tour.puntoLlegada);
+
+    if (!salida || !llegada) {
+      return '';
+    }
+
+    // Solo los controles e intermedios son fijos; los extremos vienen del mapa.
+    const tramos = [
+      ...tour.ruta.intermedios,
+      { ...tour.ruta.final, hasta: [llegada.x, llegada.y] }
+    ];
+
+    return `M${salida.x} ${salida.y} ` + tramos.map(tramo =>
+      `C${tramo.control1.join(' ')} ${tramo.control2.join(' ')} ${tramo.hasta.join(' ')}`
+    ).join(' ');
+  }
 
   constructor() {
     this.cargarToursBackend();
@@ -236,9 +331,14 @@ formatearDuracion(minutos: number): string {
   }
 
   seleccionarPunto(punto: PuntoMapa): void {
-    const tour = this.tours.find(
-      tour => tour.id === punto.tourId
-    );
+    const utilizaPunto = (tour: TourVisual) =>
+      tour.puntoSalida === punto.id || tour.puntoLlegada === punto.id ||
+      (punto.rol === 'interes' && (tour.ruta.puntosInteres?.includes(punto.id) ?? false));
+
+    // Un punto compartido no debe cambiar un tour que ya lo utiliza.
+    const tour = utilizaPunto(this.tourSeleccionado)
+      ? this.tourSeleccionado
+      : this.tours.find(utilizaPunto);
 
     if (tour) {
       this.seleccionarTour(tour);
@@ -247,8 +347,14 @@ formatearDuracion(minutos: number): string {
 
   puntoEstaActivo(punto: PuntoMapa): boolean {
     return (
-      punto.id === this.tourSeleccionado.puntoActivo ||
-      punto.tourId === this.tourSeleccionado.id
+      punto.rol === 'puerto' &&
+      (punto.id === this.tourSeleccionado.puntoSalida ||
+        punto.id === this.tourSeleccionado.puntoLlegada)
     );
+  }
+
+  puntoEstaVisible(punto: PuntoMapa): boolean {
+    return punto.rol !== 'interes' ||
+      (this.tourSeleccionado.ruta.puntosInteres?.includes(punto.id) ?? false);
   }
 }

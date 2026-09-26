@@ -37,6 +37,7 @@ public class Tour {
     @Column(nullable = false)
     private Boolean activo;
 
+    // relacion muchos a uno
     @NotNull(message = "La categoría del tour es obligatoria")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "categoria_tour_id", nullable = false)

@@ -6,7 +6,7 @@
   position: relative;
 
   width: 100%;
-  min-height: 760px;
+  min-height: 680px;
 
   overflow: hidden;
 
@@ -18,7 +18,6 @@
   background-color: #02131f;
 }
 
-/* Oscurece suavemente la parte superior y el lado izquierdo */
 .rutas-section::before {
   content: '';
 
@@ -46,26 +45,10 @@
     );
 }
 
-/* Esmeralda controlado en mar abierto */
 .rutas-section::after {
-  content: '';
-
-  position: absolute;
-  inset: 0;
-
-  z-index: 1;
-  pointer-events: none;
-
-  background: radial-gradient(
-    ellipse 42% 74% at 53% 43%,
-    rgba(0, 190, 155, 0.18) 0%,
-    rgba(0, 180, 160, 0.13) 28%,
-    rgba(0, 160, 165, 0.06) 52%,
-    transparent 74%
-  );
+  display: none;
 }
 
-/* Capa ligera para mantener profundidad en la izquierda */
 .rutas-overlay {
   position: absolute;
   inset: 0;
@@ -134,9 +117,6 @@
 
   text-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
 }
-/* ==================================================
-   EXPERIENCIA DE RUTAS
-================================================== */
 
 .mapa-interactivo {
   position: absolute;
@@ -259,10 +239,6 @@
   }
 }
 
-/* ==================================================
-   LISTA DE TOURS
-================================================== */
-
 .lista-tours {
   display: flex;
   flex-direction: column;
@@ -271,7 +247,7 @@
 
   margin-top: 30px;
 
-  width: 500px;
+  width: 380px;
 }
 
 .tour-card {
@@ -369,14 +345,10 @@
   font-size: 20px;
 }
 
-/* ==================================================
-   TARJETA FLOTANTE
-================================================== */
-
 .tour-detalle {
   position: absolute;
 
-  top: 330px;
+  top: 120px;
   right: 38px;
 
   z-index: 4;
@@ -510,15 +482,11 @@
   letter-spacing: 0.18em;
 }
 
-/* ==================================================
-   LEYENDA
-================================================== */
-
 .mapa-leyenda {
   position: absolute;
 
   right: 38px;
-  top: 20px;
+  top: 500px;
   bottom: auto;
   z-index: 4;
 
@@ -595,16 +563,11 @@
 
   border-top: 2px dashed #55dcff;
 }
-/* ==================================================
-   PUNTOS INTERACTIVOS
-================================================== */
 
 .punto-interactivo {
   cursor: pointer;
   pointer-events: auto;
 }
-
-/* Halo invisible normalmente */
 
 .punto-halo {
   fill: rgba(70, 225, 255, 0.04);
@@ -641,8 +604,6 @@
 
   fill: rgba(0, 86, 91, 0.65);
 }
-
-/* Luz pequeña del centro */
 
 .punto-luz {
   fill: #d9ffff;
@@ -752,9 +713,6 @@
     stroke-dashoffset: -180;
   }
 }
-/* ==================================================
-   FIX DEFINITIVO - PUNTOS SIN SALTOS AL CLICK
-================================================== */
 
 .punto-interactivo,
 .punto-interactivo *,
@@ -822,8 +780,92 @@
 }
 
 .punto-interactivo.activo .punto-luz {
-  fill: #ffffff;
+  fill: #ff9f43;
 
-  filter: drop-shadow(0 0 4px #ffffff) drop-shadow(0 0 9px #52e8ff)
-    drop-shadow(0 0 14px rgba(57, 225, 255, 0.9));
+  filter: drop-shadow(0 0 4px #ffcf9f) drop-shadow(0 0 9px #ff9f43)
+    drop-shadow(0 0 14px rgba(255, 128, 45, 0.95));
+}
+/* Destinos: brillo centrado en el extremo de la ruta y simbolo maritimo encima. */
+.destino-marcador,
+.destino-icono {
+  overflow: visible;
+}
+
+.destino-halo {
+  fill: rgba(70, 235, 231, 0.04);
+  filter: blur(2px);
+}
+
+.destino-estrella {
+  fill: #62dace;
+  stroke: #62f5e9;
+  stroke-width: 0.7;
+  filter: drop-shadow(0 0 1px rgba(85, 240, 223, 0.3));
+}
+
+.destino-rayos {
+  fill: none;
+  stroke: #95fff2;
+  stroke-width: 1;
+  opacity: 0.3;
+}
+
+.destino-nucleo {
+  fill: #c5fff7;
+}
+
+.destino-icono {
+  fill: #124957;
+  stroke: #b0fff2;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 1px rgba(85, 240, 223, 0.25));
+}
+
+.destino-icono-marco {
+  fill: rgba(2, 25, 35, 0.85);
+  stroke: #62dace;
+  stroke-width: 1;
+}
+
+.destino-icono-detalle {
+  fill: none;
+  stroke-width: 1.4;
+}
+
+.destino-icono-coral {
+  fill: none;
+  stroke-width: 3;
+}
+
+.destino-seleccionado .destino-estrella {
+  fill: #b0fff2;
+  filter: drop-shadow(0 0 2px rgba(85, 240, 223, 0.6));
+}
+
+.interes-marcador {
+  overflow: visible;
+  fill: #63cfc6;
+  filter: drop-shadow(0 0 0.5px rgba(85, 240, 223, 0.2));
+}
+
+.interes-marcador circle {
+  fill: #a0e9e1;
+}
+
+.tour-miniatura {
+  width: 52px;
+  height: 44px;
+  flex: 0 0 52px;
+
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.tour-miniatura img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }

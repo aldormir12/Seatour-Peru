@@ -4,29 +4,72 @@
   <!-- RUTA Y PUNTOS SOBRE LA IMAGEN -->
   <svg class="mapa-interactivo" viewBox="0 0 1600 760" preserveAspectRatio="none">
     <!-- SOMBRA DE LA RUTA -->
-    <path class="ruta-brillo" [attr.d]="tourSeleccionado.ruta" />
+    <path class="ruta-brillo" [attr.d]="rutaSeleccionada" />
 
-    <!-- RUTA DINÁMICA -->
-    <!-- RUTA PUNTEADA CON TRAZADO PROGRESIVO -->
+    <!-- RUTA  -->
     <defs>
       <mask id="mascaraRuta">
-        <path [attr.d]="tourSeleccionado.ruta" class="ruta-mascara">
+        <path [attr.d]="rutaSeleccionada" class="ruta-mascara">
           <animate attributeName="stroke-dashoffset" from="1200" to="0" dur="2.2s" fill="freeze" />
         </path>
       </mask>
     </defs>
 
-    <path class="ruta-principal" [attr.d]="tourSeleccionado.ruta" mask="url(#mascaraRuta)" />
+    <path class="ruta-principal" [attr.d]="rutaSeleccionada" mask="url(#mascaraRuta)" />
 
-    <path class="ruta-principal" [attr.d]="tourSeleccionado.ruta" mask="url(#mascaraRuta)" />
+    <path class="ruta-principal" [attr.d]="rutaSeleccionada" mask="url(#mascaraRuta)" />
 
     <!-- TODOS LOS PUNTOS -->
     @for (punto of puntos; track punto.id) {
       <g
         class="punto-interactivo"
+        [attr.display]="puntoEstaVisible(punto) ? null : 'none'"
         [class.activo]="puntoEstaActivo(punto)"
         (click)="seleccionarPunto(punto)"
       >
+        @if (punto.rol === 'destino') {
+          <svg class="destino-marcador" [attr.x]="punto.x - 10" [attr.y]="punto.y - 10"
+            [class.destino-seleccionado]="punto.id === tourSeleccionado.puntoLlegada"
+            width="20" height="20" viewBox="-24 -24 48 48" aria-hidden="true">
+            <circle class="destino-halo" r="20" />
+            <path class="destino-estrella" d="M0 -18 L4 -4 L18 0 L4 4 L0 18 L-4 4 L-18 0 L-4 -4 Z" />
+            <path class="destino-rayos" d="M-10 -10 L10 10 M-10 10 L10 -10" />
+            <circle class="destino-nucleo" r="3" />
+          </svg>
+          @if (punto.id === tourSeleccionado.puntoLlegada && punto.icono) {
+            <svg class="destino-icono" [attr.data-icono]="punto.icono"
+              [attr.x]="punto.x - 22" [attr.y]="punto.y - 58"
+              width="44" height="44" viewBox="-8 -12 64 64" aria-hidden="true">
+              <circle class="destino-icono-marco" cx="24" cy="20" r="30" />
+              @switch (punto.icono) {
+                @case ('ballena') {
+                  <path d="M5 21 Q8 14 21 17 L31 20 Q37 20 38 13 L35 8 L41 11 L46 7 L45 16 Q43 31 27 33 Q9 35 5 25 Z" />
+                  <path class="destino-icono-detalle" d="M13 24 H14 M20 28 Q24 33 28 29 M17 13 V7 M17 9 Q12 3 10 8 M17 9 Q21 2 24 7" />
+                }
+                @case ('tortuga') {
+                  <path d="M18 12 Q9 3 8 10 L14 18 M30 12 Q39 3 40 10 L34 18 M15 25 Q5 29 10 33 L19 29 M33 25 Q43 29 38 33 L29 29" />
+                  <ellipse cx="24" cy="8" rx="4" ry="5" />
+                  <ellipse cx="24" cy="22" rx="11" ry="13" />
+                  <path class="destino-icono-detalle" d="M24 14 L30 18 V25 L24 29 L18 25 V18 Z M24 9 V14 M13 18 H18 M30 18 H35 M17 31 L20 27 M31 31 L28 27" />
+                }
+                @case ('pez') {
+                  <path d="M5 21 Q17 5 32 17 L43 10 L41 21 L43 32 L32 25 Q17 37 5 21 Z" />
+                  <path class="destino-icono-detalle" d="M16 14 Q22 21 16 28 M12 20 H13 M23 16 L27 11 L30 17" />
+                }
+                @case ('arrecife') {
+                  <path class="destino-icono-coral" d="M24 34 V12 M24 23 L14 17 V7 M14 14 L8 10 M24 18 L33 12 V5 M33 10 L40 6 M24 29 L36 24 V17 M36 23 L43 19 M24 30 L10 25 V19" />
+                  <path class="destino-icono-detalle" d="M9 35 Q24 30 40 35" />
+                }
+              }
+            </svg>
+          }
+        } @else if (punto.rol === 'interes') {
+          <svg class="interes-marcador" [attr.x]="punto.x - 5" [attr.y]="punto.y - 5"
+            width="10" height="10" viewBox="-5 -5 10 10" aria-hidden="true">
+            <path d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z" />
+            <circle r="0.8" />
+          </svg>
+        } @else {
         <!-- Halo -->
         <circle class="punto-halo" [attr.cx]="punto.x" [attr.cy]="punto.y" r="18" />
 
@@ -42,6 +85,7 @@
 
         <!-- LUZ CENTRAL -->
         <circle class="punto-luz" [attr.cx]="punto.x" [attr.cy]="punto.y" r="3" />
+        }
 
         <!-- NOMBRE -->
         <text [attr.x]="punto.x + 18" [attr.y]="punto.y + 5" class="etiqueta-mapa">
@@ -68,6 +112,9 @@
           [class.activo]="tourSeleccionado.id === tour.id"
           (click)="seleccionarTour(tour)"
         >
+          <div class="tour-miniatura">
+            <img [src]="tour.imagen" [alt]="tour.nombre" />
+          </div>
           <div class="tour-info">
             <h3>
               {{ tour.nombre }}

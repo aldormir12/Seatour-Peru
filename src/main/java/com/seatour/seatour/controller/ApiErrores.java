@@ -13,6 +13,17 @@ import org.springframework.web.server.ResponseStatusException;
 @RestControllerAdvice
 public class ApiErrores {
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ProblemDetail parametroInvalido() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Parametro invalido");
+    }
+
+    @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
+    public ProblemDetail concurrencia() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "La disponibilidad esta siendo actualizada. Consulta los cupos e intenta nuevamente");
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ProblemDetail estado(ResponseStatusException error) {
 

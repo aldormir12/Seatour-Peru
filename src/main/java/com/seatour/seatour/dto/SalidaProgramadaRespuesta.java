@@ -18,6 +18,13 @@ public class SalidaProgramadaRespuesta {
 
     private Long embarcacionId;
     private String embarcacionNombre;
+    private java.math.BigDecimal precioPorPasajero;
+    private boolean reservable;
+
+    public java.math.BigDecimal getPrecioPorPasajero() { return precioPorPasajero; }
+    public void setPrecioPorPasajero(java.math.BigDecimal precio) { this.precioPorPasajero = precio; }
+    public boolean isReservable() { return reservable; }
+    public void setReservable(boolean reservable) { this.reservable = reservable; }
 
     public SalidaProgramadaRespuesta() {
     }

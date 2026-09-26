@@ -448,6 +448,8 @@
   font-size: 14px;
 }
 
+.reservar-link { color: #7be5ff; font-size: .8rem; }
+
 .detalle-footer button {
   width: 28px;
   height: 28px;

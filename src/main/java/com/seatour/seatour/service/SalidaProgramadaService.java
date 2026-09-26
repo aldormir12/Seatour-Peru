@@ -23,14 +23,17 @@ public class SalidaProgramadaService {
     private final SalidaProgramadaRepository salidas;
     private final TourRepository tours;
     private final EmbarcacionRepository embarcaciones;
+    private final com.seatour.seatour.repository.ReservaRepository reservas;
 
     public SalidaProgramadaService(
             SalidaProgramadaRepository salidas,
             TourRepository tours,
-            EmbarcacionRepository embarcaciones) {
+            EmbarcacionRepository embarcaciones,
+            com.seatour.seatour.repository.ReservaRepository reservas) {
         this.salidas = salidas;
         this.tours = tours;
         this.embarcaciones = embarcaciones;
+        this.reservas = reservas;
     }
 
     public List<SalidaProgramada> listarTodas() {
@@ -92,7 +95,7 @@ public class SalidaProgramadaService {
             Long id,
             SalidaProgramada datos) {
 
-        SalidaProgramada existente = buscarPorId(id);
+        SalidaProgramada existente = bloquearSinReservas(id);
 
         validarSalida(datos);
 
@@ -135,9 +138,17 @@ public class SalidaProgramadaService {
     @Transactional
     public void eliminar(Long id) {
 
-        SalidaProgramada salida = buscarPorId(id);
+        SalidaProgramada salida = bloquearSinReservas(id);
 
         salidas.delete(salida);
+    }
+
+    private SalidaProgramada bloquearSinReservas(Long id) {
+        var salida = salidas.bloquearPorId(id).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Salida no encontrada"));
+        if (reservas.existsBySalidaId(id)) throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Una salida con reservas no puede modificarse ni eliminarse; se conserva su historial y sus cupos");
+        return salida;
     }
 
     private void validarSalida(

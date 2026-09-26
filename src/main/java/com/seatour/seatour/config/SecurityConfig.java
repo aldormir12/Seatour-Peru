@@ -33,6 +33,7 @@ public class SecurityConfig {
             ApiAuthenticationEntryPoint entryPoint) throws Exception {
 
         http
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
 
                 .sessionManagement(session -> session.sessionCreationPolicy(
@@ -50,6 +51,14 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/usuarios").permitAll()
+
+                        .requestMatchers(HttpMethod.POST, "/api/reservas").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/reservas/mis-reservas").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.HEAD, "/api/reservas/mis-reservas").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/reservas").hasAnyRole("OPERADOR", "ADMIN")
+                        .requestMatchers(HttpMethod.HEAD, "/api/reservas").hasAnyRole("OPERADOR", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/reservas/*/confirmar").hasAnyRole("OPERADOR", "ADMIN")
+                        .requestMatchers("/api/reservas/**").hasAnyRole("CLIENTE", "OPERADOR", "ADMIN")
 
                         // Solo las consultas son publicas. HEAD conserva los permisos de GET.
                         .requestMatchers(HttpMethod.GET, "/api/tours/**", "/api/categorias/**", "/api/salidas/**")

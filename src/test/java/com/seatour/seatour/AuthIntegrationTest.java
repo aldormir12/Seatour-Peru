@@ -83,6 +83,43 @@ class AuthIntegrationTest {
     }
 
     @Test
+    void registroPublicoLoginYRestauracionDeSesion() throws Exception {
+        mvc.perform(post("/api/usuarios").contentType("application/json").content("""
+                {"nombre":"Luis","apellido":"Perez","correo":"luis@example.com",
+                 "password":"Clave de prueba 123!","rol":"ADMIN"}
+                """))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.rol").value("CLIENTE"));
+        var login = mvc.perform(post("/api/auth/login").contentType("application/json")
+                        .content(solicitud("luis@example.com", CLAVE)))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        String token = mapper.readTree(login.getContentAsString()).get("token").asString();
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Luis"))
+                .andExpect(jsonPath("$.rol").value("CLIENTE"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + tokenFirmado("firma")))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + tokenFirmado("expirado")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void corsPermiteFrontendYConservaErroresDeAutenticacion() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/api/auth/login")
+                        .header("Origin", "http://localhost:4200")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "content-type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:4200"));
+        mvc.perform(get("/api/auth/me").header("Origin", "http://localhost:4200")
+                        .header("Authorization", "Bearer invalido"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:4200"));
+    }
+
+    @Test
     void loginPublicoDevuelveJwtSinPasswordNiSesion() throws Exception {
         var usuario = usuarios.findByCorreo("ana@example.com").orElseThrow();
         String hash = usuario.getPassword();

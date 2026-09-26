@@ -18,6 +18,16 @@
   </nav>
 
   <div class="nav-actions">
+    <a class="session-action" routerLink="/salidas">Reservar</a>
+    @if (auth.tieneRol('CLIENTE')) { <a class="session-action" routerLink="/mis-reservas">Mis reservas</a> }
+    @if (auth.tieneRol('OPERADOR', 'ADMIN')) { <a class="session-action" routerLink="/gestion/reservas">Gestionar reservas</a> }
+    @if (auth.usuario(); as usuario) {
+      <span class="session-name">{{ usuario.nombre }}</span>
+      <button class="session-action" type="button" (click)="auth.logout()">Cerrar sesión</button>
+    } @else {
+      <a class="session-action" routerLink="/login">Iniciar sesión</a>
+      <a class="session-action" routerLink="/registro">Registrarse</a>
+    }
     <button class="search-btn" aria-label="Buscar">⌕</button>
     <a class="nav-cta" href="#tours">
       Explorar tours

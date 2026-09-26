@@ -1,13 +1,16 @@
-import { Component, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { Component, inject, signal } from '@angular/core';
 import { RutasInteractivas } from '../rutas-interactivas/rutas-interactivas';
 
 @Component({
   selector: 'app-inicio',
-  imports: [RutasInteractivas],
+  imports: [RutasInteractivas, RouterLink],
   templateUrl: './inicio.html',
   styleUrl: '../../app.css'
 })
 export class Inicio {
+  readonly auth = inject(AuthService);
   protected readonly title = signal('seatour-frontend-angular');
 
   ensureVideoPlays(event: Event): void {

@@ -137,7 +137,7 @@ public class SalidaProgramadaController {
     private SalidaProgramadaRespuesta convertirARespuesta(
             SalidaProgramada salida) {
 
-        return new SalidaProgramadaRespuesta(
+        var respuesta = new SalidaProgramadaRespuesta(
                 salida.getId(),
                 salida.getFecha(),
                 salida.getHoraSalida(),
@@ -147,5 +147,11 @@ public class SalidaProgramadaController {
                 salida.getTour().getNombre(),
                 salida.getEmbarcacion().getId(),
                 salida.getEmbarcacion().getNombre());
+        respuesta.setPrecioPorPasajero(salida.getTour().getPrecioBase());
+        respuesta.setReservable(salida.getEstado() == com.seatour.seatour.model.EstadoSalida.PROGRAMADA
+                && Boolean.TRUE.equals(salida.getTour().getActivo()) && salida.getCuposDisponibles() > 0
+                && java.time.LocalDateTime.of(salida.getFecha(), salida.getHoraSalida())
+                    .isAfter(java.time.LocalDateTime.now(java.time.ZoneId.of("America/Lima"))));
+        return respuesta;
     }
 }

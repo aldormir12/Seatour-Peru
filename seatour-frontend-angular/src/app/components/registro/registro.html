@@ -1,0 +1,42 @@
+<div class="login-page"><div class="login-card">
+  <div class="login-header"><span class="login-eyebrow">SEATOUR PERÚ</span><h1>Registrarse</h1><p>Crea tu cuenta en SeaTour.</p></div>
+  <form [formGroup]="formulario" (ngSubmit)="registrar()" novalidate>
+    <div class="campo"><label for="nombre">Nombre</label>
+      <input id="nombre" type="text" formControlName="nombre" autocomplete="given-name" />
+      @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
+        <small class="campo-error">Completa este campo con un valor válido.</small>
+      }
+    </div>
+    <div class="campo"><label for="apellido">Apellido</label>
+      <input id="apellido" type="text" formControlName="apellido" autocomplete="family-name" />
+      @if (formulario.controls.apellido.touched && formulario.controls.apellido.invalid) {
+        <small class="campo-error">Completa este campo con un valor válido.</small>
+      }
+    </div>
+    <div class="campo"><label for="correo">Correo electrónico</label>
+      <input id="correo" type="email" formControlName="correo" autocomplete="email" />
+      @if (formulario.controls.correo.touched && formulario.controls.correo.invalid) {
+        <small class="campo-error">Completa este campo con un valor válido.</small>
+      }
+    </div>
+    <div class="campo"><label for="password">Contraseña</label>
+      <input id="password" type="password" formControlName="password" autocomplete="new-password" />
+      @if (formulario.controls.password.touched && formulario.controls.password.invalid) {
+        <small class="campo-error">Usa entre 6 y 1024 caracteres.</small>
+      }
+    </div>
+    <div class="campo"><label for="confirmacion">Confirmar contraseña</label>
+      <input id="confirmacion" type="password" formControlName="confirmacion" autocomplete="new-password" />
+      @if (formulario.controls.confirmacion.touched && formulario.controls.confirmacion.invalid) {
+        <small class="campo-error">Completa este campo con un valor válido.</small>
+      }
+    </div>
+    @if (formulario.controls.confirmacion.touched && formulario.hasError('contrasenasDistintas')) {
+      <p class="campo-error" role="alert">Las contraseñas no coinciden.</p>
+    }
+    @if (error()) { <p class="login-error" role="alert">{{ error() }}</p> }
+    <button type="submit" [disabled]="cargando() || cuentaCreada()">{{ cargando() ? 'Creando cuenta...' : 'Crear cuenta' }}</button>
+  </form>
+  <p>¿Ya tienes cuenta? <a routerLink="/login">Iniciar sesión</a></p>
+  <a routerLink="/">Volver al inicio</a>
+</div></div>

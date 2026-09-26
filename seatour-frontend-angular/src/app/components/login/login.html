@@ -8,6 +8,7 @@
       <p>Accede a tu cuenta para continuar.</p>
     </div>
 
+    @if (sesionExpirada) { <p role="status">Tu sesión terminó. Vuelve a iniciar sesión.</p> }
     <form [formGroup]="formulario" (ngSubmit)="iniciarSesion()" novalidate>
       <div class="campo">
         <label for="correo"> Correo electrónico </label>
@@ -42,7 +43,7 @@
       </div>
 
       @if (error()) {
-        <div class="login-error">
+        <div class="login-error" role="alert">
           {{ error() }}
         </div>
       }
@@ -55,5 +56,7 @@
         }
       </button>
     </form>
+    <p>¿No tienes cuenta? <a routerLink="/registro">Registrarse</a></p>
+    <a routerLink="/">Volver al inicio</a>
   </div>
 </div>

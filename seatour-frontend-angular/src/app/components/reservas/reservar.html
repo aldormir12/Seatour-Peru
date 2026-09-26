@@ -1,0 +1,29 @@
+<app-reservas-nav [protegida]="true" />
+<main><a routerLink="/salidas">← Volver a salidas</a><h1>Reserva tu experiencia</h1>
+  @if (cargando()) { <p role="status">Consultando disponibilidad...</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (salida(); as s) {
+    <section class="panel"><h2>{{ s.tourNombre }}</h2>
+      <p>{{ s.fecha | date:'dd/MM/yyyy' }} · {{ s.horaSalida.slice(0,5) }} (hora de Perú)</p>
+      <p>{{ s.embarcacionNombre }} · {{ s.cuposDisponibles }} cupos disponibles</p>
+      @if (resumen()) {
+        <h2>Revisa tu reserva</h2>
+        <dl><dt>Pasajeros</dt><dd>{{ pasajeros.value }}</dd>
+          <dt>Precio por pasajero</dt><dd>{{ s.precioPorPasajero | currency:'PEN':'S/ ' }}</dd>
+          <dt>Total</dt><dd class="total">{{ total() | currency:'PEN':'S/ ' }}</dd></dl>
+        <p>La reserva quedará pendiente de confirmación del operador. Puedes cancelarla antes de la salida. No se realizará ningún cobro.</p>
+        <div class="actions"><button type="button" (click)="reservar()" [disabled]="enviando()">{{ enviando() ? 'Reservando...' : 'Confirmar solicitud de reserva' }}</button>
+          <button class="secondary" type="button" (click)="resumen.set(false)" [disabled]="enviando()">Modificar pasajeros</button></div>
+      } @else {
+        <form (ngSubmit)="revisar()"><label for="pasajeros">Cantidad de pasajeros</label>
+          <input id="pasajeros" type="number" min="1" step="1" [max]="s.cuposDisponibles" [formControl]="pasajeros" />
+          @if (pasajeros.touched && pasajeros.invalid) { <p class="error" role="alert">Ingresa un número entero entre 1 y {{ s.cuposDisponibles }}.</p> }
+          <p>{{ s.precioPorPasajero | currency:'PEN':'S/ ' }} por pasajero</p>
+          @if (pasajeros.valid) { <p class="total">Total: {{ total() | currency:'PEN':'S/ ' }}</p> }
+          <button type="submit" [disabled]="cargando() || !s.reservable">Revisar resumen</button>
+        </form>
+        @if (!s.reservable) { <p>Esta salida no admite nuevas reservas.</p> }
+      }
+    </section>
+  } @else if (!cargando()) { <button type="button" (click)="cargar()">Reintentar</button> }
+</main>

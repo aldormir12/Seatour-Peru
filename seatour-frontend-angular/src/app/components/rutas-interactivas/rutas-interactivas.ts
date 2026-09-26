@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 
 type Coordenadas = [x: number, y: number];
 
@@ -52,13 +53,14 @@ interface PuntoMapa {
 
 @Component({
   selector: 'app-rutas-interactivas',
-  imports: [],
+  imports: [RouterLink],
   templateUrl: './rutas-interactivas.html',
   styleUrl: './rutas-interactivas.css'
 })
 export class RutasInteractivas {
 
   private http = inject(HttpClient);
+  toursReservables = new Set<number>();
 
   tours: TourVisual[] = [
     {
@@ -280,6 +282,7 @@ cargarToursBackend(): void {
     .get<TourBackend[]>('http://localhost:8080/api/tours')
     .subscribe({
       next: (respuesta) => {
+        this.toursReservables = new Set(respuesta.filter(t => t.activo).map(t => t.id));
 
         console.log('Tours desde Spring Boot:', respuesta);
 

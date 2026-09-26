@@ -32,6 +32,12 @@ public class AuthController {
         return LoginTokenRespuesta.desde(usuario.datos(), jwtService.generarToken(usuario));
     }
 
+    @GetMapping("/me")
+    public com.seatour.seatour.dto.LoginRespuesta sesion(
+            org.springframework.security.core.Authentication autenticacion) {
+        return ((UsuarioPrincipal) autenticacion.getPrincipal()).datos();
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, String>> autenticacionFallida() {
         return ResponseEntity.status(401).body(Map.of("mensaje", "Credenciales invalidas"));

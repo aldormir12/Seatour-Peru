@@ -1,0 +1,37 @@
+<app-reservas-nav [protegida]="true" /><main>
+  <a [routerLink]="auth.tieneRol('OPERADOR','ADMIN') ? '/gestion/reservas' : '/mis-reservas'">← Volver al listado</a>
+  <h1>Detalle de reserva #{{ id }}</h1>
+  @if (cargando()) { <p role="status">Cargando reserva...</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (mensaje()) { <p class="success" role="status">{{ mensaje() }}</p> }
+  @if (reserva(); as r) {
+    <section class="panel"><h2>{{ r.tourNombre }}</h2><span class="badge">{{ r.estado }}</span>
+      <dl><dt>Cliente</dt><dd>{{ r.clienteNombre }}</dd>
+        <dt>Salida</dt><dd>{{ r.fecha | date:'dd/MM/yyyy' }} · {{ r.horaSalida.slice(0,5) }} (Perú)</dd>
+        <dt>Embarcación</dt><dd>{{ r.embarcacionNombre }}</dd>
+        <dt>Pasajeros</dt><dd>{{ r.pasajeros }}</dd>
+        <dt>Precio aplicado por pasajero</dt><dd>{{ r.precioUnitario | currency:'PEN':'S/ ' }}</dd>
+        <dt>Total reservado</dt><dd class="total">{{ r.precioTotal | currency:'PEN':'S/ ' }}</dd>
+        <dt>Cupos disponibles ahora</dt><dd>{{ r.cuposDisponibles }}</dd>
+        <dt>Creada</dt><dd>{{ r.creadaEn | date:'dd/MM/yyyy HH:mm':'-0500' }}</dd>
+        @if (r.confirmadaEn) { <dt>Confirmada</dt><dd>{{ r.confirmadaEn | date:'dd/MM/yyyy HH:mm':'-0500' }}</dd> }
+        @if (r.canceladaEn) { <dt>Cancelada</dt><dd>{{ r.canceladaEn | date:'dd/MM/yyyy HH:mm':'-0500' }}</dd> }
+      </dl>
+      <p>Los precios de esta reserva se conservan aunque cambie la tarifa del tour. No se ha realizado ningún cobro.</p>
+      @if (accion(); as accionActual) {
+        <section aria-label="Confirmar operación"><h2>{{ accionActual === 'cancelar' ? '¿Cancelar esta reserva?' : '¿Confirmar esta reserva?' }}</h2>
+          <p>{{ accionActual === 'cancelar' ? 'La cancelación es definitiva y liberará los cupos.' : 'La reserva pasará a confirmada; sus cupos ya están descontados.' }}</p>
+          <div class="actions"><button type="button" (click)="ejecutar()" [disabled]="enviando() || cargando()">{{ enviando() ? 'Procesando...' : 'Sí, continuar' }}</button>
+            <button type="button" class="secondary" (click)="accion.set(null)" [disabled]="enviando()">Volver</button></div>
+        </section>
+      } @else {
+        <div class="actions">
+          @if (r.puedeConfirmar && auth.tieneRol('OPERADOR','ADMIN')) { <button type="button" (click)="accion.set('confirmar')" [disabled]="cargando()">Confirmar reserva</button> }
+          @if (r.puedeCancelar) { <button type="button" class="danger" (click)="accion.set('cancelar')" [disabled]="cargando()">Cancelar reserva</button> }
+        </div>
+        @if (!r.puedeCancelar && r.estado !== 'CANCELADA') { <p>El plazo de cancelación terminó al comenzar la salida.</p> }
+      }
+    </section>
+  }
+  <button type="button" class="secondary" (click)="cargar()" [disabled]="cargando() || enviando()">Actualizar detalle y cupos</button>
+</main>

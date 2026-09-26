@@ -1,5 +1,7 @@
+import { AuthService } from './services/auth.service';
 import {
   ApplicationConfig,
+  inject, provideAppInitializer,
   provideBrowserGlobalErrorListeners
 } from '@angular/core';
 
@@ -20,6 +22,7 @@ import {
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideAppInitializer(() => inject(AuthService).restaurarSesion()),
     provideBrowserGlobalErrorListeners(),
 
     provideRouter(routes),

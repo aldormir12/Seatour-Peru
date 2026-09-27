@@ -1,16 +1,17 @@
+import { reservasPorRol } from '../../navigation';
 import { Component, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { Reserva, ReservasService, errorReserva } from '../../services/reservas.service';
-import { ReservasNav } from './reservas-nav';
 
 @Component({
-  selector: 'app-reserva-detalle', imports: [CurrencyPipe, DatePipe, RouterLink, ReservasNav],
+  selector: 'app-reserva-detalle', imports: [CurrencyPipe, DatePipe, RouterLink],
   styleUrl: './reservas.css', templateUrl: './reserva-detalle.html'
 })
 export class ReservaDetalleComponent {
   readonly auth = inject(AuthService);
+  readonly rutaReservas = reservasPorRol(this.auth.usuario()?.rol);
   private readonly api = inject(ReservasService);
   private readonly route = inject(ActivatedRoute);
   readonly id = Number(this.route.snapshot.paramMap.get('id'));

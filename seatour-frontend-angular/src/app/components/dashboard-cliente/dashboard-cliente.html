@@ -1,0 +1,280 @@
+<main class="dashboard-cliente">
+  <section class="hero">
+    <div class="hero-overlay"></div>
+
+    <div class="hero-content">
+      <p class="eyebrow">
+        {{ hero.eyebrow }}
+      </p>
+
+      <h1>
+        {{ hero.tituloPrincipal }}
+        <em>{{ hero.palabraResaltada }}</em
+        >,
+        <span>{{ hero.tituloSecundario }}</span>
+      </h1>
+
+      <p class="hero-description">
+        {{ hero.descripcion }}
+      </p>
+
+      <div class="feature-list">
+        @for (feature of features; track feature.titulo) {
+          <a class="feature" [routerLink]="feature.ruta">
+            <span class="feature-icon" aria-hidden="true">
+              @switch (feature.icono) {
+                @case ('rutas') {
+                  <svg viewBox="0 0 24 24">
+                    <path d="M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4-2" />
+                    <path d="M4 10c2-2 4-2 6 0s4 2 6 0 4-2 4-2" />
+                  </svg>
+                }
+                @case ('tours') {
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 8v8M8 12h8" />
+                  </svg>
+                }
+                @case ('reservas') {
+                  <svg viewBox="0 0 24 24">
+                    <rect x="5" y="4" width="14" height="16" rx="2" />
+                    <path d="M8 9h8M8 13h8M8 17h5" />
+                  </svg>
+                }
+              }
+            </span>
+
+            <span class="feature-text">
+              <strong>{{ feature.titulo }}</strong>
+              <small>{{ feature.descripcion }}</small>
+            </span>
+          </a>
+        }
+      </div>
+    </div>
+
+    <aside class="floating-card" aria-label="Condiciones actuales del mar">
+      <div class="floating-card__header">
+        <div>
+          <h2>Condiciones actuales del mar</h2>
+
+          <div class="floating-card__meta">
+            <div
+              class="zona-dropdown"
+              #zonaDropdown
+              (keydown.escape)="menuZonaAbierto = false; zonaTrigger.focus()"
+              (focusout)="
+                !zonaDropdown.contains($any($event.relatedTarget)) && (menuZonaAbierto = false)
+              "
+            >
+              <button
+                #zonaTrigger
+                type="button"
+                class="zona-trigger"
+                aria-label="Elegir zona maritima"
+                aria-controls="ocean-zona-menu"
+                (click)="menuZonaAbierto = !menuZonaAbierto"
+                [attr.aria-expanded]="menuZonaAbierto"
+              >
+                <svg class="zona-location" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10Z" />
+                  <circle cx="12" cy="11" r="2.2" />
+                </svg>
+                <span>{{ zona().nombre }}</span>
+                <svg class="zona-arrow" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m7 10 5 5 5-5" />
+                </svg>
+              </button>
+
+              @if (menuZonaAbierto) {
+                <div
+                  class="zona-menu"
+                  id="ocean-zona-menu"
+                  role="group"
+                  aria-label="Zonas maritimas"
+                >
+                  @for (opcion of zonas; track opcion.id) {
+                    <button
+                      type="button"
+                      class="zona-opcion"
+                      [class.activa]="opcion.id === zona().id"
+                      [attr.aria-pressed]="opcion.id === zona().id"
+                      (click)="cambiarZona(opcion.id); menuZonaAbierto = false; zonaTrigger.focus()"
+                    >
+                      {{ opcion.nombre }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <span class="floating-card__updated" aria-live="polite">
+          {{ cargando() ? 'Consultando...' : condicionActual().actualizado }}
+          <span
+            class="status-dot"
+            [class.status-dot--unavailable]="
+              cargando() || condicionActual().actualizado === 'No disponible'
+            "
+          ></span>
+        </span>
+      </div>
+
+      <div class="floating-card__body">
+        <div class="weather-main">
+          <div class="weather-icon" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              @if (condicionActual().climaIcono === 'sol') {
+                <circle cx="32" cy="32" r="11" />
+                <path
+                  d="M32 8v8M32 48v8M8 32h8M48 32h8M15 15l6 6M43 43l6 6M49 15l-6 6M21 43l-6 6"
+                />
+              } @else {
+                <path d="M8 28c8-7 16 7 24 0s16 7 24 0M8 40c8-7 16 7 24 0s16 7 24 0" />
+              }
+            </svg>
+          </div>
+
+          <div class="weather-text">
+            <strong
+              [class.weather-unavailable]="condicionActual().temperatura === 'No disponible'"
+              >{{ condicionActual().temperatura }}</strong
+            >
+            <span>{{ condicionActual().estado }}</span>
+          </div>
+        </div>
+
+        <div class="weather-metrics">
+          @for (metrica of condicionActual().metricas; track metrica.id) {
+            <div class="metric-row">
+              <div class="metric-label">
+                <span class="metric-icon" aria-hidden="true">
+                  @switch (metrica.icono) {
+                    @case ('oleaje') {
+                      <svg viewBox="0 0 24 24">
+                        <path
+                          d="M3 14c1.4 0 1.4-1 2.8-1s1.4 1 2.8 1 1.4-1 2.8-1 1.4 1 2.8 1 1.4-1 2.8-1 1.4 1 2.8 1"
+                        />
+                        <path d="M4 9c2.2-1.8 4.2-1.8 6.4 0" />
+                      </svg>
+                    }
+                    @case ('viento') {
+                      <svg viewBox="0 0 24 24">
+                        <path d="M3 8h10c1.7 0 3-1.3 3-3s-1.3-3-3-3" />
+                        <path d="M3 12h15c1.7 0 3 1.3 3 3s-1.3 3-3 3" />
+                        <path d="M3 16h8" />
+                      </svg>
+                    }
+                    @case ('visibilidad') {
+                      <svg viewBox="0 0 24 24">
+                        <path d="M2 12s3.5-5 10-5 10 5 10 5-3.5 5-10 5-10-5-10-5Z" />
+                        <circle cx="12" cy="12" r="2.5" />
+                      </svg>
+                    }
+                    @case ('temperatura') {
+                      <svg viewBox="0 0 24 24">
+                        <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z" />
+                      </svg>
+                    }
+                  }
+                </span>
+
+                <span>{{ metrica.label }}</span>
+              </div>
+
+              <div class="metric-value">
+                <span>{{ metrica.valor }}</span>
+
+                @if (metrica.variacion === 'down') {
+                  <svg class="metric-trend" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m7 10 5 5 5-5" />
+                  </svg>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      <small class="ocean-source"
+        >Datos de modelo:
+        <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> /
+        DWD · Hora de Perú</small
+      >
+    </aside>
+
+    <div class="search-bar">
+      @for (campo of camposBusqueda; track campo.etiqueta) {
+        <label class="search-field">
+          @switch (campo.etiqueta) {
+            @case ('Fecha') {
+              <svg class="search-field-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M16 3v4M8 3v4M3 10h18" />
+              </svg>
+            }
+
+            @case ('Personas') {
+              <svg class="search-field-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="9" cy="7" r="4" />
+                <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" />
+                <path d="M16 3.5a4 4 0 0 1 0 7" />
+                <path d="M18 15a4 4 0 0 1 4 4v2" />
+              </svg>
+            }
+
+            @case ('Horario') {
+              <svg class="search-field-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+            }
+
+            @case ('Intereses') {
+              <svg class="search-field-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 12 12 20 4 12 12 4Z" />
+                <circle cx="12" cy="12" r="2" />
+              </svg>
+            }
+          }
+
+          <div class="search-field-content">
+            <span class="search-field-label">{{ campo.etiqueta }}</span>
+
+            @if (campo.tipo === 'date') {
+              <input type="date" [value]="campo.valor" [attr.aria-label]="campo.etiqueta" />
+            }
+
+            @if (campo.tipo === 'number') {
+              <input
+                type="number"
+                min="1"
+                [value]="campo.valor"
+                [attr.aria-label]="campo.etiqueta"
+              />
+            }
+
+            @if (campo.tipo === 'select') {
+              <select [attr.aria-label]="campo.etiqueta">
+                @for (opcion of campo.opciones ?? []; track opcion.value) {
+                  <option [value]="opcion.value" [selected]="opcion.value === campo.valor">
+                    {{ opcion.label }}
+                  </option>
+                }
+              </select>
+            }
+          </div>
+        </label>
+      }
+
+      <button class="search-button" type="button" (click)="buscarExperiencias()">
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="6" />
+          <path d="m16 16 4 4" />
+        </svg>
+
+        Buscar experiencias
+      </button>
+    </div>
+  </section>
+</main>

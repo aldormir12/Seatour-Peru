@@ -1,2 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@400;500&display=swap');
 @import 'maplibre-gl/dist/maplibre-gl.css';
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+app-root {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}

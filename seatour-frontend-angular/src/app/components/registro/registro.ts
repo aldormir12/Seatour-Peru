@@ -1,3 +1,4 @@
+import { inicioPorRol } from '../../navigation';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -29,7 +30,7 @@ export class RegistroComponent {
     this.error.set(null);
     const { confirmacion, ...datos } = this.formulario.getRawValue();
     this.auth.registrar(datos).subscribe({
-      next: () => { this.cargando.set(false); void this.router.navigateByUrl('/'); },
+      next: usuario => { this.cargando.set(false); void this.router.navigateByUrl(inicioPorRol(usuario.rol)); },
       error: error => {
         this.cargando.set(false);
         if (error instanceof LoginTrasRegistroError) {

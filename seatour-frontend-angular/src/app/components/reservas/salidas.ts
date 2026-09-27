@@ -1,3 +1,4 @@
+import { inicioPorRol } from '../../navigation';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
@@ -5,15 +6,14 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReservasService, Salida, errorReserva } from '../../services/reservas.service';
 import { AuthService } from '../../services/auth.service';
-import { ReservasNav } from './reservas-nav';
 
 @Component({
-  selector: 'app-salidas', imports: [RouterLink, CurrencyPipe, DatePipe, ReservasNav],
+  selector: 'app-salidas', imports: [RouterLink, CurrencyPipe, DatePipe],
   styleUrl: './reservas.css',
-  template: `<app-reservas-nav />
+  template: `
     <main><h1>Elige tu próxima salida</h1><p>Horarios de Perú · Precios por pasajero en soles.</p>
     <button type="button" (click)="cargar()" [disabled]="cargando()">Actualizar disponibilidad</button>
-    @if (tourId) { <p><a routerLink="/salidas">Ver todos los tours</a></p> }
+    @if (tourId) { <p><a [routerLink]="rutaSalidas">Ver todos los tours</a></p> }
     @if (cargando()) { <p role="status">Cargando salidas...</p> }
     @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
     <div class="cards">
@@ -23,7 +23,7 @@ import { ReservasNav } from './reservas-nav';
       <p><strong>{{ reservas.cupos()[s.id] ?? s.cuposDisponibles }} cupos disponibles</strong></p>
       @if (s.reservable && (reservas.cupos()[s.id] ?? s.cuposDisponibles) > 0) {
         @if (auth.usuario() && !auth.tieneRol('CLIENTE')) { <p>La reserva está disponible para cuentas de cliente.</p> }
-        @else { <a class="action" [routerLink]="['/reservar', s.id]">Elegir pasajeros</a> }
+        @else { <a class="action" [routerLink]="['/app/reservar', s.id]">Elegir pasajeros</a> }
       } @else { <span class="badge">No disponible · {{ s.estado }}</span> }
       </article>
     } @empty { @if (!cargando() && !error()) { <p>No hay salidas programadas para mostrar.</p> } }
@@ -32,6 +32,8 @@ import { ReservasNav } from './reservas-nav';
 export class SalidasComponent {
   readonly reservas = inject(ReservasService);
   readonly auth = inject(AuthService);
+  readonly rutaSalidas = this.auth.tieneRol('OPERADOR', 'ADMIN')
+    ? inicioPorRol(this.auth.usuario()?.rol) + '/salidas' : '/app/tours';
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private peticion?: Subscription;

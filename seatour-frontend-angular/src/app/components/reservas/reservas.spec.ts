@@ -56,7 +56,7 @@ describe('Flujo de reservas', () => {
     expect(req.request.body).toEqual({ salidaId: 3, pasajeros: 2, precioEsperado: 80.25 });
     req.flush(reserva);
     expect(TestBed.inject(ReservasService).cupos()[3]).toBe(2);
-    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/reservas', 7], { queryParams: { creada: '1' } });
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/app/mis-reservas', 7], { queryParams: { creada: '1' } });
   });
 
   it.each([0, -1, 1.5, 5])('no permite cantidad invalida %i', pasajeros => {

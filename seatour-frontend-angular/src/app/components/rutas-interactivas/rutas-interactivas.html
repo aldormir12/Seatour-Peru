@@ -164,7 +164,7 @@
       <div class="detalle-footer">
         <strong> S/ {{ tourSeleccionado.precio }} </strong>
 
-        <a class="reservar-link" routerLink="/salidas"
+        <a class="reservar-link" routerLink="/app/tours"
           [queryParams]="toursReservables.has(tourSeleccionado.id) ? { tourId: tourSeleccionado.id } : {}">Ver salidas →</a>
       </div>
     </div>

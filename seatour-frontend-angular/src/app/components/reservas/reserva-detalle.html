@@ -1,5 +1,5 @@
-<app-reservas-nav [protegida]="true" /><main>
-  <a [routerLink]="auth.tieneRol('OPERADOR','ADMIN') ? '/gestion/reservas' : '/mis-reservas'">← Volver al listado</a>
+<main>
+  <a [routerLink]="rutaReservas">← Volver al listado</a>
   <h1>Detalle de reserva #{{ id }}</h1>
   @if (cargando()) { <p role="status">Cargando reserva...</p> }
   @if (error()) { <p class="error" role="alert">{{ error() }}</p> }

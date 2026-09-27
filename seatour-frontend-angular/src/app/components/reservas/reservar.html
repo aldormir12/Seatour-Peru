@@ -1,5 +1,5 @@
-<app-reservas-nav [protegida]="true" />
-<main><a routerLink="/salidas">← Volver a salidas</a><h1>Reserva tu experiencia</h1>
+
+<main><a routerLink="/app/tours">← Volver a salidas</a><h1>Reserva tu experiencia</h1>
   @if (cargando()) { <p role="status">Consultando disponibilidad...</p> }
   @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
   @if (salida(); as s) {

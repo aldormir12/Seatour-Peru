@@ -10,7 +10,9 @@ describe('Login', () => {
     providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }));
   afterEach(() => { TestBed.inject(HttpTestingController).verify(); TestBed.inject(AuthService).logout(); });
 
-  it('acepta claves existentes cortas y entra en portada con sesion', () => {
+  it.each([
+    ['CLIENTE', '/app/dashboard'], ['OPERADOR', '/app/operador'], ['ADMIN', '/app/admin']
+  ])('acepta claves existentes cortas y entra en el panel de %s', (rol, destino) => {
     const component = TestBed.createComponent(LoginComponent).componentInstance;
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     component.formulario.setValue({ correo: 'ana@example.com', password: 'abc' });
@@ -18,9 +20,9 @@ describe('Login', () => {
     component.iniciarSesion();
     const token = `e30.${btoa(JSON.stringify({ exp: Date.now() / 1000 + 3600 })).replace(/=/g, '')}.firma`;
     TestBed.inject(HttpTestingController).expectOne(`${API_URL}/auth/login`).flush({
-      id: 1, nombre: 'Ana', correo: 'ana@example.com', rol: 'CLIENTE', token
+      id: 1, nombre: 'Ana', correo: 'ana@example.com', rol, token
     });
-    expect(navigate).toHaveBeenCalledWith('/');
+    expect(navigate).toHaveBeenCalledWith(destino);
     expect(TestBed.inject(AuthService).estaAutenticado()).toBe(true);
   });
 

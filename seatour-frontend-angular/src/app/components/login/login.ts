@@ -1,3 +1,4 @@
+import { destinoTrasLogin } from '../../navigation';
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -67,11 +68,11 @@ export class LoginComponent {
     this.auth
       .login(correo, password)
       .subscribe({
-        next: () => {
+        next: usuario => {
           this.cargando.set(false);
 
           const destino = this.route.snapshot.queryParamMap.get('returnUrl');
-          void this.router.navigateByUrl(destino?.startsWith('/') && !destino.startsWith('//') ? destino : '/');
+          void this.router.navigateByUrl(destinoTrasLogin(usuario.rol, destino));
         },
 
         error: (error) => {

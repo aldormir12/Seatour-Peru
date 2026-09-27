@@ -3,10 +3,9 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ReservasService, Salida, errorReserva } from '../../services/reservas.service';
-import { ReservasNav } from './reservas-nav';
 
 @Component({
-  selector: 'app-reservar', imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, RouterLink, ReservasNav],
+  selector: 'app-reservar', imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, RouterLink],
   styleUrl: './reservas.css', templateUrl: './reservar.html'
 })
 export class ReservarComponent {
@@ -47,7 +46,7 @@ export class ReservarComponent {
     this.api.crear(salida.id, this.pasajeros.value, salida.precioPorPasajero).subscribe({
       next: reserva => {
         this.enviando.set(false); this.resumen.set(false);
-        void this.router.navigate(['/reservas', reserva.id], { queryParams: { creada: '1' } });
+        void this.router.navigate(['/app/mis-reservas', reserva.id], { queryParams: { creada: '1' } });
       },
       error: error => {
         this.enviando.set(false); this.resumen.set(false); this.error.set(errorReserva(error));

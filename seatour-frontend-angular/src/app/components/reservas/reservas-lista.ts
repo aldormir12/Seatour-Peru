@@ -1,17 +1,18 @@
+import { AuthService } from '../../services/auth.service';
+import { reservasPorRol } from '../../navigation';
 import { Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Reserva, ReservasService, errorReserva } from '../../services/reservas.service';
-import { ReservasNav } from './reservas-nav';
 
 @Component({
-  selector: 'app-reservas-lista', imports: [CurrencyPipe, DatePipe, RouterLink, ReservasNav],
+  selector: 'app-reservas-lista', imports: [CurrencyPipe, DatePipe, RouterLink],
   styleUrl: './reservas.css',
-  template: `<app-reservas-nav [protegida]="true" /><main>
+  template: `<main>
     <h1>{{ gestion ? 'Gestión de reservas' : 'Mis reservas' }}</h1>
     <p>{{ gestion ? 'Consulta las reservas y abre su detalle para confirmar o cancelar.' : 'Consulta tus viajes y administra tus reservas.' }}</p>
     <div class="actions"><button type="button" (click)="cargar()" [disabled]="cargando()">Actualizar</button>
-      @if (!gestion) { <a class="action" routerLink="/salidas">Nueva reserva</a> }</div>
+      @if (!gestion) { <a class="action" routerLink="/app/tours">Nueva reserva</a> }</div>
     <label for="estado">Filtrar por estado</label>
     <select id="estado" (change)="filtro.set($any($event.target).value)">
       <option value="">Todos</option><option value="PENDIENTE">Pendientes</option>
@@ -25,12 +26,13 @@ import { ReservasNav } from './reservas-nav';
         <p>Reserva #{{ r.id }} · {{ r.fecha | date:'dd/MM/yyyy' }} · {{ r.horaSalida.slice(0,5) }}</p>
         @if (gestion) { <p>Cliente: {{ r.clienteNombre }} (#{{ r.clienteId }})</p> }
         <p>{{ r.pasajeros }} pasajero(s) · {{ r.precioTotal | currency:'PEN':'S/ ' }}</p>
-        <a class="action" [routerLink]="['/reservas', r.id]">Ver detalle</a>
+        <a class="action" [routerLink]="[rutaReservas, r.id]">Ver detalle</a>
       </article>
     } @empty { @if (!cargando() && !error()) { <p>No hay reservas para mostrar.</p> } }
     </div></main>`
 })
 export class ReservasListaComponent {
+  readonly rutaReservas = reservasPorRol(inject(AuthService).usuario()?.rol);
   private readonly api = inject(ReservasService);
   readonly gestion = !!inject(ActivatedRoute).snapshot.data['gestion'];
   readonly reservas = signal<Reserva[]>([]);

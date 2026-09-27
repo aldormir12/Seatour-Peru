@@ -1,3 +1,4 @@
+import { inicioPorRol, reservasPorRol } from '../../navigation';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { Component, inject, signal } from '@angular/core';
@@ -10,6 +11,8 @@ import { RutasInteractivas } from '../rutas-interactivas/rutas-interactivas';
   styleUrl: '../../app.css'
 })
 export class Inicio {
+  readonly inicioPorRol = inicioPorRol;
+  readonly reservasPorRol = reservasPorRol;
   readonly auth = inject(AuthService);
   protected readonly title = signal('seatour-frontend-angular');
 

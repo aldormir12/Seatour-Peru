@@ -1,37 +1,52 @@
 package com.seatour.seatour.controller;
 
-import com.seatour.seatour.model.CategoriaTour;
+import com.seatour.seatour.dto.*;
 import com.seatour.seatour.service.CategoriaTourService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/categorias")
 public class CategoriaTourController {
+    private final CategoriaTourService categorias;
 
-    private final CategoriaTourService categoriaTourService;
-
-    public CategoriaTourController(CategoriaTourService categoriaTourService) {
-        this.categoriaTourService = categoriaTourService;
+    public CategoriaTourController(CategoriaTourService categorias) {
+        this.categorias = categorias;
     }
 
-    @GetMapping
-    public ResponseEntity<List<CategoriaTour>> listarCategorias() {
-        return ResponseEntity.ok(categoriaTourService.listarTodos());
+    @GetMapping("/api/categorias")
+    public List<CategoriaTourRespuesta> listarActivas() {
+        return categorias.listarActivas();
     }
 
-    @PostMapping
-    public ResponseEntity<CategoriaTour> registrarCategoria(
-            @Valid @RequestBody CategoriaTour categoriaTour) {
+    @GetMapping("/api/admin/categorias")
+    public List<CategoriaTourRespuesta> listarTodas() {
+        return categorias.listarTodas();
+    }
 
-        CategoriaTour categoriaGuardada = categoriaTourService.guardar(categoriaTour);
+    @PostMapping("/api/admin/categorias")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CategoriaTourRespuesta crear(@Valid @RequestBody CategoriaTourCreacion datos) {
+        return categorias.crear(datos);
+    }
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(categoriaGuardada);
+    @PutMapping("/api/admin/categorias/{id}")
+    public CategoriaTourRespuesta actualizar(@PathVariable Long id,
+            @Valid @RequestBody CategoriaTourActualizacion datos) {
+        return categorias.actualizar(id, datos);
+    }
+
+    @PatchMapping("/api/admin/categorias/{id}/estado")
+    public CategoriaTourRespuesta cambiarEstado(@PathVariable Long id,
+            @Valid @RequestBody CategoriaTourEstado datos) {
+        return categorias.cambiarEstado(id, datos);
+    }
+
+    @DeleteMapping("/api/admin/categorias/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        categorias.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,6 +1,6 @@
 package com.seatour.seatour;
 
-import com.seatour.seatour.dto.UsuarioCreacion;
+import com.seatour.seatour.dto.*;
 import com.seatour.seatour.model.*;
 import com.seatour.seatour.repository.RolRepository;
 import com.seatour.seatour.repository.UsuarioRepository;
@@ -45,6 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@org.springframework.test.context.TestPropertySource(locations = "classpath:application-test.properties")
 @Import(AutorizacionIntegrationTest.EmbarcacionesProbe.class)
 class AutorizacionIntegrationTest {
     @Autowired MockMvc mvc;
@@ -60,7 +61,7 @@ class AutorizacionIntegrationTest {
     private Long usuarioId;
     private static final String TOUR = """
             {"nombre":"Tour","descripcion":"Paseo","duracionMinutos":60,
-             "precioBase":50,"activo":true,"categoriaTour":{"id":1}}
+             "precioBase":50,"activo":true,"categoriaId":1,"imagenUrl":"/api/tours/imagenes/fixture.jpg"}
             """;
 
     // No existe controller de embarcaciones en produccion: prueba solo su regla de acceso.
@@ -102,11 +103,12 @@ class AutorizacionIntegrationTest {
         salida.setHoraSalida(LocalTime.NOON);
         salida.setCuposDisponibles(5);
         salida.setEstado(EstadoSalida.PROGRAMADA);
-        when(tours.listarTodos()).thenReturn(List.of(tour));
-        when(tours.buscarPorId(1L)).thenReturn(Optional.of(tour));
-        when(tours.guardar(any())).thenReturn(tour);
-        when(categorias.listarTodos()).thenReturn(List.of(categoria));
-        when(categorias.guardar(any())).thenReturn(categoria);
+        when(tours.listarTodos()).thenReturn(List.of(TourRespuesta.desde(tour)));
+        when(tours.listarActivos()).thenReturn(List.of(TourRespuesta.desde(tour)));
+        when(tours.crear(any())).thenReturn(TourRespuesta.desde(tour));
+        when(tours.actualizar(eq(1L), any())).thenReturn(TourRespuesta.desde(tour));
+        when(categorias.listarActivas()).thenReturn(List.of(CategoriaTourRespuesta.desde(categoria)));
+        when(categorias.crear(any())).thenReturn(CategoriaTourRespuesta.desde(categoria));
         when(salidas.listarTodas()).thenReturn(List.of(salida));
         when(salidas.buscarPorId(1L)).thenReturn(salida);
         when(salidas.listarPorTour(1L)).thenReturn(List.of(salida));
@@ -166,15 +168,15 @@ class AutorizacionIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"OPERADOR", "ADMIN"})
-    void rolesOperativosGestionanEndpointsExistentes(String rol) throws Exception {
+    void permisosDeGestionRespetanElRol(String rol) throws Exception {
         String auth = token(rol);
-        mvc.perform(post("/api/categorias").header("Authorization", auth).contentType("application/json")
+        mvc.perform(post("/api/admin/categorias").header("Authorization", auth).contentType("application/json")
                         .content("{\"nombre\":\"Categoria\",\"activo\":true}"))
-                .andExpect(status().isCreated());
-        mvc.perform(post("/api/tours").header("Authorization", auth).contentType("application/json").content(TOUR))
-                .andExpect(status().isCreated());
-        mvc.perform(put("/api/tours/1").header("Authorization", auth).contentType("application/json").content(TOUR))
-                .andExpect(status().isOk());
+                .andExpect(status().is("ADMIN".equals(rol) ? 201 : 403));
+        mvc.perform(post("/api/admin/tours").header("Authorization", auth).contentType("application/json").content(TOUR))
+                .andExpect(status().is("ADMIN".equals(rol) ? 201 : 403));
+        mvc.perform(put("/api/admin/tours/1").header("Authorization", auth).contentType("application/json").content(TOUR))
+                .andExpect(status().is("ADMIN".equals(rol) ? 200 : 403));
         String salida = """
                 {"fecha":"%s","horaSalida":"12:00:00","cuposDisponibles":5,
                  "estado":"PROGRAMADA","tourId":1,"embarcacionId":1}
@@ -184,8 +186,9 @@ class AutorizacionIntegrationTest {
         mvc.perform(put("/api/salidas/1").header("Authorization", auth).contentType("application/json").content(salida))
                 .andExpect(status().isOk());
         mvc.perform(delete("/api/salidas/1").header("Authorization", auth)).andExpect(status().isNoContent());
-        verify(categorias).guardar(any());
-        verify(tours, times(2)).guardar(any());
+        verify(categorias, times("ADMIN".equals(rol) ? 1 : 0)).crear(any());
+        verify(tours, times("ADMIN".equals(rol) ? 1 : 0)).crear(any());
+        verify(tours, times("ADMIN".equals(rol) ? 1 : 0)).actualizar(eq(1L), any());
         verify(salidas).crear(any());
         verify(salidas).actualizar(eq(1L), any());
         verify(salidas).eliminar(1L);
@@ -221,20 +224,20 @@ class AutorizacionIntegrationTest {
 
     @Test
     void cambioDeRolRevocaPermisoConElMismoJwt() throws Exception {
-        String auth = token("OPERADOR");
-        mvc.perform(post("/api/tours").header("Authorization", auth).contentType("application/json").content(TOUR))
+        String auth = token("ADMIN");
+        mvc.perform(post("/api/admin/tours").header("Authorization", auth).contentType("application/json").content(TOUR))
                 .andExpect(status().isCreated());
         var usuario = usuarios.findById(usuarioId).orElseThrow();
         usuario.setRol(roles.findByNombre("CLIENTE").orElseThrow());
         usuarios.saveAndFlush(usuario);
-        mvc.perform(post("/api/tours").header("Authorization", auth).contentType("application/json").content(TOUR))
+        mvc.perform(post("/api/admin/tours").header("Authorization", auth).contentType("application/json").content(TOUR))
                 .andExpect(status().isForbidden());
-        verify(tours, times(1)).guardar(any());
+        verify(tours, times(1)).crear(any());
     }
 
     @Test
     void tokenInvalidoSigueSiendo401() throws Exception {
-        mvc.perform(post("/api/tours").header("Authorization", "Bearer invalido")
+        mvc.perform(post("/api/admin/tours").header("Authorization", "Bearer invalido")
                         .contentType("application/json").content(TOUR))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().json("{\"mensaje\":\"No autorizado\"}"));

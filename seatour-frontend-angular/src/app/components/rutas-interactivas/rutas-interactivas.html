@@ -29,14 +29,14 @@
       >
         @if (punto.rol === 'destino') {
           <svg class="destino-marcador" [attr.x]="punto.x - 10" [attr.y]="punto.y - 10"
-            [class.destino-seleccionado]="punto.id === tourSeleccionado.puntoLlegada"
+            [class.destino-seleccionado]="punto.id === recorridoSeleccionado.puntoLlegada"
             width="20" height="20" viewBox="-24 -24 48 48" aria-hidden="true">
             <circle class="destino-halo" r="20" />
             <path class="destino-estrella" d="M0 -18 L4 -4 L18 0 L4 4 L0 18 L-4 4 L-18 0 L-4 -4 Z" />
             <path class="destino-rayos" d="M-10 -10 L10 10 M-10 10 L10 -10" />
             <circle class="destino-nucleo" r="3" />
           </svg>
-          @if (punto.id === tourSeleccionado.puntoLlegada && punto.icono) {
+          @if (punto.id === recorridoSeleccionado.puntoLlegada && punto.icono) {
             <svg class="destino-icono" [attr.data-icono]="punto.icono"
               [attr.x]="punto.x - 22" [attr.y]="punto.y - 58"
               width="44" height="44" viewBox="-8 -12 64 64" aria-hidden="true">
@@ -106,29 +106,38 @@
     </p>
 
     <div class="lista-tours">
-      @for (tour of tours; track tour.id) {
+      @if (cargando()) {
+        <p role="status">Cargando tours...</p>
+      } @else if (errorCarga()) {
+        <p role="alert">{{ errorCarga() }}</p>
+        <button type="button" (click)="cargarToursBackend()">Reintentar</button>
+      } @else if (!tours().length) {
+        <p role="status">No hay tours disponibles por ahora.</p>
+      }
+      @for (tour of tours(); track tour.id) {
         <button
           class="tour-card"
-          [class.activo]="tourSeleccionado.id === tour.id"
+          type="button"
+          [attr.aria-pressed]="seleccionado()?.id === tour.id"
+          [class.activo]="seleccionado()?.id === tour.id"
           (click)="seleccionarTour(tour)"
         >
-          <div class="tour-miniatura">
-            <img [src]="tour.imagen" [alt]="tour.nombre" />
-          </div>
           <div class="tour-info">
             <h3>
               {{ tour.nombre }}
             </h3>
 
             <div class="tour-meta">
-              <span> ◷ {{ tour.duracion }} </span>
+              <span> ◷ {{ formatearDuracion(tour.duracionMinutos) }} </span>
 
-              <span> ⌖ {{ tour.origen }} </span>
+              @if (categorias()[tour.categoriaId]; as categoria) {
+                <span>{{ categoria }}</span>
+              }
             </div>
           </div>
 
           <div class="tour-precio">
-            <strong> S/ {{ tour.precio }} </strong>
+            <strong> S/ {{ tour.precioBase.toFixed(2) }} </strong>
 
             <span class="tour-arrow"> › </span>
           </div>
@@ -138,9 +147,10 @@
   </div>
 
   <!-- TARJETA FLOTANTE -->
+  @if (seleccionado(); as tourSeleccionado) {
   <aside class="tour-detalle">
     <div class="tour-detalle-imagen">
-      <img [src]="tourSeleccionado.imagen" [alt]="tourSeleccionado.nombre" />
+      @if (tourSeleccionado.imagenUrl) { <img [src]="urlImagen(tourSeleccionado.imagenUrl)" [alt]="tourSeleccionado.nombre" /> }
 
       <div class="tour-detalle-gradient"></div>
     </div>
@@ -157,18 +167,21 @@
       </p>
 
       <div class="detalle-meta">
-        <span>◷ {{ tourSeleccionado.duracion }}</span>
-        <span>⌖ {{ tourSeleccionado.origen }}</span>
+        <span>◷ {{ formatearDuracion(tourSeleccionado.duracionMinutos) }}</span>
+        @if (categorias()[tourSeleccionado.categoriaId]; as categoria) {
+          <span>{{ categoria }}</span>
+        }
       </div>
 
       <div class="detalle-footer">
-        <strong> S/ {{ tourSeleccionado.precio }} </strong>
+        <strong> S/ {{ tourSeleccionado.precioBase.toFixed(2) }} </strong>
 
         <a class="reservar-link" routerLink="/app/tours"
-          [queryParams]="toursReservables.has(tourSeleccionado.id) ? { tourId: tourSeleccionado.id } : {}">Ver salidas →</a>
+          [queryParams]="{ tourId: tourSeleccionado.id }">Ver salidas →</a>
       </div>
     </div>
   </aside>
+  }
 
   <div class="oceano-label">OCÉANO PACÍFICO</div>
 

@@ -256,12 +256,15 @@
 
             @if (campo.tipo === 'select') {
               <select [attr.aria-label]="campo.etiqueta">
-                @for (opcion of campo.opciones ?? []; track opcion.value) {
+                @for (opcion of (campo.etiqueta === 'Intereses' ? opcionesIntereses() : campo.opciones ?? []); track opcion.value) {
                   <option [value]="opcion.value" [selected]="opcion.value === campo.valor">
                     {{ opcion.label }}
                   </option>
                 }
               </select>
+              @if (campo.etiqueta === 'Intereses' && errorCategorias()) {
+                <small role="status">{{ errorCategorias() }}</small>
+              }
             }
           </div>
         </label>

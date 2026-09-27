@@ -23,6 +23,17 @@ public class Tour {
     @Column(nullable = false, length = 1000)
     private String descripcion;
 
+    @Column(length = 2048)
+    private String imagenUrl;
+
+    public String getImagenUrl() {
+        return imagenUrl;
+    }
+
+    public void setImagenUrl(String imagenUrl) {
+        this.imagenUrl = imagenUrl == null ? null : imagenUrl.trim();
+    }
+
     @NotNull(message = "La duración es obligatoria")
     @Positive(message = "La duración debe ser mayor a cero")
     @Column(nullable = false)

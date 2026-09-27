@@ -1,5 +1,7 @@
-import { Component, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Tour, Tours } from '../../services/tours';
+import { CategoriasService } from '../../services/categorias.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
 type Coordenadas = [x: number, y: number];
@@ -15,26 +17,10 @@ interface RutaMapa {
   final: ControlesCurva;
 }
 
-interface TourVisual {
-  id: number;
-  nombre: string;
-  duracion: string;
-  origen: string;
-  precio: number;
-  descripcion: string;
-  imagen: string;
-
+interface RecorridoMapa {
   puntoSalida: PuntoMapa['id'];
   puntoLlegada: PuntoMapa['id'];
   ruta: RutaMapa;
-}
-interface TourBackend {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  duracionMinutos: number;
-  precioBase: number;
-  activo: boolean;
 }
 type RolPuntoMapa = 'puerto' | 'interes' | 'destino';
 type IconoDestino = 'ballena' | 'tortuga' | 'pez' | 'arrecife';
@@ -59,22 +45,18 @@ interface PuntoMapa {
 })
 export class RutasInteractivas {
 
-  private http = inject(HttpClient);
-  toursReservables = new Set<number>();
+  private readonly servicio = inject(Tours);
+  private readonly categoriasService = inject(CategoriasService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly tours = signal<Tour[]>([]);
+  readonly seleccionado = signal<Tour | null>(null);
+  readonly cargando = signal(true);
+  readonly errorCarga = signal('');
+  readonly categorias = signal<Record<number, string>>({});
+  urlImagen(ruta: string): string { return this.servicio.urlImagen(ruta); }
 
-  tours: TourVisual[] = [
+  recorridos: RecorridoMapa[] = [
     {
-      id: 1,
-      nombre: 'Avistamiento de ballenas',
-      duracion: '3 horas',
-      origen: 'Máncora',
-      precio: 150,
-
-      descripcion:
-        'Vive la experiencia de observar ballenas jorobadas en las aguas del norte peruano.',
-
-      imagen:
-        '/images/tours/ballena.jpg',
 
       puntoSalida: 'mancora',
       puntoLlegada: 'ballenas',
@@ -89,17 +71,6 @@ export class RutasInteractivas {
     },
 
     {
-      id: 2,
-      nombre: 'Ruta costera',
-      duracion: '4 horas',
-      origen: 'Los Órganos',
-      precio: 220,
-
-      descripcion:
-        'Recorre algunos de los paisajes marítimos más representativos de la costa norte.',
-
-      imagen:
-        '/images/tours/ruta-costera.jpg',
 
       puntoSalida: 'organos',
       puntoLlegada: 'arrecifes',
@@ -112,17 +83,6 @@ export class RutasInteractivas {
     },
 
     {
-      id: 3,
-      nombre: 'Pesca recreativa',
-      duracion: '5 horas',
-      origen: 'Cabo Blanco',
-      precio: 350,
-
-      descripcion:
-        'Una experiencia marítima orientada a la pesca recreativa frente al litoral.',
-
-      imagen:
-        '/images/tours/pesca.jpg',
 
       puntoSalida: 'cabo-blanco',
       puntoLlegada: 'isla-foca',
@@ -134,17 +94,6 @@ export class RutasInteractivas {
       }
     },
     {
-  id: 4,
-  nombre: 'Nado con tortugas',
-  duracion: '3 horas',
-  origen: 'El Ñuro',
-  precio: 180,
-
-  descripcion:
-    'Disfruta una experiencia marítima de observación y nado con tortugas frente a las costas de El Ñuro.',
-
-  imagen:
-    '/images/tours/tortugas.jpg',
 
   puntoSalida: 'nuro',
   puntoLlegada: 'tortugas',
@@ -252,10 +201,10 @@ export class RutasInteractivas {
     }
   ];
 
-  tourSeleccionado = this.tours[0];
+  recorridoSeleccionado = this.recorridos[0];
 
   get rutaSeleccionada(): string {
-    const tour = this.tourSeleccionado;
+    const tour = this.recorridoSeleccionado;
     const salida = this.puntos.find(punto => punto.id === tour.puntoSalida);
     const llegada = this.puntos.find(punto => punto.id === tour.puntoLlegada);
 
@@ -278,37 +227,27 @@ export class RutasInteractivas {
     this.cargarToursBackend();
   }
 cargarToursBackend(): void {
-  this.http
-    .get<TourBackend[]>('http://localhost:8080/api/tours')
-    .subscribe({
-      next: (respuesta) => {
-        this.toursReservables = new Set(respuesta.filter(t => t.activo).map(t => t.id));
-
-        console.log('Tours desde Spring Boot:', respuesta);
-
-        respuesta.forEach((tourBackend) => {
-
-          const tourVisual = this.tours.find(
-            tour => tour.id === tourBackend.id
-          );
-
-          if (tourVisual) {
-            tourVisual.nombre = tourBackend.nombre;
-            tourVisual.descripcion = tourBackend.descripcion;
-            tourVisual.duracion =
-              this.formatearDuracion(tourBackend.duracionMinutos);
-            tourVisual.precio = tourBackend.precioBase;
-          }
-
-        });
-
-        this.tourSeleccionado = this.tours[0];
-      },
-
-      error: (error) => {
-        console.error('Error al cargar tours:', error);
-      }
-    });
+  this.cargando.set(true);
+  this.errorCarga.set('');
+  this.servicio.listarActivos().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    next: tours => {
+      const visibles = tours.filter(tour => tour.activo).slice(0, 4);
+      this.tours.set(visibles);
+      this.seleccionado.set(visibles[0] ?? null);
+      this.recorridoSeleccionado = this.recorridos[0];
+      this.cargando.set(false);
+    },
+    error: () => {
+      this.tours.set([]);
+      this.seleccionado.set(null);
+      this.errorCarga.set('No se pudieron cargar los tours.');
+      this.cargando.set(false);
+    }
+  });
+  this.categoriasService.listarActivas().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    next: categorias => this.categorias.set(Object.fromEntries(categorias.map(c => [c.id, c.nombre]))),
+    error: () => this.categorias.set({})
+  });
 }
 formatearDuracion(minutos: number): string {
   if (minutos % 60 === 0) {
@@ -329,35 +268,40 @@ formatearDuracion(minutos: number): string {
   return `${horas} h ${minutosRestantes} min`;
 }
 
-  seleccionarTour(tour: TourVisual): void {
-    this.tourSeleccionado = tour;
+  seleccionarTour(tour: Tour): void {
+    const indice = this.tours().findIndex(item => item.id === tour.id);
+    if (indice < 0 || !this.recorridos[indice]) return;
+    this.seleccionado.set(tour);
+    // Asociación visual temporal por posición, sin modificar los datos del tour.
+    this.recorridoSeleccionado = this.recorridos[indice];
   }
 
   seleccionarPunto(punto: PuntoMapa): void {
-    const utilizaPunto = (tour: TourVisual) =>
+    const utilizaPunto = (tour: RecorridoMapa) =>
       tour.puntoSalida === punto.id || tour.puntoLlegada === punto.id ||
       (punto.rol === 'interes' && (tour.ruta.puntosInteres?.includes(punto.id) ?? false));
 
     // Un punto compartido no debe cambiar un tour que ya lo utiliza.
-    const tour = utilizaPunto(this.tourSeleccionado)
-      ? this.tourSeleccionado
-      : this.tours.find(utilizaPunto);
+    const tour = utilizaPunto(this.recorridoSeleccionado)
+      ? this.recorridoSeleccionado
+      : this.recorridos.find(utilizaPunto);
 
     if (tour) {
-      this.seleccionarTour(tour);
+      this.recorridoSeleccionado = tour;
+      this.seleccionado.set(this.tours()[this.recorridos.indexOf(tour)] ?? null);
     }
   }
 
   puntoEstaActivo(punto: PuntoMapa): boolean {
     return (
       punto.rol === 'puerto' &&
-      (punto.id === this.tourSeleccionado.puntoSalida ||
-        punto.id === this.tourSeleccionado.puntoLlegada)
+      (punto.id === this.recorridoSeleccionado.puntoSalida ||
+        punto.id === this.recorridoSeleccionado.puntoLlegada)
     );
   }
 
   puntoEstaVisible(punto: PuntoMapa): boolean {
     return punto.rol !== 'interes' ||
-      (this.tourSeleccionado.ruta.puntosInteres?.includes(punto.id) ?? false);
+      (this.recorridoSeleccionado.ruta.puntosInteres?.includes(punto.id) ?? false);
   }
 }

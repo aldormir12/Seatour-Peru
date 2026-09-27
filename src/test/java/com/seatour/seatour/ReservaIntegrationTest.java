@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@org.springframework.test.context.TestPropertySource(locations = "classpath:application-test.properties")
 class ReservaIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;

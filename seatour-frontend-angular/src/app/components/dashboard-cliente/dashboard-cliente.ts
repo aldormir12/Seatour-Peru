@@ -6,6 +6,7 @@ import { OceanService, CondicionesOpenMeteo, estadoClima } from '../../services/
 import { ZONAS_MARITIMAS, ZONA_STORAGE_KEY, ZonaMaritima } from './zonas-maritimas';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { CategoriasService } from '../../services/categorias.service';
 
 interface FeatureItem {
   titulo: string;
@@ -47,6 +48,11 @@ interface CondicionActual {
 })
 export class DashboardClienteComponent {
   private readonly auth = inject(AuthService);
+  private readonly categorias = inject(CategoriasService);
+  readonly opcionesIntereses = signal<{ label: string; value: string }[]>([
+    { label: 'Todos', value: '' }
+  ]);
+  readonly errorCategorias = signal('');
 
   readonly usuario = computed(() => this.auth.usuario());
 
@@ -105,12 +111,6 @@ export class DashboardClienteComponent {
       etiqueta: 'Intereses',
       tipo: 'select',
       valor: '',
-      opciones: [
-        { label: 'Todos', value: '' },
-        { label: 'Fauna marina', value: 'fauna' },
-        { label: 'Aventura', value: 'aventura' },
-        { label: 'Relajación', value: 'relajacion' }
-      ]
     }
   ];
 
@@ -125,6 +125,17 @@ export class DashboardClienteComponent {
 
   constructor() {
     if (!this.navegador) return;
+    this.categorias.listarActivas().pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: categorias => this.opcionesIntereses.set([
+        { label: 'Todos', value: '' },
+        ...categorias.filter(categoria => categoria.activo).map(categoria => ({
+          label: categoria.nombre, value: String(categoria.id)
+        }))
+      ]),
+      error: () => this.errorCategorias.set('No se pudieron cargar los intereses.')
+    });
     this.cambiosZona.pipe(
       tap(() => {
         this.cargando.set(true);

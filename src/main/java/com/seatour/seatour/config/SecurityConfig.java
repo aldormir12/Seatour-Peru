@@ -71,11 +71,13 @@ public class SecurityConfig {
                                 "/api/usuarios/**")
                         .hasRole("ADMIN")
 
-                        // Gestion operativa: cualquier metodo distinto de las consultas anteriores.
-                        .requestMatchers(
-                                "/api/tours/**",
-                                "/api/categorias/**")
-                        .hasAnyRole("OPERADOR", "ADMIN")
+                        .requestMatchers("/api/admin/categorias", "/api/admin/categorias/**",
+                                "/api/categorias", "/api/categorias/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers("/api/admin/tours", "/api/admin/tours/**",
+                                "/api/tours", "/api/tours/**")
+                        .hasRole("ADMIN")
 
                         // Gestion de salidas programadas.
                         .requestMatchers(

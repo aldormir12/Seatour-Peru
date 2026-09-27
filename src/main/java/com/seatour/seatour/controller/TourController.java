@@ -1,6 +1,6 @@
 package com.seatour.seatour.controller;
 
-import com.seatour.seatour.model.Tour;
+import com.seatour.seatour.dto.*;
 import com.seatour.seatour.service.TourService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -10,42 +10,42 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/tours")
 public class TourController {
+    private final TourService tours;
 
-    private final TourService tourService;
-
-    public TourController(TourService tourService) {
-        this.tourService = tourService;
+    public TourController(TourService tours) {
+        this.tours = tours;
     }
 
-    @GetMapping
-    public ResponseEntity<List<Tour>> listarTours() {
-        return ResponseEntity.ok(tourService.listarTodos());
+    @GetMapping("/api/tours")
+    public List<TourRespuesta> listarActivos() {
+        return tours.listarActivos();
     }
 
-    @PostMapping
-    public ResponseEntity<Tour> registrarTour(@Valid @RequestBody Tour tour) {
-        Tour tourGuardado = tourService.guardar(tour);
-        return ResponseEntity.status(HttpStatus.CREATED).body(tourGuardado);
+    @GetMapping("/api/admin/tours")
+    public List<TourRespuesta> listarTodos() {
+        return tours.listarTodos();
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Tour> actualizar(
-            @PathVariable Long id,
-            @Valid @RequestBody Tour tour) {
+    @PostMapping("/api/admin/tours")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TourRespuesta crear(@Valid @RequestBody TourCreacion datos) {
+        return tours.crear(datos);
+    }
 
-        Tour existente = tourService.buscarPorId(id)
-                .orElseThrow(() -> new RuntimeException("Tour no encontrado"));
-        existente.setNombre(tour.getNombre());
-        existente.setDescripcion(tour.getDescripcion());
-        existente.setDuracionMinutos(tour.getDuracionMinutos());
-        existente.setPrecioBase(tour.getPrecioBase());
-        existente.setActivo(tour.getActivo());
-        existente.setCategoriaTour(tour.getCategoriaTour());
+    @PutMapping("/api/admin/tours/{id}")
+    public TourRespuesta actualizar(@PathVariable Long id, @Valid @RequestBody TourActualizacion datos) {
+        return tours.actualizar(id, datos);
+    }
 
-        Tour actualizado = tourService.guardar(existente);
+    @PatchMapping("/api/admin/tours/{id}/estado")
+    public TourRespuesta cambiarEstado(@PathVariable Long id, @Valid @RequestBody TourEstado datos) {
+        return tours.cambiarEstado(id, datos);
+    }
 
-        return ResponseEntity.ok(actualizado);
+    @DeleteMapping("/api/admin/tours/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        tours.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 }

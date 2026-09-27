@@ -245,16 +245,16 @@
 
   gap: 9px;
 
-  margin-top: 30px;
+  margin-top: 20px;
 
   width: 380px;
 }
 
 .tour-card {
   width: 100%;
-  min-height: 72px;
+  min-height: 64px;
 
-  padding: 14px 16px;
+  padding: 10px 12px;
 
   display: flex;
   align-items: center;
@@ -295,8 +295,16 @@
   box-shadow: 0 0 25px rgba(0, 179, 220, 0.12);
 }
 
+.tour-info {
+  min-width: 0;
+  flex: 1;
+}
+
 .tour-info h3 {
-  margin: 0 0 9px;
+  margin: 0 0 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   color: white;
 
@@ -306,8 +314,9 @@
 
 .tour-meta {
   display: flex;
+  flex-wrap: wrap;
 
-  gap: 18px;
+  gap: 3px 10px;
 
   color: rgba(200, 225, 234, 0.66);
 

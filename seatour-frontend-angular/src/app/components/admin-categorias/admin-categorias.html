@@ -1,0 +1,323 @@
+<div class="mx-auto max-w-7xl">
+  <!-- CABECERA -->
+  <div class="mb-6 flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold tracking-tight text-slate-900">Categorías</h2>
+
+      <p class="mt-1 text-sm text-slate-500">Organiza las experiencias disponibles en SeaTour.</p>
+    </div>
+
+    <button
+      type="button"
+      (click)="nueva()"
+      class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+    >
+      <svg
+        class="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+
+      Nueva categoría
+    </button>
+  </div>
+
+  <!-- BARRA SUPERIOR -->
+  <div class="mb-4 flex items-center rounded-xl border border-slate-200 bg-white px-4 shadow-sm">
+    <svg
+      class="h-5 w-5 shrink-0 text-slate-400"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </svg>
+
+    <input
+      type="search"
+      placeholder="Buscar categoría..."
+      class="w-full border-0 bg-transparent px-3 py-3 text-sm text-slate-700 outline-none placeholder:text-slate-400"
+      [ngModel]="busqueda()"
+      (ngModelChange)="busqueda.set($event)"
+    />
+  </div>
+
+  <!-- TABLA -->
+  <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    @if (cargando()) {
+      <div class="flex min-h-52 items-center justify-center text-sm text-slate-500">
+        Cargando categorías...
+      </div>
+    } @else if (categoriasFiltradas().length === 0) {
+      <div class="flex min-h-52 flex-col items-center justify-center px-6 text-center">
+        <div
+          class="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M4 7h16M6 12h12M8 17h8" />
+          </svg>
+        </div>
+
+        <p class="font-semibold text-slate-700">No hay categorías</p>
+
+        <p class="mt-1 text-sm text-slate-500">
+          Crea la primera categoría para empezar a organizar tus tours.
+        </p>
+      </div>
+    } @else {
+      <table class="w-full border-collapse">
+        <thead class="bg-slate-50">
+          <tr
+            class="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
+          >
+            <th class="px-5 py-3">Categoría</th>
+
+            <th class="px-5 py-3">Descripción</th>
+
+            <th class="px-5 py-3">Estado</th>
+
+            <th class="px-5 py-3 text-right">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100">
+          @for (categoria of categoriasFiltradas(); track categoria.id) {
+            <tr class="transition hover:bg-slate-50/70">
+              <td class="px-5 py-4">
+                <div class="font-semibold text-slate-800">
+                  {{ categoria.nombre }}
+                </div>
+              </td>
+
+              <td class="max-w-md px-5 py-4 text-sm text-slate-500">
+                {{ categoria.descripcion || 'Sin descripción' }}
+              </td>
+
+              <td class="px-5 py-4">
+                @if (categoria.activo) {
+                  <span
+                    class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                  >
+                    Activa
+                  </span>
+                } @else {
+                  <span
+                    class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500"
+                  >
+                    Inactiva
+                  </span>
+                }
+              </td>
+
+              <td class="px-5 py-4">
+                <div class="flex items-center justify-end gap-1">
+                  <!-- EDITAR -->
+                  <button
+                    type="button"
+                    (click)="editar(categoria)"
+                    aria-label="Editar categoría"
+                    class="rounded-lg p-2 text-slate-500 transition hover:bg-sky-50 hover:text-sky-700"
+                  >
+                    <svg
+                      class="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    >
+                      <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
+                      <path d="m13 7 4 4" />
+                    </svg>
+                  </button>
+
+                  <!-- ACTIVAR / DESACTIVAR -->
+                  <button
+                    type="button"
+                    (click)="cambiarEstado(categoria)"
+                    [attr.aria-label]="
+                      categoria.activo ? 'Desactivar categoría' : 'Activar categoría'
+                    "
+                    class="rounded-lg p-2 text-slate-500 transition hover:bg-amber-50 hover:text-amber-700"
+                  >
+                    <svg
+                      class="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    >
+                      <path d="M12 2v10" />
+                      <path d="M6.3 5.3a8 8 0 1 0 11.4 0" />
+                    </svg>
+                  </button>
+
+                  <!-- ELIMINAR -->
+                  <button
+                    type="button"
+                    (click)="eliminar(categoria)"
+                    aria-label="Eliminar categoría"
+                    class="rounded-lg p-2 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                  >
+                    <svg
+                      class="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    >
+                      <path d="M4 7h16" />
+                      <path d="M9 7V4h6v3" />
+                      <path d="M7 7l1 13h8l1-13" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>
+
+<!-- MODAL -->
+@if (modalAbierto()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+    (click)="cerrarModal()"
+  >
+    <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">
+            {{ categoriaEditando() ? 'Editar categoría' : 'Nueva categoría' }}
+          </h3>
+
+          <p class="mt-1 text-sm text-slate-500">
+            {{
+              categoriaEditando()
+                ? 'Actualiza la información de la categoría.'
+                : 'Crea una nueva categoría para tus experiencias.'
+            }}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="cerrarModal()"
+          class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          aria-label="Cerrar"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-5 px-6 py-5">
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700"> Nombre </span>
+
+          <input
+            type="text"
+            [(ngModel)]="nombre"
+            required
+            spellcheck="true"
+            autocorrect="off"
+            autocapitalize="none"
+            aria-describedby="nombre-ayuda"
+            [attr.aria-invalid]="!!errorNombre"
+            placeholder="Ej. Fauna marina"
+            class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+          />
+          <div id="nombre-ayuda" class="mt-1 text-xs text-slate-500">
+            <span>{{ nombreNormalizado.length }}/255 caracteres · mínimo 2; espacios normalizados.</span>
+            @if (errorNombre) {
+              <p class="mt-1 text-red-600" role="status">{{ errorNombre }}</p>
+            }
+          </div>
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700"> Descripción </span>
+
+          <textarea
+            [(ngModel)]="descripcion"
+            spellcheck="true"
+            autocorrect="off"
+            aria-describedby="descripcion-ayuda"
+            [attr.aria-invalid]="!!errorDescripcion"
+            rows="4"
+            placeholder="Describe qué tipo de experiencias pertenecen a esta categoría..."
+            class="w-full resize-none rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+          ></textarea>
+          <div id="descripcion-ayuda" class="mt-1 text-xs text-slate-500">
+            <span>{{ descripcionNormalizada.length }}/255 caracteres</span>
+            @if (errorDescripcion) {
+              <p class="mt-1 text-red-600" role="status">{{ errorDescripcion }}</p>
+            }
+          </div>
+        </label>
+
+        @if (!categoriaEditando()) {
+          <label
+            class="flex cursor-pointer items-center justify-between rounded-lg border border-slate-200 px-4 py-3"
+          >
+            <div>
+              <div class="text-sm font-semibold text-slate-700">Categoría activa</div>
+
+              <div class="mt-0.5 text-xs text-slate-500">Estará disponible para nuevos tours.</div>
+            </div>
+
+            <input type="checkbox" [(ngModel)]="activo" class="h-4 w-4 accent-sky-600" />
+          </label>
+        }
+
+        @if (error()) {
+          <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ error() }}
+          </div>
+        }
+      </div>
+
+      <div class="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+        <button
+          type="button"
+          (click)="cerrarModal()"
+          class="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          (click)="guardar()"
+          [disabled]="guardando() || formularioInvalido"
+          class="rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {{ guardando() ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

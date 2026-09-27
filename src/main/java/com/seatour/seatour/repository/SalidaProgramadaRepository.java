@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface SalidaProgramadaRepository extends JpaRepository<SalidaProgramada, Long> {
+    boolean existsByTour_Id(Long tourId);
 
     @Override
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion"})

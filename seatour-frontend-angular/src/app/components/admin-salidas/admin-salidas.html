@@ -1,0 +1,972 @@
+<section class="min-h-full min-w-0 max-w-full bg-slate-50 px-5 py-6 lg:px-8">
+  <!-- Encabezado -->
+  <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <p class="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+        Operación marítima
+      </p>
+
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        Salidas programadas
+      </h1>
+
+      <p class="mt-1 max-w-2xl text-sm text-slate-500">
+        Programa y controla las salidas de los tours, embarcaciones, horarios y cupos disponibles.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      (click)="abrirCrear()"
+      class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-100"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        class="h-4 w-4"
+        aria-hidden="true"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+      </svg>
+
+      Nueva salida
+    </button>
+  </div>
+
+  <!-- Métricas -->
+  <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Total</p>
+
+      <p class="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+        {{ total() }}
+      </p>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Programadas</p>
+
+      <p class="mt-2 text-3xl font-bold tracking-tight text-sky-700">
+        {{ programadas() }}
+      </p>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">En curso</p>
+
+      <p class="mt-2 text-3xl font-bold tracking-tight text-amber-600">
+        {{ enCurso() }}
+      </p>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Completadas</p>
+
+      <p class="mt-2 text-3xl font-bold tracking-tight text-emerald-600">
+        {{ completadas() }}
+      </p>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Canceladas</p>
+
+      <p class="mt-2 text-3xl font-bold tracking-tight text-red-600">
+        {{ canceladas() }}
+      </p>
+    </article>
+  </div>
+
+  <!-- Panel principal -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex gap-2 border-b border-slate-200 p-4" role="group" aria-label="Vista de salidas">
+      <button type="button" (click)="cambiarVista('ACTIVAS')"
+        [attr.aria-pressed]="vista() === 'ACTIVAS'"
+        class="rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-sky-100"
+        [ngClass]="vista() === 'ACTIVAS' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
+        Activas
+      </button>
+      <button type="button" (click)="cambiarVista('HISTORIAL')"
+        [attr.aria-pressed]="vista() === 'HISTORIAL'"
+        class="rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-sky-100"
+        [ngClass]="vista() === 'HISTORIAL' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
+        Historial
+      </button>
+    </div>
+    <!-- Filtros -->
+    <div class="border-b border-slate-200 p-4 sm:p-5">
+      <div class="salidas-filtros grid min-w-0 gap-3">
+        <!-- Buscar -->
+        <div class="relative">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path stroke-linecap="round" d="m20 20-3.5-3.5" />
+          </svg>
+
+          <input
+            type="search"
+            [ngModel]="busqueda()"
+            (ngModelChange)="cambiarBusqueda($event)"
+            placeholder="Buscar por tour o embarcación"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
+          />
+        </div>
+
+        <!-- Estado -->
+        <select
+          [ngModel]="filtroEstado()"
+          (ngModelChange)="cambiarFiltroEstado($event)"
+          class="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
+        >
+          <option value="TODOS">Todos los estados</option>
+
+          @if (vista() === 'ACTIVAS') {
+            <option value="PROGRAMADA">Programadas</option>
+            <option value="EN_CURSO">En curso</option>
+          } @else {
+            <option value="COMPLETADA">Completadas</option>
+            <option value="CANCELADA">Canceladas</option>
+          }
+        </select>
+
+        <!-- Tour -->
+        <select
+          [ngModel]="filtroTour() ?? ''"
+          (ngModelChange)="cambiarFiltroTour($event)"
+          class="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
+        >
+          <option value="">Todos los tours</option>
+
+          @for (tour of tours(); track tour.id) {
+            <option [value]="tour.id">
+              {{ tour.nombre }}
+            </option>
+          }
+        </select>
+
+        <!-- Embarcación -->
+        <select
+          [ngModel]="filtroEmbarcacion() ?? ''"
+          (ngModelChange)="cambiarFiltroEmbarcacion($event)"
+          class="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
+        >
+          <option value="">Todas las embarcaciones</option>
+
+          @for (embarcacion of embarcaciones(); track embarcacion.id) {
+            <option [value]="embarcacion.id">
+              {{ embarcacion.nombre }}
+            </option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- Cargando -->
+    @if (cargando()) {
+      <div class="flex min-h-72 flex-col items-center justify-center gap-3 p-8">
+        <div
+          class="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-sky-600"
+        ></div>
+
+        <p class="text-sm text-slate-500">Cargando salidas...</p>
+      </div>
+    } @else {
+      @if (salidasFiltradas().length === 0) {
+        <div class="flex min-h-72 flex-col items-center justify-center px-6 py-12 text-center">
+          <div
+            class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              class="h-7 w-7"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M5 19h14M7 17V8h10v9M9 8V5h6v3M4 12h16"
+              />
+            </svg>
+          </div>
+
+          <h3 class="text-base font-semibold text-slate-800">No hay salidas para mostrar</h3>
+
+          <p class="mt-1 max-w-md text-sm text-slate-500">
+            Ajusta los filtros o programa una nueva salida.
+          </p>
+        </div>
+      } @else {
+        <!-- Tabla escritorio -->
+        <div class="salidas-tabla min-w-0 max-w-full">
+          <table class="w-full table-fixed">
+            <colgroup>
+              <col style="width: 18%" />
+              <col style="width: 16%" />
+              <col style="width: 11%" />
+              <col style="width: 7%" />
+              <col style="width: 6%" />
+              <col style="width: 10%" />
+              <col style="width: 13%" />
+              <col style="width: 19%" />
+            </colgroup>
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50/70 text-left">
+                <th
+                  class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Tour
+                </th>
+
+                <th
+                  class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Embarcación
+                </th>
+
+                <th
+                  class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Fecha
+                </th>
+
+                <th
+                  class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Hora
+                </th>
+
+                <th
+                  class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Cupos
+                </th>
+
+                <th
+                  class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Precio
+                </th>
+
+                <th
+                  class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Estado
+                </th>
+
+                <th
+                  class="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+              @for (salida of salidasFiltradas(); track salida.id) {
+                <tr class="transition hover:bg-slate-50/80">
+                  <!-- Tour -->
+                  <td class="px-5 py-4">
+                    <div>
+                      <p class="truncate font-semibold text-slate-900" [title]="salida.tourNombre">
+                        {{ salida.tourNombre }}
+                      </p>
+
+                      <p class="mt-0.5 text-xs text-slate-400">Salida #{{ salida.id }}</p>
+                    </div>
+                  </td>
+
+                  <!-- Embarcación -->
+                  <td class="px-5 py-4">
+                    <div class="flex min-w-0 items-center gap-2 text-sm text-slate-600">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        class="h-4 w-4 shrink-0 text-sky-600"
+                        aria-hidden="true"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M3 17l2.3 2.3A2.4 2.4 0 0 0 7 20h10
+                             a2.4 2.4 0 0 0 1.7-.7L21 17M4 15h16
+                             l-2-7H6l-2 7Zm5-7V5h6v3"
+                        />
+                      </svg>
+
+                      <span class="min-w-0 truncate" [title]="salida.embarcacionNombre">{{ salida.embarcacionNombre }}</span>
+                    </div>
+                  </td>
+
+                  <!-- Fecha -->
+                  <td class="px-5 py-4 text-sm font-medium text-slate-700">
+                    {{ formatearFecha(salida.fecha) }}
+                  </td>
+
+                  <!-- Hora -->
+                  <td class="px-5 py-4 text-sm text-slate-600">
+                    {{ formatearHora(salida.horaSalida) }}
+                  </td>
+
+                  <!-- Cupos -->
+                  <td class="px-5 py-4">
+                    <span
+                      class="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+                    >
+                      {{ salida.cuposDisponibles }}
+                    </span>
+                  </td>
+
+                  <!-- Precio -->
+                  <td class="px-5 py-4 text-sm font-semibold text-slate-700">
+                    S/ {{ salida.precioPorPasajero | number: '1.2-2' }}
+                  </td>
+
+                  <!-- Estado -->
+                  <td class="px-5 py-4">
+                    @switch (salida.estado) {
+                      @case ('PROGRAMADA') {
+                        <span
+                          class="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700"
+                        >
+                          <span class="h-1.5 w-1.5 rounded-full bg-sky-500"></span>
+                          Programada
+                        </span>
+                      }
+
+                      @case ('EN_CURSO') {
+                        <span
+                          class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                        >
+                          <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                          En curso
+                        </span>
+                      }
+
+                      @case ('COMPLETADA') {
+                        <span
+                          class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                        >
+                          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                          Completada
+                        </span>
+                      }
+
+                      @case ('CANCELADA') {
+                        <span
+                          class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700"
+                        >
+                          <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                          Cancelada
+                        </span>
+                      }
+                    }
+                  </td>
+
+                  <!-- Acciones -->
+                  <td class="px-5 py-4">
+                    <div class="salidas-acciones flex flex-wrap items-center justify-end gap-1">
+                      @if (puedeEditar(salida)) {
+                        <button type="button" (click)="abrirCambioEmbarcacion(salida)"
+                          title="Cambiar embarcación" aria-label="Cambiar embarcación"
+                          class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-sky-50 hover:text-sky-700">
+                          <span aria-hidden="true">⇄</span>
+                        </button>
+                      }
+                      @if (puedeEditar(salida)) {
+                        <button
+                          type="button"
+                          (click)="abrirEditar(salida)"
+                          title="Editar"
+                          class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-sky-50 hover:text-sky-700"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            class="h-4 w-4"
+                            aria-hidden="true"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M13.5 6.5 17.5 10.5M4 20l4.5-1
+                                 10-10a2.8 2.8 0 0 0-4-4l-10 10L4 20Z"
+                            />
+                          </svg>
+                        </button>
+                      }
+
+
+                      @if (puedeCompletar(salida)) {
+                        <button
+                          type="button"
+                          (click)="completar(salida)"
+                          title="Completar salida"
+                          class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            class="h-4 w-4"
+                            aria-hidden="true"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="m5 12 4 4L19 6"
+                            />
+                          </svg>
+                        </button>
+                      }
+
+                      @if (puedeCancelar(salida)) {
+                        <button
+                          type="button"
+                          (click)="cancelar(salida)"
+                          title="Cancelar salida"
+                          class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            class="h-4 w-4"
+                            aria-hidden="true"
+                          >
+                            <circle cx="12" cy="12" r="9" />
+                            <path stroke-linecap="round" d="m9 9 6 6m0-6-6 6" />
+                          </svg>
+                        </button>
+                      }
+
+                      <button
+                        type="button"
+                        (click)="eliminar(salida)"
+                        title="Eliminar"
+                        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          class="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13
+                               M10 11v5m4-5v5"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Cards móvil/tablet -->
+        <div class="salidas-tarjetas grid min-w-0 gap-4 p-4">
+          @for (salida of salidasFiltradas(); track salida.id) {
+            <article class="min-w-0 rounded-2xl border border-slate-200 bg-white p-5">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0 flex-1">
+                  <h3 class="truncate font-semibold text-slate-900" [title]="salida.tourNombre">
+                    {{ salida.tourNombre }}
+                  </h3>
+
+                  <p class="mt-1 truncate text-sm text-slate-500" [title]="salida.embarcacionNombre">
+                    {{ salida.embarcacionNombre }}
+                  </p>
+                </div>
+
+                <span
+                  class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                >
+                  {{ etiquetaEstado(salida.estado) }}
+                </span>
+              </div>
+
+              @if (salida.pasajerosReservados > 0) {
+                <span
+                  class="mt-3 inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700"
+                >
+                  Con reservas activas
+                </span>
+              }
+
+              <div class="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4">
+                <div>
+                  <p class="text-xs text-slate-400">Fecha</p>
+
+                  <p class="mt-1 text-sm font-semibold text-slate-700">
+                    {{ formatearFecha(salida.fecha) }}
+                  </p>
+                </div>
+
+                <div>
+                  <p class="text-xs text-slate-400">Hora</p>
+
+                  <p class="mt-1 text-sm font-semibold text-slate-700">
+                    {{ formatearHora(salida.horaSalida) }}
+                  </p>
+                </div>
+
+                <div>
+                  <p class="text-xs text-slate-400">Cupos</p>
+
+                  <p class="mt-1 text-sm font-semibold text-slate-700">
+                    {{ salida.cuposDisponibles }}
+                  </p>
+                </div>
+
+                <div>
+                  <p class="text-xs text-slate-400">Precio</p>
+
+                  <p class="mt-1 text-sm font-semibold text-slate-700">
+                    S/ {{ salida.precioPorPasajero | number: '1.2-2' }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="mt-4 flex flex-wrap gap-2">
+                @if (puedeEditar(salida)) {
+                  <button type="button" (click)="abrirCambioEmbarcacion(salida)"
+                    class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+                    Cambiar embarcación
+                  </button>
+                }
+                @if (puedeEditar(salida)) {
+                  <button
+                    type="button"
+                    (click)="abrirEditar(salida)"
+                    class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Editar
+                  </button>
+                }
+
+
+                @if (puedeCompletar(salida)) {
+                  <button
+                    type="button"
+                    (click)="completar(salida)"
+                    class="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                  >
+                    Completar
+                  </button>
+                }
+
+                @if (puedeCancelar(salida)) {
+                  <button
+                    type="button"
+                    (click)="cancelar(salida)"
+                    class="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                  >
+                    Cancelar
+                  </button>
+                }
+
+                <button
+                  type="button"
+                  (click)="eliminar(salida)"
+                  class="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Modal -->
+  @if (salidaCancelacion(); as salida) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+      (mousedown)="cerrarCancelacion()">
+      <div role="dialog" aria-modal="true" aria-labelledby="titulo-cancelacion-salida"
+        class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+        (mousedown)="$event.stopPropagation()">
+        <h2 id="titulo-cancelacion-salida" class="text-xl font-bold text-slate-900">Cancelar salida</h2>
+        <p class="mt-2 text-sm text-slate-500">
+          La salida de {{ salida.tourNombre }} tiene reservas activas para {{ salida.pasajerosReservados }} pasajeros.
+          Sus reservas también serán canceladas.
+        </p>
+        <form class="mt-5 space-y-4" (ngSubmit)="confirmarCancelacion()">
+          <div>
+            <label for="motivo-cancelacion-salida" class="mb-2 block text-sm font-semibold text-slate-700">Motivo obligatorio</label>
+            <select id="motivo-cancelacion-salida" name="motivoCancelacion" [(ngModel)]="motivoCancelacion"
+              required [disabled]="cancelando()"
+              class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+              <option value="" disabled>Selecciona un motivo</option>
+              @for (motivo of motivosCancelacion; track motivo.valor) {
+                <option [value]="motivo.valor">{{ motivo.nombre }}</option>
+              }
+            </select>
+          </div>
+          @if (errorCancelacion()) {
+            <p role="alert" class="text-sm text-red-600">{{ errorCancelacion() }}</p>
+          }
+          <div class="flex flex-wrap justify-end gap-3">
+            <button type="button" (click)="cerrarCancelacion()" [disabled]="cancelando()"
+              class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold">Volver</button>
+            <button type="submit" [disabled]="cancelando() || !motivoCancelacionValido()"
+              class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+              {{ cancelando() ? 'Cancelando...' : 'Cancelar salida' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  @if (salidaCambioEmbarcacion(); as salida) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+      (mousedown)="cerrarCambioEmbarcacion()">
+      <div role="dialog" aria-modal="true" aria-labelledby="titulo-cambio-embarcacion"
+        class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+        (mousedown)="$event.stopPropagation()">
+        <h2 id="titulo-cambio-embarcacion" class="text-xl font-bold text-slate-900">Cambiar embarcación</h2>
+        <p class="mt-2 text-sm text-slate-500">Actual: {{ salida.embarcacionNombre }}. Pasajeros reservados: {{ salida.pasajerosReservados }}.</p>
+        <form class="mt-5 space-y-4" (ngSubmit)="guardarCambioEmbarcacion()">
+          <div>
+            <label for="nueva-embarcacion" class="mb-2 block text-sm font-semibold text-slate-700">Nueva embarcación activa</label>
+            <select id="nueva-embarcacion" name="nuevaEmbarcacion" [(ngModel)]="nuevaEmbarcacionId" required
+              class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+              <option [ngValue]="null">Selecciona una embarcación</option>
+              @for (embarcacion of embarcaciones(); track embarcacion.id) {
+                @if (embarcacion.id !== salida.embarcacionId) {
+                  <option [ngValue]="embarcacion.id">{{ embarcacion.nombre }} · {{ embarcacion.capacidad }} pasajeros</option>
+                }
+              }
+            </select>
+          </div>
+          <div>
+            <label for="motivo-cambio-embarcacion" class="mb-2 block text-sm font-semibold text-slate-700">Motivo obligatorio</label>
+            <select id="motivo-cambio-embarcacion" name="motivoCambio" [(ngModel)]="motivoCambioEmbarcacion" required
+              class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+              <option value="" disabled>Selecciona un motivo</option>
+              @for (motivo of motivosCambioEmbarcacion; track motivo.valor) {
+                <option [value]="motivo.valor">{{ motivo.nombre }}</option>
+              }
+            </select>
+          </div>
+          @if (cuposCambioEmbarcacion() !== null) {
+            <p class="text-sm text-slate-600">Cupos disponibles tras el cambio: {{ cuposCambioEmbarcacion() }}.</p>
+          }
+          <p class="text-xs text-slate-500">Se conservan el tour, la fecha, la hora y todas las reservas.</p>
+          @if (errorCambioEmbarcacion()) {
+            <p role="alert" class="text-sm text-red-600">{{ errorCambioEmbarcacion() }}</p>
+          }
+          <div class="flex flex-wrap justify-end gap-3">
+            <button type="button" (click)="cerrarCambioEmbarcacion()" [disabled]="guardando()"
+              class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold">Volver</button>
+            <button type="submit" [disabled]="guardando()"
+              class="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              {{ guardando() ? 'Guardando...' : 'Cambiar embarcación' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  @if (modalAbierto()) {
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+      (mousedown)="cerrarModal()"
+    >
+      <div
+        class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
+        (mousedown)="$event.stopPropagation()"
+      >
+        <!-- Cabecera -->
+        <div
+          class="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-6 py-5 sm:px-7"
+        >
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.15em] text-sky-600">
+              Operación marítima
+            </p>
+
+            <h2 class="mt-1 text-xl font-bold text-slate-900">
+              {{ modoEdicion() ? 'Editar salida' : 'Programar salida' }}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            (click)="cerrarModal()"
+            [disabled]="guardando()"
+            class="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+
+        <form class="p-6 sm:p-7" (ngSubmit)="guardar()">
+          <div class="grid gap-5 sm:grid-cols-2">
+            <!-- Tour -->
+            <div class="sm:col-span-2">
+              <label for="salida-tour" class="mb-2 block text-sm font-semibold text-slate-700">
+                Tour
+              </label>
+
+              <select
+                id="salida-tour"
+                name="tourId"
+                [disabled]="modoEdicion() && !!salidaSeleccionada()?.tieneReservas"
+                [(ngModel)]="formulario.tourId"
+                class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
+              >
+                <option [ngValue]="null">Selecciona un tour</option>
+
+                @for (tour of tours(); track tour.id) {
+                  <option [ngValue]="tour.id">
+                    {{ tour.nombre }}
+                  </option>
+                }
+              </select>
+
+              @if (tourSeleccionado(); as tour) {
+                <p class="mt-2 text-xs text-slate-400">
+                  Duración: {{ tour.duracionMinutos }} min · Precio base: S/
+                  {{ tour.precioBase | number: '1.2-2' }}
+                </p>
+              }
+            </div>
+
+            <!-- Embarcación -->
+            <div class="sm:col-span-2">
+              <label
+                for="salida-embarcacion"
+                class="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Embarcación
+              </label>
+
+              @if (modoEdicion()) {
+                <input
+                  id="salida-embarcacion"
+                  type="text"
+                  [value]="salidaSeleccionada()?.embarcacionNombre ?? ''"
+                  readonly
+                  class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-700"
+                />
+                <p class="mt-2 text-xs text-slate-400">Para sustituirla, utiliza la acción Cambiar embarcación.</p>
+              } @else {
+              <select
+                id="salida-embarcacion"
+                name="embarcacionId"
+                [(ngModel)]="formulario.embarcacionId"
+                (ngModelChange)="actualizarCuposPorEmbarcacion()"
+                class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
+              >
+                <option [ngValue]="null">Selecciona una embarcación</option>
+
+                @for (embarcacion of embarcaciones(); track embarcacion.id) {
+                  <option [ngValue]="embarcacion.id">
+                    {{ embarcacion.nombre }} · {{ embarcacion.capacidad }} pasajeros
+                  </option>
+                }
+              </select>
+
+              }
+
+              @if (embarcacionSeleccionada(); as embarcacion) {
+                <p class="mt-2 text-xs text-slate-400">
+                  {{ embarcacion.matricula }} · Capacidad máxima:
+                  {{ embarcacion.capacidad }} pasajeros
+                </p>
+              }
+            </div>
+
+            <!-- Fecha -->
+            <div>
+              <label for="salida-fecha" class="mb-2 block text-sm font-semibold text-slate-700">
+                Fecha
+              </label>
+
+              <input
+                id="salida-fecha"
+                name="fecha"
+                type="date"
+                [min]="fechaMinima"
+                [max]="fechaMaxima"
+                [(ngModel)]="formulario.fecha"
+                class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
+              />
+            </div>
+
+            <!-- Hora -->
+            <div>
+              <label for="salida-hora" class="mb-2 block text-sm font-semibold text-slate-700">
+                Hora de salida
+              </label>
+
+              <input
+                id="salida-hora"
+                name="horaSalida"
+                type="time"
+                min="06:00"
+                max="19:00"
+                [(ngModel)]="formulario.horaSalida"
+                class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
+              />
+            </div>
+
+            @if (modoEdicion() && salidaSeleccionada()?.tieneReservas) {
+              <div class="sm:col-span-2">
+                <label for="salida-motivo" class="mb-2 block text-sm font-semibold text-slate-700">
+                  Motivo de reprogramación
+                </label>
+                <select id="salida-motivo" name="motivoReprogramacion"
+                  [(ngModel)]="formulario.motivoReprogramacion" required
+                  class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50">
+                  <option value="" disabled>Selecciona un motivo</option>
+                  @for (motivo of motivosReprogramacion; track motivo.valor) {
+                    <option [value]="motivo.valor">{{ motivo.nombre }}</option>
+                  }
+                </select>
+                <p class="mt-1.5 text-xs text-slate-400">
+                  Solo hacia adelante, hasta 72 horas desde el horario original. Las reservas se mantienen.
+                </p>
+              </div>
+            }
+
+            <!-- Cupos -->
+            <div class="sm:col-span-2">
+              <label for="salida-cupos" class="mb-2 block text-sm font-semibold text-slate-700">
+                Cupos disponibles
+              </label>
+
+              <input
+                id="salida-cupos"
+                name="cuposDisponibles"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                [(ngModel)]="formulario.cuposDisponibles"
+                readonly
+                class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
+              />
+
+              <p class="mt-1.5 text-xs text-slate-400">
+                Los cupos se calculan automáticamente. Al cambiar de embarcación se descuentan
+                de su capacidad los pasajeros ya reservados.
+              </p>
+            </div>
+          </div>
+
+          <!-- Info -->
+          <div class="mt-6 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3">
+            <div class="flex gap-3">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                class="mt-0.5 h-4 w-4 shrink-0 text-sky-600"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path stroke-linecap="round" d="M12 11v5M12 8h.01" />
+              </svg>
+
+              <p class="text-xs leading-5 text-sky-800">
+                SeaTour validará automáticamente conflictos de horario, capacidad, estado del tour y
+                disponibilidad de la embarcación.
+              </p>
+            </div>
+          </div>
+
+          <!-- Error -->
+          @if (errorFormulario()) {
+            <div
+              class="mt-5 flex gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                class="mt-0.5 h-4 w-4 shrink-0"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path stroke-linecap="round" d="M12 7v6M12 17h.01" />
+              </svg>
+
+              <span>
+                {{ errorFormulario() }}
+              </span>
+            </div>
+          }
+
+          <!-- Acciones -->
+          <div
+            class="mt-7 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end"
+          >
+            <button
+              type="button"
+              (click)="cerrarModal()"
+              [disabled]="guardando()"
+              class="h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="submit"
+              [disabled]="guardando()"
+              class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              @if (guardando()) {
+                <span
+                  class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                ></span>
+
+                Guardando...
+              } @else {
+                {{ modoEdicion() ? 'Guardar cambios' : 'Programar salida' }}
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</section>

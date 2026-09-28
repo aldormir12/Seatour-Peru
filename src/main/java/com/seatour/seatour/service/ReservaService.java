@@ -16,21 +16,32 @@ public class ReservaService {
     private final ReservaRepository reservas;
     private final SalidaProgramadaRepository salidas;
     private final UsuarioRepository usuarios;
+    private final TourRepository tours;
+    private final EmbarcacionRepository embarcaciones;
     private static final ZoneId ZONA = ZoneId.of("America/Lima");
 
-    public ReservaService(ReservaRepository reservas, SalidaProgramadaRepository salidas, UsuarioRepository usuarios) {
+    public ReservaService(ReservaRepository reservas, SalidaProgramadaRepository salidas, UsuarioRepository usuarios,
+            TourRepository tours, EmbarcacionRepository embarcaciones) {
         this.reservas = reservas; this.salidas = salidas; this.usuarios = usuarios;
+        this.tours = tours; this.embarcaciones = embarcaciones;
     }
 
     @Transactional
     public ReservaRespuesta crear(ReservaCreacion datos, LoginRespuesta actor) {
         if (!"CLIENTE".equals(actor.rol())) throw error(HttpStatus.FORBIDDEN, "Solo un cliente puede reservar");
-        if (datos.salidaId() == null || datos.salidaId() <= 0 || datos.pasajeros() == null || datos.pasajeros() <= 0)
+        if (datos == null || datos.salidaId() == null || datos.salidaId() <= 0 || datos.pasajeros() == null || datos.pasajeros() <= 0)
             throw error(HttpStatus.BAD_REQUEST, "Indica una salida y una cantidad positiva de pasajeros");
         // Toda escritura de cupos (incluida la gestion de salidas) usa el mismo bloqueo.
         SalidaProgramada salida = bloquearSalida(datos.salidaId());
-        if (!abierta(salida) || !Boolean.TRUE.equals(salida.getTour().getActivo()))
+        HorizonteOperativo.validar(salida.getFecha());
+        salida.setTour(tours.bloquearPorId(salida.getTour().getId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Tour no encontrado")));
+        salida.setEmbarcacion(embarcaciones.bloquearPorId(salida.getEmbarcacion().getId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Embarcación no encontrada")));
+        if (!abierta(salida) || !Boolean.TRUE.equals(salida.getTour().getActivo())
+                || !Boolean.TRUE.equals(salida.getEmbarcacion().getActivo()))
             throw error(HttpStatus.CONFLICT, "La salida ya no admite reservas");
+        validarOcupacion(salida);
         if (datos.pasajeros() > salida.getCuposDisponibles())
             throw error(HttpStatus.CONFLICT, "No hay suficientes cupos disponibles");
         var cliente = usuarios.findById(actor.id()).orElseThrow(() -> error(HttpStatus.UNAUTHORIZED, "Sesion invalida"));
@@ -51,6 +62,7 @@ public class ReservaService {
     }
 
     public ReservaRespuesta consultar(Long id, LoginRespuesta actor) {
+        validarId(id);
         var reserva = reservas.findById(id).orElseThrow(this::noEncontrada);
         autorizar(reserva, actor);
         return respuesta(reserva, actor);
@@ -62,6 +74,14 @@ public class ReservaService {
         Reserva reserva = bloquearReserva(id);
         if (reserva.getEstado() != EstadoReserva.PENDIENTE || !abierta(reserva.getSalida()))
             throw error(HttpStatus.CONFLICT, "Solo se puede confirmar una reserva pendiente antes de la salida");
+        var salida = reserva.getSalida();
+        salida.setTour(tours.bloquearPorId(salida.getTour().getId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Tour no encontrado")));
+        salida.setEmbarcacion(embarcaciones.bloquearPorId(salida.getEmbarcacion().getId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Embarcación no encontrada")));
+        if (!Boolean.TRUE.equals(salida.getTour().getActivo()) || !Boolean.TRUE.equals(salida.getEmbarcacion().getActivo()))
+            throw error(HttpStatus.CONFLICT, "No se puede confirmar una reserva con tour o embarcación inactivos");
+        validarOcupacion(salida);
         reserva.confirmar();
         return respuesta(reserva, actor);
     }
@@ -74,18 +94,22 @@ public class ReservaService {
         if (reserva.getEstado() == EstadoReserva.CANCELADA) return respuesta(reserva, actor);
         if (!cancelable(reserva)) throw error(HttpStatus.CONFLICT, "No se puede cancelar una reserva cuya salida ya comenzo");
         var salida = reserva.getSalida();
+        if (reserva.getPasajeros() <= 0) throw error(HttpStatus.CONFLICT, "La reserva tiene una cantidad inválida de pasajeros");
+        validarOcupacion(salida);
         salida.setCuposDisponibles(Math.addExact(salida.getCuposDisponibles(), reserva.getPasajeros()));
         reserva.cancelar();
         return respuesta(reserva, actor);
     }
 
     private Reserva bloquearReserva(Long id) {
+        validarId(id);
         Long salidaId = reservas.buscarSalidaId(id).orElseThrow(this::noEncontrada);
         // Orden fijo salida -> reserva evita interbloqueos entre reservar, confirmar y cancelar.
         bloquearSalida(salidaId);
         return reservas.bloquearPorId(id).orElseThrow(this::noEncontrada);
     }
     private SalidaProgramada bloquearSalida(Long id) {
+        validarId(id);
         return salidas.bloquearPorId(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Salida no encontrada"));
     }
     private boolean futura(SalidaProgramada s) {
@@ -97,6 +121,17 @@ public class ReservaService {
                 && (r.getSalida().getEstado() == EstadoSalida.PROGRAMADA || r.getSalida().getEstado() == EstadoSalida.CANCELADA);
     }
     private boolean gestor(LoginRespuesta a) { return "ADMIN".equals(a.rol()) || "OPERADOR".equals(a.rol()); }
+    private void validarId(Long id) {
+        if (id == null || id <= 0) throw error(HttpStatus.BAD_REQUEST, "El ID debe ser un entero positivo");
+    }
+    private void validarOcupacion(SalidaProgramada salida) {
+        Integer cupos = salida.getCuposDisponibles();
+        Integer capacidad = salida.getEmbarcacion().getCapacidad();
+        long pasajeros = reservas.pasajerosActivos(salida.getId(), EstadoReserva.CANCELADA);
+        if (cupos == null || cupos < 0 || capacidad == null || capacidad < 1 || capacidad > 100
+                || pasajeros < 0 || cupos + pasajeros > capacidad)
+            throw error(HttpStatus.CONFLICT, "Los cupos y reservas no corresponden a la capacidad de la embarcación");
+    }
     private void autorizar(Reserva r, LoginRespuesta a) {
         if (!gestor(a) && !("CLIENTE".equals(a.rol()) && r.getCliente().getId().equals(a.id()))) throw noEncontrada();
     }
@@ -109,6 +144,8 @@ public class ReservaService {
                 s.getFecha(), s.getHoraSalida(), s.getEmbarcacion().getNombre(), r.getPasajeros(),
                 r.getPrecioUnitario(), r.getPrecioTotal(), "PEN", r.getEstado(), r.getCreadaEn(),
                 r.getConfirmadaEn(), r.getCanceladaEn(), s.getCuposDisponibles(),
-                gestor(a) && r.getEstado() == EstadoReserva.PENDIENTE && abierta(s), cancelable(r));
+                gestor(a) && r.getEstado() == EstadoReserva.PENDIENTE && abierta(s)
+                        && Boolean.TRUE.equals(s.getTour().getActivo())
+                        && Boolean.TRUE.equals(s.getEmbarcacion().getActivo()), cancelable(r));
     }
 }

@@ -30,6 +30,27 @@ public class Embarcacion {
     @Column(nullable = false)
     private String estado;
 
+    // Columnas inicialmente opcionales para conservar registros anteriores a la API ADMIN.
+    // Los DTOs exigen tipo e imagen en todas las altas y ediciones.
+    private String tipo;
+
+    private Boolean activo;
+
+    @Column(name = "imagen_url", length = 2048)
+    private String imagenUrl;
+
+    public String getTipo() { return tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
+    public Boolean getActivo() {
+        return activo != null ? activo : "ACTIVA".equalsIgnoreCase(estado);
+    }
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+        this.estado = Boolean.TRUE.equals(activo) ? "ACTIVA" : "INACTIVA";
+    }
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
+
     public Embarcacion() {
     }
 
@@ -71,5 +92,6 @@ public class Embarcacion {
 
     public void setEstado(String estado) {
         this.estado = estado;
+        this.activo = "ACTIVA".equalsIgnoreCase(estado);
     }
 }

@@ -10,7 +10,36 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface SalidaProgramadaRepository extends JpaRepository<SalidaProgramada, Long> {
+    @Query("""
+            select s.id from SalidaProgramada s
+            where s.estado = com.seatour.seatour.model.EstadoSalida.PROGRAMADA
+              and (s.fecha < :fecha or (s.fecha = :fecha and s.horaSalida <= :hora))
+            order by s.fecha, s.horaSalida, s.id
+            """)
+    List<Long> buscarPendientesDeInicio(@Param("fecha") LocalDate fecha,
+            @Param("hora") java.time.LocalTime hora);
+
     boolean existsByTour_Id(Long tourId);
+    boolean existsByEmbarcacion_Id(Long embarcacionId);
+
+    // Una sola consulta observa cupos y reservas de forma consistente. Reservar/cancelar
+    // conserva su suma; asignar embarcaciones se serializa con el bloqueo de la embarcacion.
+    @Query("""
+            select count(s) from SalidaProgramada s
+            where s.embarcacion.id = :embarcacionId
+              and (s.fecha > :fecha or (s.fecha = :fecha and s.horaSalida > :hora)
+                   or s.estado in (com.seatour.seatour.model.EstadoSalida.PROGRAMADA,
+                                   com.seatour.seatour.model.EstadoSalida.EN_CURSO))
+              and s.cuposDisponibles +
+                  (select coalesce(sum(r.pasajeros), 0) from Reserva r
+                   where r.salida = s and r.estado <> :cancelada) > :capacidad
+            """)
+    long contarSalidasQueExcedenCapacidad(
+            @Param("embarcacionId") Long embarcacionId,
+            @Param("fecha") LocalDate fecha,
+            @Param("hora") java.time.LocalTime hora,
+            @Param("cancelada") com.seatour.seatour.model.EstadoReserva cancelada,
+            @Param("capacidad") Integer capacidad);
 
     @Override
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion"})
@@ -31,16 +60,21 @@ public interface SalidaProgramadaRepository extends JpaRepository<SalidaPrograma
             WHERE s.tour.id = :tourId
               AND s.estado = :estado
               AND s.cuposDisponibles > 0
-              AND s.fecha >= :fecha
+              AND s.tour.activo = true
+              AND (s.embarcacion.activo = true OR
+                   (s.embarcacion.activo IS NULL AND upper(s.embarcacion.estado) = 'ACTIVA'))
+              AND (s.fecha > :fecha OR (s.fecha = :fecha AND s.horaSalida > :hora))
             ORDER BY s.fecha ASC, s.horaSalida ASC
             """)
     List<SalidaProgramada> buscarSalidasDisponiblesPorTour(
             @Param("tourId") Long tourId,
             @Param("estado") EstadoSalida estado,
-            @Param("fecha") LocalDate fecha);
+            @Param("fecha") LocalDate fecha,
+            @Param("hora") java.time.LocalTime hora);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion"})
     List<SalidaProgramada> findByTourIdOrderByFechaAscHoraSalidaAsc(Long tourId);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour"})
     List<SalidaProgramada> findByEmbarcacionIdOrderByFechaAscHoraSalidaAsc(Long embarcacionId);
 }

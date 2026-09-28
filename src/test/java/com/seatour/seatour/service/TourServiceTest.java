@@ -42,7 +42,7 @@ class TourServiceTest {
 
     @Test
     void rechazaEliminarTourConSalidas() {
-        when(tours.findById(1L)).thenReturn(Optional.of(new Tour()));
+        when(tours.bloquearPorId(1L)).thenReturn(Optional.of(new Tour()));
         when(salidas.existsByTour_Id(1L)).thenReturn(true);
         var error = assertThrows(ResponseStatusException.class, () -> servicio.eliminar(1L));
         assertEquals(409, error.getStatusCode().value());

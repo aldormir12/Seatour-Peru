@@ -64,7 +64,7 @@ class AutorizacionIntegrationTest {
              "precioBase":50,"activo":true,"categoriaId":1,"imagenUrl":"/api/tours/imagenes/fixture.jpg"}
             """;
 
-    // No existe controller de embarcaciones en produccion: prueba solo su regla de acceso.
+    // Probe de la ruta antigua; el CRUD productivo esta en /api/admin/embarcaciones.
     @TestConfiguration(proxyBeanMethods = false)
     @RestController
     static class EmbarcacionesProbe {
@@ -139,7 +139,11 @@ class AutorizacionIntegrationTest {
         return Stream.concat(Stream.of("tours", "categorias", "salidas", "embarcaciones")
                 .flatMap(recurso -> Stream.of("POST /api/" + recurso, "PUT /api/" + recurso + "/1",
                         "PATCH /api/" + recurso + "/1", "DELETE /api/" + recurso + "/1")),
-                Stream.of("GET /api/embarcaciones", "GET /api/usuarios", "GET /api/usuarios/1",
+                Stream.of("GET /api/admin/embarcaciones", "POST /api/admin/embarcaciones",
+                        "PUT /api/admin/embarcaciones/1", "PATCH /api/admin/embarcaciones/1/estado",
+                        "DELETE /api/admin/embarcaciones/1", "POST /api/admin/embarcaciones/imagen",
+                        "GET /api/embarcaciones/imagenes/imagen.jpg", "HEAD /api/embarcaciones/imagenes/imagen.jpg",
+                        "GET /api/embarcaciones", "GET /api/usuarios", "GET /api/usuarios/1",
                         "HEAD /api/usuarios", "POST /api/usuarios/1"));
     }
 
@@ -196,12 +200,24 @@ class AutorizacionIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"OPERADOR", "ADMIN"})
-    void reglaEmbarcacionesPermiteGestionOperativa(String rol) throws Exception {
+    void reglaEmbarcacionesSoloPermiteAdmin(String rol) throws Exception {
         String auth = token(rol);
         for (HttpMethod metodo : List.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.DELETE)) {
             mvc.perform(request(metodo, "/api/embarcaciones/1").header("Authorization", auth))
-                    .andExpect(status().isNoContent());
+                    .andExpect(status().is("ADMIN".equals(rol) ? 204 : 403));
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GET /api/admin/embarcaciones", "POST /api/admin/embarcaciones",
+            "PUT /api/admin/embarcaciones/1", "PATCH /api/admin/embarcaciones/1/estado",
+            "DELETE /api/admin/embarcaciones/1", "POST /api/admin/embarcaciones/imagen",
+            "GET /api/embarcaciones/imagenes/imagen.jpg", "HEAD /api/embarcaciones/imagenes/imagen.jpg"})
+    void operadorNoPuedeGestionarEmbarcaciones(String operacion) throws Exception {
+        String[] partes = operacion.split(" ");
+        mvc.perform(request(HttpMethod.valueOf(partes[0]), partes[1])
+                .header("Authorization", token("OPERADOR")).contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

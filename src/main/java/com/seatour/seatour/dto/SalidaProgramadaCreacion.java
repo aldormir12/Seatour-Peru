@@ -1,33 +1,35 @@
 package com.seatour.seatour.dto;
 
 import com.seatour.seatour.model.EstadoSalida;
-import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class SalidaProgramadaCreacion {
+    private String motivoReprogramacion;
+    public String getMotivoReprogramacion() { return motivoReprogramacion; }
+    public void setMotivoReprogramacion(String valor) { motivoReprogramacion = valor; }
+    public interface Edicion extends jakarta.validation.groups.Default {}
 
     @NotNull(message = "La fecha de salida es obligatoria")
-    @FutureOrPresent(message = "La fecha de salida no puede estar en el pasado")
     private LocalDate fecha;
 
     @NotNull(message = "La hora de salida es obligatoria")
     private LocalTime horaSalida;
 
-    @NotNull(message = "Los cupos disponibles son obligatorios")
-    @PositiveOrZero(message = "Los cupos disponibles no pueden ser negativos")
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private Integer cuposDisponibles;
 
-    @NotNull(message = "El estado de la salida es obligatorio")
-    private EstadoSalida estado;
+    private EstadoSalida estado = EstadoSalida.PROGRAMADA;
 
     @NotNull(message = "El tour es obligatorio")
+    @Positive(message = "El ID del tour debe ser positivo")
     private Long tourId;
 
     @NotNull(message = "La embarcación es obligatoria")
+    @Positive(message = "El ID de la embarcación debe ser positivo")
     private Long embarcacionId;
 
     public SalidaProgramadaCreacion() {

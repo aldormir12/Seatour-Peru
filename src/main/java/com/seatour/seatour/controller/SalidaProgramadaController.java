@@ -88,7 +88,8 @@ public class SalidaProgramadaController {
     @PutMapping("/{id}")
     public ResponseEntity<SalidaProgramadaRespuesta> actualizar(
             @PathVariable Long id,
-            @Valid @RequestBody SalidaProgramadaCreacion datos) {
+            @org.springframework.validation.annotation.Validated(SalidaProgramadaCreacion.Edicion.class)
+            @RequestBody SalidaProgramadaCreacion datos) {
 
         SalidaProgramada salida = convertirAEntidad(datos);
 
@@ -109,6 +110,25 @@ public class SalidaProgramadaController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<SalidaProgramadaRespuesta> cambiarEstado(@PathVariable Long id,
+            @Valid @RequestBody com.seatour.seatour.dto.SalidaProgramadaEstado datos) {
+        return ResponseEntity.ok(convertirARespuesta(salidaProgramadaService.cambiarEstado(
+                id, datos.estado(), datos.motivoCancelacion())));
+    }
+
+    @PatchMapping("/{id}/embarcacion")
+    public ResponseEntity<SalidaProgramadaRespuesta> cambiarEmbarcacion(@PathVariable Long id,
+            @Valid @RequestBody com.seatour.seatour.dto.SalidaCambioEmbarcacion datos) {
+        return ResponseEntity.ok(convertirARespuesta(salidaProgramadaService.cambiarEmbarcacion(
+                id, datos.embarcacionId(), datos.motivo())));
+    }
+
+    @GetMapping("/embarcaciones/activas")
+    public java.util.List<com.seatour.seatour.dto.EmbarcacionRespuesta> embarcacionesActivas() {
+        return salidaProgramadaService.listarEmbarcacionesActivas();
+    }
+
     private SalidaProgramada convertirAEntidad(
             SalidaProgramadaCreacion datos) {
 
@@ -119,6 +139,7 @@ public class SalidaProgramadaController {
         salida.setCuposDisponibles(
                 datos.getCuposDisponibles());
         salida.setEstado(datos.getEstado());
+        salida.setMotivoReprogramacion(datos.getMotivoReprogramacion());
 
         Tour tour = new Tour();
         tour.setId(datos.getTourId());
@@ -148,8 +169,19 @@ public class SalidaProgramadaController {
                 salida.getEmbarcacion().getId(),
                 salida.getEmbarcacion().getNombre());
         respuesta.setPrecioPorPasajero(salida.getTour().getPrecioBase());
+        respuesta.setTieneReservas(salidaProgramadaService.tieneReservas(salida.getId()));
+        respuesta.setCambioOperativoConsumido(salidaProgramadaService.cambioOperativoConsumido(salida.getId()));
+        respuesta.setPasajerosReservados(salidaProgramadaService.pasajerosReservados(salida.getId()));
+        respuesta.setFechaOriginal(salida.getFechaOriginal());
+        respuesta.setHoraOriginal(salida.getHoraOriginal());
+        respuesta.setFechaAnterior(salida.getFechaAnterior());
+        respuesta.setHoraAnterior(salida.getHoraAnterior());
+        respuesta.setMotivoReprogramacion(salida.getMotivoReprogramacion());
+        respuesta.setMotivoCancelacion(salida.getMotivoCancelacion());
+        respuesta.setFechaCancelacion(salida.getFechaCancelacion());
         respuesta.setReservable(salida.getEstado() == com.seatour.seatour.model.EstadoSalida.PROGRAMADA
                 && Boolean.TRUE.equals(salida.getTour().getActivo()) && salida.getCuposDisponibles() > 0
+                && Boolean.TRUE.equals(salida.getEmbarcacion().getActivo())
                 && java.time.LocalDateTime.of(salida.getFecha(), salida.getHoraSalida())
                     .isAfter(java.time.LocalDateTime.now(java.time.ZoneId.of("America/Lima"))));
         return respuesta;

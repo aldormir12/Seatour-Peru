@@ -6,6 +6,36 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class SalidaProgramadaRespuesta {
+    private boolean tieneReservas;
+    private boolean cambioOperativoConsumido;
+    public boolean isCambioOperativoConsumido() { return cambioOperativoConsumido; }
+    public void setCambioOperativoConsumido(boolean valor) { cambioOperativoConsumido = valor; }
+    private long pasajerosReservados;
+    public long getPasajerosReservados() { return pasajerosReservados; }
+    public void setPasajerosReservados(long valor) { pasajerosReservados = valor; }
+    private LocalDate fechaOriginal;
+    private LocalTime horaOriginal;
+    private LocalDate fechaAnterior;
+    private LocalTime horaAnterior;
+    private String motivoReprogramacion;
+    private String motivoCancelacion;
+    private java.time.LocalDateTime fechaCancelacion;
+    public String getMotivoCancelacion() { return motivoCancelacion; }
+    public void setMotivoCancelacion(String valor) { motivoCancelacion = valor; }
+    public java.time.LocalDateTime getFechaCancelacion() { return fechaCancelacion; }
+    public void setFechaCancelacion(java.time.LocalDateTime valor) { fechaCancelacion = valor; }
+    public boolean isTieneReservas() { return tieneReservas; }
+    public void setTieneReservas(boolean valor) { tieneReservas = valor; }
+    public LocalDate getFechaOriginal() { return fechaOriginal; }
+    public void setFechaOriginal(LocalDate valor) { fechaOriginal = valor; }
+    public LocalTime getHoraOriginal() { return horaOriginal; }
+    public void setHoraOriginal(LocalTime valor) { horaOriginal = valor; }
+    public LocalDate getFechaAnterior() { return fechaAnterior; }
+    public void setFechaAnterior(LocalDate valor) { fechaAnterior = valor; }
+    public LocalTime getHoraAnterior() { return horaAnterior; }
+    public void setHoraAnterior(LocalTime valor) { horaAnterior = valor; }
+    public String getMotivoReprogramacion() { return motivoReprogramacion; }
+    public void setMotivoReprogramacion(String valor) { motivoReprogramacion = valor; }
 
     private Long id;
     private LocalDate fecha;

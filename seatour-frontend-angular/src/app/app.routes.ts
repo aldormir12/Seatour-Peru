@@ -33,6 +33,14 @@ const adminTours = () =>
   import('./components/admin-tours/admin-tours')
     .then(m => m.AdminTours);
 
+const adminEmbarcaciones = () =>
+  import('./components/admin-embarcaciones/admin-embarcaciones')
+    .then(m => m.AdminEmbarcaciones);
+
+const adminSalidas = () =>
+  import('./components/admin-salidas/admin-salidas')
+    .then(m => m.AdminSalidas);
+
 const salidas = () =>
   import('./components/reservas/salidas')
     .then(m => m.SalidasComponent);
@@ -106,7 +114,7 @@ function gestion(admin: boolean): Routes {
 
     {
       path: 'salidas',
-      loadComponent: salidas
+      loadComponent: adminSalidas
     },
 
     {
@@ -141,7 +149,9 @@ function gestion(admin: boolean): Routes {
         ? adminTours
         : admin && path === 'categorias'
           ? adminCategorias
-          : area,
+          : admin && path === 'embarcaciones'
+            ? adminEmbarcaciones
+            : area,
 
       data: {
         titulo:

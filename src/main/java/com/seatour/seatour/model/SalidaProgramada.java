@@ -1,7 +1,6 @@
 package com.seatour.seatour.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -16,13 +15,53 @@ import java.time.LocalTime;
         @Index(name = "idx_salida_estado", columnList = "estado")
 })
 public class SalidaProgramada {
+    private Boolean cambioOperativoConsumido = false;
+
+    public boolean isCambioOperativoConsumido() {
+        // Registros anteriores: conservar el límite si ya tienen trazabilidad de un cambio.
+        return cambioOperativoConsumido != null ? cambioOperativoConsumido
+                : fechaOriginal != null || !cambiosEmbarcacion.isEmpty();
+    }
+
+    public void consumirCambioOperativo() { cambioOperativoConsumido = true; }
+    @ElementCollection
+    @CollectionTable(name = "salida_cambios_embarcacion", joinColumns = @JoinColumn(name = "salida_id"))
+    @OrderColumn(name = "orden")
+    private java.util.List<CambioEmbarcacionSalida> cambiosEmbarcacion = new java.util.ArrayList<>();
+
+    public void registrarCambioEmbarcacion(Long anterior, Long nueva, String motivo, java.time.LocalDateTime fechaHora) {
+        cambiosEmbarcacion.add(new CambioEmbarcacionSalida(anterior, nueva, motivo, fechaHora));
+    }
+    private LocalDate fechaOriginal;
+    private LocalTime horaOriginal;
+    private LocalDate fechaAnterior;
+    private LocalTime horaAnterior;
+    private String motivoReprogramacion;
+    private String motivoCancelacion;
+    private java.time.LocalDateTime fechaCancelacion;
+
+    public String getMotivoCancelacion() { return motivoCancelacion; }
+    public void setMotivoCancelacion(String valor) { motivoCancelacion = valor; }
+    public java.time.LocalDateTime getFechaCancelacion() { return fechaCancelacion; }
+    public void setFechaCancelacion(java.time.LocalDateTime valor) { fechaCancelacion = valor; }
+
+    public LocalDate getFechaOriginal() { return fechaOriginal; }
+    public void setFechaOriginal(LocalDate valor) { fechaOriginal = valor; }
+    public LocalTime getHoraOriginal() { return horaOriginal; }
+    public void setHoraOriginal(LocalTime valor) { horaOriginal = valor; }
+    public LocalDate getFechaAnterior() { return fechaAnterior; }
+    public void setFechaAnterior(LocalDate valor) { fechaAnterior = valor; }
+    public LocalTime getHoraAnterior() { return horaAnterior; }
+    public void setHoraAnterior(LocalTime valor) { horaAnterior = valor; }
+    public String getMotivoReprogramacion() { return motivoReprogramacion; }
+    public void setMotivoReprogramacion(String valor) { motivoReprogramacion = valor; }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "La fecha de salida es obligatoria")
-    @FutureOrPresent(message = "La fecha de salida no puede estar en el pasado")
+    // La fecha futura se valida al programar; el historial debe poder finalizarse después.
     @Column(nullable = false)
     private LocalDate fecha;
 

@@ -60,6 +60,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/reservas/*/confirmar").hasAnyRole("OPERADOR", "ADMIN")
                         .requestMatchers("/api/reservas/**").hasAnyRole("CLIENTE", "OPERADOR", "ADMIN")
 
+                        .requestMatchers("/api/salidas/embarcaciones/activas")
+                        .hasAnyRole("OPERADOR", "ADMIN")
+
                         // Solo las consultas son publicas. HEAD conserva los permisos de GET.
                         .requestMatchers(HttpMethod.GET, "/api/tours/**", "/api/categorias/**", "/api/salidas/**")
                         .permitAll()
@@ -84,9 +87,10 @@ public class SecurityConfig {
                                 "/api/salidas/**")
                         .hasAnyRole("OPERADOR", "ADMIN")
 
-                        // Regla preparada para la API de gestion de embarcaciones.
-                        .requestMatchers("/api/embarcaciones/**")
-                        .hasAnyRole("OPERADOR", "ADMIN")
+                        // Administracion e imagenes de embarcaciones: exclusivamente ADMIN.
+                        .requestMatchers("/api/admin/embarcaciones", "/api/admin/embarcaciones/**",
+                                "/api/embarcaciones", "/api/embarcaciones/**")
+                        .hasRole("ADMIN")
 
                         // H2 durante desarrollo
                         .requestMatchers(

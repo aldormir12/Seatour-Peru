@@ -77,12 +77,17 @@ public class TourService {
     }
 
     private Tour buscar(Long id) {
-        return tours.findById(id).orElseThrow(() ->
+        return tours.bloquearPorId(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Tour no encontrado"));
     }
 
     private void aplicar(Tour tour, String nombre, String descripcion, Integer duracionMinutos,
             BigDecimal precioBase, Boolean activo, Long categoriaId) {
+        if (tour.getId() != null && !java.util.Objects.equals(tour.getDuracionMinutos(), duracionMinutos)
+                && salidas.existsByTour_Id(tour.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede cambiar la duración de un tour con salidas asociadas; alteraría sus horarios e historial");
+        }
         String normalizado = CategoriaTourCreacion.normalizarNombre(nombre);
         boolean duplicado = tour.getId() == null
                 ? tours.existsByNombreIgnoreCase(normalizado)

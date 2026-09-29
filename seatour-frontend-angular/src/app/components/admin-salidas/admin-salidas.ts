@@ -424,7 +424,6 @@ export class AdminSalidas implements OnInit {
       fecha: this.formulario.fecha,
       horaSalida:
         this.formulario.horaSalida,
-      estado: 'PROGRAMADA',
       tourId: Number(
         this.formulario.tourId
       ),

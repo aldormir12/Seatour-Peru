@@ -37,7 +37,6 @@ export interface SalidaSolicitud {
   motivoReprogramacion?: string;
   fecha: string;
   horaSalida: string;
-  estado: EstadoSalida;
   tourId: number;
   embarcacionId: number;
 }

@@ -202,8 +202,8 @@ public class SalidaProgramadaService {
                 && (destino == EstadoSalida.EN_CURSO || destino == EstadoSalida.CANCELADA)
                 || origen == EstadoSalida.EN_CURSO && destino == EstadoSalida.COMPLETADA;
         if (!valida) throw error(HttpStatus.CONFLICT, "Transición de estado no permitida: " + origen + " -> " + destino);
-        if (destino == EstadoSalida.CANCELADA && reservas.existsBySalidaId(id) && motivoCancelacion == null)
-            throw error(HttpStatus.BAD_REQUEST, "El motivo de cancelación es obligatorio cuando la salida tiene reservas");
+        if (destino == EstadoSalida.CANCELADA && pasajerosReservados(id) > 0 && motivoCancelacion == null)
+            throw error(HttpStatus.BAD_REQUEST, "El motivo de cancelación es obligatorio cuando la salida tiene reservas activas");
         var ahora = LocalDateTime.now(ZONA);
         if (destino == EstadoSalida.EN_CURSO) {
             if (ahora.isBefore(inicio(salida))) throw error(HttpStatus.CONFLICT, "La salida no puede iniciar antes de su hora programada");

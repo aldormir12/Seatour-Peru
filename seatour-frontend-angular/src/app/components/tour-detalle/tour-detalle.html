@@ -1,0 +1,49 @@
+<main>
+  <div class="contenido">
+    <a class="volver" routerLink="/app/tours">Volver al catálogo</a>
+    @if (cargando()) {
+      <section class="estado" role="status" aria-busy="true"><h1>Cargando tour</h1><p>Estamos consultando los detalles de esta experiencia.</p></section>
+    } @else if (error()) {
+      <section class="estado" role="alert"><h1>No se pudo cargar el tour</h1><p>{{ error() }}</p><button type="button" (click)="cargar()">Reintentar</button></section>
+    } @else if (tour(); as t) {
+      <article class="tour">
+        <div class="imagen">
+          @if (t.imagenUrl && !imagenFallida()) {
+            <img [src]="toursService.urlImagen(t.imagenUrl)" [alt]="t.nombre" (error)="imagenFallida.set(true)" />
+          } @else { <span>Imagen no disponible</span> }
+        </div>
+        <div class="resumen">
+          <p class="categoria">{{ categoria() }}</p>
+          <h1>{{ t.nombre }}</h1>
+          <dl class="datos"><div><dt>Duración</dt><dd>{{ t.duracionMinutos }} min</dd></div><div><dt>Precio por persona</dt><dd>{{ t.precioBase | currency:'PEN':'S/ ':'1.2-2' }}</dd></div></dl>
+          <h2>Sobre esta experiencia</h2>
+          <p class="descripcion">{{ t.descripcion }}</p>
+        </div>
+      </article>
+
+      <section class="salidas" aria-labelledby="titulo-salidas" [attr.aria-busy]="cargandoSalidas()">
+        <header><div><h2 id="titulo-salidas">Próximas salidas</h2><p>Elige una fecha para reservar. Horarios de Perú.</p></div><button class="secundario" type="button" (click)="cargarSalidas()" [disabled]="cargandoSalidas()">Actualizar disponibilidad</button></header>
+        @if (cargandoSalidas()) {
+          <div class="estado" role="status"><p>Consultando salidas disponibles...</p></div>
+        } @else if (errorSalidas()) {
+          <div class="estado" role="alert"><p>{{ errorSalidas() }}</p><button type="button" (click)="cargarSalidas()">Reintentar</button></div>
+        } @else {
+          <div class="lista-salidas">
+            @for (salida of salidas(); track salida.id) {
+              <article class="salida">
+                <dl><div><dt>Fecha</dt><dd>{{ salida.fecha | date:'dd/MM/yyyy' }}</dd></div><div><dt>Hora</dt><dd>{{ salida.horaSalida.slice(0, 5) }}</dd></div><div><dt>Embarcación</dt><dd>{{ salida.embarcacionNombre }}</dd></div><div><dt>Cupos disponibles</dt><dd>{{ salida.cuposDisponibles }}</dd></div></dl>
+                @if (salida.reservable && salida.cuposDisponibles > 0) {
+                  <a class="boton" [routerLink]="['/app/reservar', salida.id]" [attr.aria-label]="'Reservar salida del ' + salida.fecha + ' a las ' + salida.horaSalida.slice(0, 5)">Reservar</a>
+                } @else { <span class="no-disponible">No disponible</span> }
+              </article>
+            } @empty {
+              <div class="estado" role="status"><h3>No hay salidas disponibles</h3><p>Este tour aún no tiene próximas salidas disponibles para reservar.</p></div>
+            }
+          </div>
+        }
+      </section>
+    } @else {
+      <section class="estado" role="status"><h1>Tour no disponible</h1><p>El tour solicitado no existe o ya no está activo. Puedes elegir otra experiencia en el catálogo.</p></section>
+    }
+  </div>
+</main>

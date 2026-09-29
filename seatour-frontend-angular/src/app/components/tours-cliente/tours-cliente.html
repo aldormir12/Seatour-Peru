@@ -1,0 +1,44 @@
+<main class="catalogo">
+  <header class="cabecera">
+    <div class="contenido">
+      <p class="eyebrow">EXPERIENCIAS EN EL MAR</p>
+      <h1>Encuentra tu próxima <em>experiencia</em></h1>
+      <p class="introduccion">Explora nuestros tours y descubre una nueva forma de disfrutar el mar.</p>
+    </div>
+  </header>
+
+  <section class="listado contenido" aria-label="Catálogo de tours" [attr.aria-busy]="cargando()">
+    @if (cargando()) {
+      <div class="estado" role="status"><span class="indicador" aria-hidden="true"></span><h2>Cargando tours</h2><p>Estamos consultando las experiencias disponibles.</p></div>
+    } @else if (error()) {
+      <div class="estado" role="alert"><h2>No se pudo cargar el catálogo</h2><p>{{ error() }}</p><button type="button" (click)="cargar()">Reintentar</button></div>
+    } @else if (tours().length === 0) {
+      <div class="estado" role="status"><h2>Aún no hay tours disponibles</h2><p>Vuelve más adelante para descubrir nuevas experiencias.</p></div>
+    } @else {
+      <div class="encabezado-listado"><h2>Nuestros tours</h2><p>{{ tours().length }} {{ tours().length === 1 ? 'experiencia disponible' : 'experiencias disponibles' }}</p></div>
+      <div class="cuadricula">
+        @for (tour of tours(); track tour.id) {
+          <article class="tarjeta">
+            <div class="imagen">
+              @if (tour.imagenUrl && !imagenesFallidas().has(tour.id)) {
+                <img [src]="servicio.urlImagen(tour.imagenUrl)" [alt]="tour.nombre" loading="lazy" (error)="imagenFallida(tour.id)" />
+              } @else {
+                <span class="sin-imagen">Imagen no disponible</span>
+              }
+            </div>
+            <div class="detalle">
+              <p class="categoria">{{ categorias()[tour.categoriaId] ?? ('Categoría ' + tour.categoriaId) }}</p>
+              <h3>{{ tour.nombre }}</h3>
+              <p class="duracion">Duración: {{ tour.duracionMinutos }} min</p>
+              <p class="descripcion">{{ tour.descripcion }}</p>
+              <div class="pie-tarjeta">
+                <div class="precio"><span>Por persona</span><strong>{{ tour.precioBase | currency:'PEN':'S/ ':'1.2-2' }}</strong></div>
+                <a [routerLink]="['/app/tours', tour.id]" [attr.aria-label]="'Ver tour: ' + tour.nombre">Ver tour</a>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </section>
+</main>

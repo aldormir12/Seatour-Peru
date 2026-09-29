@@ -41,10 +41,6 @@ const adminSalidas = () =>
   import('./components/admin-salidas/admin-salidas')
     .then(m => m.AdminSalidas);
 
-const salidas = () =>
-  import('./components/reservas/salidas')
-    .then(m => m.SalidasComponent);
-
 const reservas = () =>
   import('./components/reservas/reservas-lista')
     .then(m => m.ReservasListaComponent);
@@ -337,7 +333,16 @@ export const routes: Routes = [
 
               {
                 path: 'tours',
-                loadComponent: salidas
+                loadComponent: () =>
+                  import('./components/tours-cliente/tours-cliente')
+                    .then(m => m.ToursCliente)
+              },
+
+              {
+                path: 'tours/:id',
+                loadComponent: () =>
+                  import('./components/tour-detalle/tour-detalle')
+                    .then(m => m.TourDetalle)
               },
 
               {

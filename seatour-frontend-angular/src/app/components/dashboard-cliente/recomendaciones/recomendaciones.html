@@ -1,0 +1,219 @@
+<section
+  class="relative z-[4] mt-[-200px] ml-[max(28px,calc((100%-1200px)/2))] w-[min(840px,calc(70%-39.2px))] py-10 pb-16 text-[#102d41] max-[1000px]:mx-auto max-[1000px]:w-[calc(100%-56px)] max-[600px]:w-[calc(100%-36px)] max-[600px]:py-8 max-[600px]:pb-12"
+  aria-labelledby="titulo-tours"
+  [attr.aria-busy]="cargandoTours()"
+>
+  <div
+    class="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 max-[600px]:flex-nowrap"
+  >
+    <h2
+      id="titulo-tours"
+      class="m-0 text-[clamp(22px,2vw,28px)] font-bold tracking-[-0.7px] text-white"
+    >
+      Tours recomendados para ti
+    </h2>
+
+    <a
+      class="py-3 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-4 focus-visible:outline-[#087dab] max-[600px]:shrink-0"
+      routerLink="/app/tours"
+    >
+      Ver todos
+    </a>
+  </div>
+
+  @if (cargandoTours()) {
+    <p
+      class="col-span-full m-0 rounded-2xl border border-[#dfe9ef] bg-white px-6 py-8 text-center text-[#526c7b]"
+      role="status"
+    >
+      Cargando tours...
+    </p>
+  } @else if (errorTours()) {
+    <div
+      class="col-span-full m-0 rounded-2xl border border-[#dfe9ef] bg-white px-6 py-8 text-center text-[#526c7b]"
+      role="alert"
+    >
+      <p class="mb-4 mt-0">{{ errorTours() }}</p>
+
+      <button
+        class="inline-flex min-h-9 cursor-pointer items-center justify-center rounded-[10px] border-0 bg-[#087dab] px-[10px] py-2 text-xs font-semibold text-white hover:bg-[#06668d] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-4 focus-visible:outline-[#087dab]"
+        type="button"
+        (click)="cargarToursDestacados()"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else {
+    <div class="grid grid-cols-3 gap-[14px] max-[1000px]:grid-cols-2 max-[600px]:grid-cols-1">
+      @for (tour of toursDestacados(); track tour.id) {
+        <article
+          class="flex flex-col overflow-hidden rounded-[18px] border border-[#dfe9ef] bg-white shadow-[0_8px_28px_rgba(16,45,65,0.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(16,45,65,0.09)]"
+        >
+          <!-- Imagen -->
+          <div
+            class="grid h-[130px] place-items-center overflow-hidden bg-[#e5eff4] text-sm text-[#526c7b]"
+          >
+            @if (tour.imagenUrl && !imagenesToursFallidas().has(tour.id)) {
+              <img
+                class="block h-full w-full object-cover"
+                [src]="toursService.urlImagen(tour.imagenUrl)"
+                [alt]="tour.nombre"
+                loading="lazy"
+                (error)="marcarImagenTourFallida(tour.id)"
+              />
+            } @else {
+              <span>Imagen no disponible</span>
+            }
+          </div>
+
+          <!-- Contenido -->
+          <div class="flex min-w-0 flex-1 flex-col [overflow-wrap:anywhere] p-3">
+            <!-- Categoría -->
+            <p
+              class="mb-1.5 mt-0 inline-flex w-fit items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 ring-1 ring-inset ring-sky-600/10"
+            >
+              {{ tour.categoria?.nombre ?? 'Categoría ' + tour.categoriaId }}
+            </p>
+
+            <!-- Nombre -->
+            <h3 class="m-0 text-[17px] font-bold leading-[1.2] text-[#102d41]">
+              {{ tour.nombre }}
+            </h3>
+
+            <!-- Descripción -->
+            <p
+              class="mb-2 mt-1.5 overflow-hidden text-xs leading-[1.5] text-[#526c7b] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"
+            >
+              {{ tour.descripcion }}
+            </p>
+
+            <!-- Datos del tour -->
+            <div class="mb-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              <!-- Duración -->
+              <div class="flex items-center gap-1.5 text-xs font-medium text-[#526c7b]">
+                <svg
+                  class="h-3.5 w-3.5 shrink-0 text-sky-600"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M12 7v5l3 2"></path>
+                </svg>
+
+                <span>{{ tour.duracionMinutos }} min</span>
+              </div>
+
+              @if (tour.errorSalida) {
+                <div class="flex items-center gap-1.5 text-xs text-[#7b8790]">
+                  <svg
+                    class="h-3.5 w-3.5 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                    <path d="M16 3v4M8 3v4M3 10h18"></path>
+                  </svg>
+
+                  <span>Error al consultar salida</span>
+                </div>
+              } @else if (tour.proximaSalida; as salida) {
+                <!-- Próxima salida -->
+                <div class="flex items-center gap-1.5 text-xs text-[#526c7b]">
+                  <svg
+                    class="h-3.5 w-3.5 shrink-0 text-sky-600"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                    <path d="M16 3v4M8 3v4M3 10h18"></path>
+                  </svg>
+
+                  <span>
+                    Próxima
+                    <strong class="font-semibold text-[#29495b]">
+                      {{ salida.horaSalida.slice(0, 5) }}
+                    </strong>
+                  </span>
+                </div>
+              } @else {
+                <!-- Sin salida -->
+                <div class="flex items-center gap-1.5 text-xs text-[#7b8790]">
+                  <svg
+                    class="h-3.5 w-3.5 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                    <path d="M16 3v4M8 3v4M3 10h18"></path>
+                  </svg>
+
+                  <span>Sin próximas salidas</span>
+                </div>
+              }
+            </div>
+
+            <!-- Cupos -->
+            @if (tour.proximaSalida; as salida) {
+              <span
+                class="mb-2.5 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/15"
+              >
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
+
+                {{ salida.cuposDisponibles }}
+                {{ salida.cuposDisponibles === 1 ? 'cupo disponible' : 'cupos disponibles' }}
+              </span>
+            }
+
+            <!-- Precio y botón -->
+            <div
+              class="mt-auto flex items-end justify-between gap-2 border-t border-[#edf2f5] pt-2.5"
+            >
+              <div class="flex flex-col">
+                <span class="text-[10px] text-[#718594]"> Por persona </span>
+
+                <strong class="text-[17px] font-bold leading-tight text-[#102d41]">
+                  {{ tour.precioBase | currency: 'PEN' : 'S/ ' : '1.2-2' }}
+                </strong>
+              </div>
+
+              <a
+                class="inline-flex min-h-8 items-center justify-center rounded-[9px] bg-[#087dab] px-3 py-1.5 text-[11px] font-semibold text-white no-underline transition-colors hover:bg-[#06668d] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-4 focus-visible:outline-[#087dab]"
+                [routerLink]="['/app/tours', tour.id]"
+                [attr.aria-label]="'Ver detalles de ' + tour.nombre"
+              >
+                Ver detalles
+              </a>
+            </div>
+          </div>
+        </article>
+      } @empty {
+        <p
+          class="col-span-full m-0 rounded-2xl border border-[#dfe9ef] bg-white px-6 py-8 text-center text-[#526c7b]"
+          role="status"
+        >
+          Aún no hay tours disponibles para mostrar.
+        </p>
+      }
+    </div>
+  }
+</section>

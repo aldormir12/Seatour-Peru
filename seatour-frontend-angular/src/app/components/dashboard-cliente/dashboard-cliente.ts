@@ -7,6 +7,7 @@ import { ZONAS_MARITIMAS, ZONA_STORAGE_KEY, ZonaMaritima } from './zonas-maritim
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
+import { RecomendacionesComponent } from './recomendaciones/recomendaciones';
 
 interface FeatureItem {
   titulo: string;
@@ -42,7 +43,7 @@ interface CondicionActual {
 @Component({
   selector: 'app-dashboard-cliente',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, RecomendacionesComponent],
   templateUrl: './dashboard-cliente.html',
   styleUrl: './dashboard-cliente.css'
 })

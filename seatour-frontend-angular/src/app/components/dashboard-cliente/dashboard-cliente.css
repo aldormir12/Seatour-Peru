@@ -21,11 +21,11 @@
 .hero {
   position: relative;
   width: 100%;
-  min-height: 560px;
+  min-height: 680px;
   overflow: hidden;
   display: flex;
   align-items: flex-start;
-  padding: 108px max(4vw, 28px) 120px;
+  padding: 108px max(4vw, 28px) 145px;
   background-image: url('/images/dashboard/hero-cliente.png');
   background-size: cover;
   background-position: center 80%;
@@ -443,11 +443,11 @@
 .search-bar {
   position: absolute;
   left: 50%;
-  bottom: 70px;
+  bottom: 180px;
   transform: translateX(-50%);
 
   width: min(94%, 1050px);
-  min-height: 58px;
+  min-height: 65px;
 
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr 1.25fr;
@@ -644,6 +644,7 @@
   font-size: 9px;
   font-weight: 500;
 }
+
 .hero::after {
   content: '';
 

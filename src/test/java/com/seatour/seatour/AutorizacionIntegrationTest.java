@@ -54,6 +54,9 @@ class AutorizacionIntegrationTest {
     @Autowired UsuarioRepository usuarios;
     @Autowired RolRepository roles;
     // Controllers reales y cadena JWT real; se aisla la logica operativa de negocio.
+    @MockitoBean com.seatour.seatour.repository.EmbarcacionRepository barcos;
+    @MockitoBean ImagenEmbarcacionService imagenes;
+    @MockitoBean InicioAutomaticoSalidas inicioAutomatico;
     @MockitoBean TourService tours;
     @MockitoBean CategoriaTourService categorias;
     @MockitoBean SalidaProgramadaService salidas;
@@ -69,7 +72,7 @@ class AutorizacionIntegrationTest {
     @RestController
     static class EmbarcacionesProbe {
         @RequestMapping(value = {"/api/embarcaciones", "/api/embarcaciones/{id}"},
-                method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT,
+                method = {RequestMethod.POST, RequestMethod.PUT,
                         RequestMethod.PATCH, RequestMethod.DELETE})
         ResponseEntity<Void> gestion() {
             return ResponseEntity.noContent().build();
@@ -95,6 +98,14 @@ class AutorizacionIntegrationTest {
         Embarcacion barco = new Embarcacion();
         barco.setId(1L);
         barco.setNombre("Barco");
+        barco.setMatricula("PRIVADA-123");
+        barco.setTipo("LANCHA");
+        barco.setCapacidad(8);
+        barco.setActivo(true);
+        barco.setImagenUrl("/api/embarcaciones/imagenes/imagen.jpg");
+        when(barcos.findById(1L)).thenReturn(Optional.of(barco));
+        when(imagenes.leer("imagen.jpg")).thenReturn(
+                new org.springframework.core.io.ByteArrayResource(new byte[] {1, 2, 3}));
         SalidaProgramada salida = new SalidaProgramada();
         salida.setId(1L);
         salida.setTour(tour);
@@ -161,6 +172,12 @@ class AutorizacionIntegrationTest {
     @ParameterizedTest
     @MethodSource("operacionesProtegidas")
     void clienteNoPuedeGestionar(String operacion) throws Exception {
+        if (operacion.equals("GET /api/embarcaciones/imagenes/imagen.jpg")
+                || operacion.equals("HEAD /api/embarcaciones/imagenes/imagen.jpg")) {
+            mvc.perform(request(HttpMethod.valueOf(operacion.split(" ")[0]), "/api/embarcaciones/imagenes/imagen.jpg")
+                    .header("Authorization", token("CLIENTE"))).andExpect(status().isOk());
+            return;
+        }
         String[] partes = operacion.split(" ");
         var resultado = mvc.perform(request(HttpMethod.valueOf(partes[0]), partes[1])
                         .header("Authorization", token("CLIENTE")).contentType("application/json").content("{}"))
@@ -202,7 +219,7 @@ class AutorizacionIntegrationTest {
     @ValueSource(strings = {"OPERADOR", "ADMIN"})
     void reglaEmbarcacionesSoloPermiteAdmin(String rol) throws Exception {
         String auth = token(rol);
-        for (HttpMethod metodo : List.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.DELETE)) {
+        for (HttpMethod metodo : List.of(HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.DELETE)) {
             mvc.perform(request(metodo, "/api/embarcaciones/1").header("Authorization", auth))
                     .andExpect(status().is("ADMIN".equals(rol) ? 204 : 403));
         }
@@ -217,6 +234,35 @@ class AutorizacionIntegrationTest {
         String[] partes = operacion.split(" ");
         mvc.perform(request(HttpMethod.valueOf(partes[0]), partes[1])
                 .header("Authorization", token("OPERADOR")).contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CLIENTE", "ADMIN"})
+    void consultaEmbarcacionSoloExponeFichaPublica(String rol) throws Exception {
+        String auth = token(rol);
+        var respuesta = mvc.perform(get("/api/embarcaciones/1").header("Authorization", auth))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertEquals(mapper.readTree("""
+                {"id":1,"nombre":"Barco","tipo":"LANCHA","capacidad":8,
+                 "imagenUrl":"/api/embarcaciones/imagenes/imagen.jpg"}
+                """), mapper.readTree(respuesta));
+        mvc.perform(head("/api/embarcaciones/1").header("Authorization", auth)).andExpect(status().isOk());
+        mvc.perform(get("/api/embarcaciones/999").header("Authorization", auth)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/embarcaciones/imagenes/imagen.jpg").header("Authorization", auth))
+                .andExpect(status().isOk()).andExpect(content().contentType("image/jpeg"))
+                .andExpect(content().bytes(new byte[] {1, 2, 3}));
+    }
+
+    @Test
+    void fichaEmbarcacionRequiereRolAutorizado() throws Exception {
+        mvc.perform(get("/api/embarcaciones/1")).andExpect(status().isUnauthorized());
+        mvc.perform(head("/api/embarcaciones/1")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/embarcaciones/1").header("Authorization", token("OPERADOR")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/embarcaciones/1").header("Authorization", "Bearer invalido"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/salidas/embarcaciones/activas").header("Authorization", token("CLIENTE")))
                 .andExpect(status().isForbidden());
     }
 

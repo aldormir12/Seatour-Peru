@@ -31,7 +31,31 @@ public class Reserva {
     private Instant confirmadaEn;
     private Instant canceladaEn;
 
+    @Column(updatable = false) private Integer ninos;
+    @Column(updatable = false) private Integer adultos;
+    @Column(updatable = false) private Integer adultosMayores;
+    @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private java.util.List<ReservaAdicional> adicionales = new java.util.ArrayList<>();
+    @Column(precision = 19, scale = 2, updatable = false) private BigDecimal subtotalAdicionales;
+    public void agregarAdicionales(java.util.List<ReservaAdicional> elegidos) {
+        if (id != null || !adicionales.isEmpty()) throw new IllegalStateException("La reserva ya fue configurada");
+        elegidos.forEach(a -> { a.asociar(this); adicionales.add(a); });
+        subtotalAdicionales = elegidos.stream().map(ReservaAdicional::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+        precioTotal = precioTotal.add(subtotalAdicionales);
+    }
+    public java.util.List<ReservaAdicional> getAdicionales() { return java.util.Collections.unmodifiableList(adicionales); }
+    public BigDecimal getSubtotalAdicionales() { return subtotalAdicionales == null ? BigDecimal.ZERO : subtotalAdicionales; }
     protected Reserva() {}
+    public Reserva(Usuario cliente, SalidaProgramada salida, BigDecimal base,
+            int ninos, int adultos, int adultosMayores, BigDecimal total) {
+        this(cliente, salida, ninos + adultos + adultosMayores, base);
+        this.ninos = ninos; this.adultos = adultos; this.adultosMayores = adultosMayores;
+        this.precioTotal = total;
+    }
+    public Integer getNinos() { return ninos; }
+    public Integer getAdultos() { return adultos; }
+    public Integer getAdultosMayores() { return adultosMayores; }
     public Reserva(Usuario cliente, SalidaProgramada salida, int pasajeros, BigDecimal precio) {
         this.cliente = cliente;
         this.salida = salida;

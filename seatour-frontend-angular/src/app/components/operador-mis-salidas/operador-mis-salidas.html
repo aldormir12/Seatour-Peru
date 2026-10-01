@@ -1,0 +1,389 @@
+<section class="min-h-full bg-slate-50 px-5 py-6 lg:px-8">
+  <!-- Encabezado -->
+  <div class="mb-6">
+    <p class="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Operación</p>
+
+    <h1 class="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Mis salidas</h1>
+
+    <p class="mt-1 max-w-2xl text-sm text-slate-500">
+      Consulta las salidas que tienes asignadas y accede a su información operativa.
+    </p>
+  </div>
+
+  <!-- Resumen -->
+  <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500">Total</p>
+
+          <p class="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+            {{ total() }}
+          </p>
+        </div>
+
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <rect x="4" y="5" width="16" height="15" rx="2" />
+            <path d="M8 3v4M16 3v4M4 10h16" />
+          </svg>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500">Programadas</p>
+
+          <p class="mt-2 text-3xl font-bold tracking-tight text-slate-700">
+            {{ programadas() }}
+          </p>
+        </div>
+
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path stroke-linecap="round" d="M12 7v5l3 2" />
+          </svg>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500">En curso</p>
+
+          <p class="mt-2 text-3xl font-bold tracking-tight text-amber-700">
+            {{ enCurso() }}
+          </p>
+        </div>
+
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 4l14 8-14 8V4Z" />
+          </svg>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500">Completadas</p>
+
+          <p class="mt-2 text-3xl font-bold tracking-tight text-emerald-700">
+            {{ completadas() }}
+          </p>
+        </div>
+
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
+          </svg>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <!-- Panel -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <!-- Filtros -->
+    <div class="border-b border-slate-200 p-4 sm:p-5">
+      <div
+        class="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+      >
+        <!-- Buscar -->
+        <div class="relative">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path stroke-linecap="round" d="m20 20-3.5-3.5" />
+          </svg>
+
+          <input
+            type="search"
+            [ngModel]="busqueda()"
+            (ngModelChange)="cambiarBusqueda($event)"
+            placeholder="Buscar tour o embarcación"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-50"
+          />
+        </div>
+
+        <!-- Estado -->
+        <select
+          [ngModel]="filtroEstado()"
+          (ngModelChange)="cambiarEstado($event)"
+          class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-50"
+        >
+          <option value="TODOS">Todos los estados</option>
+
+          <option value="PROGRAMADA">Programadas</option>
+
+          <option value="EN_CURSO">En curso</option>
+
+          <option value="COMPLETADA">Completadas</option>
+
+          <option value="CANCELADA">Canceladas</option>
+        </select>
+
+        <!-- Fecha -->
+        <input
+          type="date"
+          [ngModel]="filtroFecha()"
+          (ngModelChange)="cambiarFecha($event)"
+          class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-50"
+        />
+
+        <!-- Limpiar -->
+        <button
+          type="button"
+          (click)="limpiarFiltros()"
+          class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4 4v6h6M20 20v-6h-6M5.5 15A7 7 0 0 0 18 17M18.5 9A7 7 0 0 0 6 7"
+            />
+          </svg>
+
+          Limpiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Cargando -->
+    @if (cargando()) {
+      <div class="flex min-h-72 flex-col items-center justify-center gap-3 p-8">
+        <div
+          class="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600"
+        ></div>
+
+        <p class="text-sm text-slate-500">Cargando tus salidas...</p>
+      </div>
+    } @else {
+      @if (salidasFiltradas().length === 0) {
+        <!-- Vacío -->
+        <div class="flex min-h-72 flex-col items-center justify-center px-6 py-12 text-center">
+          <div
+            class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              class="h-7 w-7"
+              aria-hidden="true"
+            >
+              <rect x="4" y="5" width="16" height="15" rx="2" />
+              <path d="M8 3v4M16 3v4M4 10h16" />
+            </svg>
+          </div>
+
+          <h3 class="text-base font-semibold text-slate-800">No hay salidas para mostrar</h3>
+
+          <p class="mt-1 max-w-md text-sm text-slate-500">
+            Ajusta los filtros o espera a que se te asigne una nueva salida.
+          </p>
+        </div>
+      } @else {
+        <!-- Encabezados escritorio -->
+        <div
+          class="hidden grid-cols-[115px_minmax(0,1.4fr)_minmax(0,1fr)_110px_115px_34px] gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 lg:grid"
+        >
+          <span> Fecha </span>
+
+          <span> Tour </span>
+
+          <span> Embarcación </span>
+
+          <span> Pasajeros </span>
+
+          <span> Estado </span>
+
+          <span></span>
+        </div>
+
+        <!-- Lista -->
+        <div class="divide-y divide-slate-100">
+          @for (salida of salidasFiltradas(); track salida.id) {
+            <button
+              type="button"
+              (click)="verSalida(salida)"
+              class="group grid w-full gap-4 px-5 py-5 text-left transition hover:bg-slate-50 lg:grid-cols-[115px_minmax(0,1.4fr)_minmax(0,1fr)_110px_115px_34px] lg:items-center"
+            >
+              <!-- Fecha -->
+              <div>
+                <p class="text-sm font-semibold text-slate-800">
+                  {{ formatearFecha(salida.fecha) }}
+                </p>
+
+                <p class="mt-1 text-xs text-slate-400">
+                  {{ formatearHora(salida.horaSalida) }}
+                </p>
+              </div>
+
+              <!-- Tour -->
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold text-slate-900">
+                  {{ salida.tourNombre }}
+                </p>
+
+                <p class="mt-1 text-xs text-slate-400">Salida #{{ salida.id }}</p>
+              </div>
+
+              <!-- Embarcación -->
+              <div class="flex min-w-0 items-center gap-2 text-sm text-slate-600">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-4 w-4 shrink-0 text-slate-400"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3 17l2.3 2.3A2.4 2.4 0 0 0 7 20h10a2.4 2.4 0 0 0 1.7-.7L21 17M4 15h16l-2-7H6l-2 7Zm5-7V5h6v3"
+                  />
+                </svg>
+
+                <span class="truncate">
+                  {{ salida.embarcacionNombre }}
+                </span>
+              </div>
+
+              <!-- Pasajeros -->
+              <div class="flex items-center gap-2 text-sm text-slate-600">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-4 w-4 text-slate-400"
+                  aria-hidden="true"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4" />
+                  <circle cx="9.5" cy="7" r="4" />
+                </svg>
+
+                {{ salida.pasajerosReservados }}
+                /
+                {{ pasajerosTotales(salida) }}
+              </div>
+
+              <!-- Estado -->
+              <div>
+                @switch (salida.estado) {
+                  @case ('PROGRAMADA') {
+                    <span
+                      class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                    >
+                      <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                      Programada
+                    </span>
+                  }
+
+                  @case ('EN_CURSO') {
+                    <span
+                      class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                    >
+                      <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                      En curso
+                    </span>
+                  }
+
+                  @case ('COMPLETADA') {
+                    <span
+                      class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                    >
+                      <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                      Completada
+                    </span>
+                  }
+
+                  @case ('CANCELADA') {
+                    <span
+                      class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600"
+                    >
+                      <span class="h-1.5 w-1.5 rounded-full bg-red-400"></span>
+                      Cancelada
+                    </span>
+                  }
+                }
+              </div>
+
+              <!-- Flecha -->
+              <div class="hidden justify-end lg:flex">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-teal-600"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" d="m9 6 6 6-6 6" />
+                </svg>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    }
+  </div>
+</section>

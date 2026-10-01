@@ -1,15 +1,82 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, forkJoin, of, timeout } from 'rxjs';
+import { catchError, forkJoin, map, of, timeout, Observable, shareReplay } from 'rxjs';
 import { ZonaMaritima } from '../components/dashboard-cliente/zonas-maritimas';
 
 export interface CondicionesOpenMeteo {
   current?: { time?: string; [variable: string]: number | string | null | undefined };
 }
 
+interface PronosticoOpenMeteo {
+  hourly?: { time: string[]; [variable: string]: (number | string | null)[] };
+}
+
+export interface HoraMarina {
+  hora: string;
+  oleaje: number | null;
+  viento: number | null;
+  visibilidad: number | null;
+  temperaturaMar: number | null;
+  condicion: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OceanService {
   private readonly http = inject(HttpClient);
+  private readonly cacheEtiquetas = new Map<string, {
+    expira: number; datos: Observable<{ items: HoraMarina[]; parcial: boolean }>;
+  }>();
+
+  pronosticoParaEtiqueta(zona: ZonaMaritima, fecha: string) {
+    const ahora = Date.now();
+    for (const [clave, entrada] of this.cacheEtiquetas) {
+      if (entrada.expira <= ahora) this.cacheEtiquetas.delete(clave);
+    }
+    const clave = `${zona.id}:${fecha}`;
+    const existente = this.cacheEtiquetas.get(clave);
+    if (existente) return existente.datos;
+    const datos = this.pronostico(zona, fecha).pipe(shareReplay({ bufferSize: 1, refCount: true }));
+    this.cacheEtiquetas.set(clave, { expira: ahora + 5 * 60_000, datos });
+    return datos;
+  }
+  pronostico(zona: ZonaMaritima, fecha: string) {
+    const params = {
+      latitude: zona.latitud, longitude: zona.longitud, timezone: 'America/Lima',
+      start_date: fecha, end_date: fecha
+    };
+    const consultar = (url: string, extras: Record<string, string>) =>
+      this.http.get<PronosticoOpenMeteo>(url, { params: { ...params, ...extras } }).pipe(
+        timeout(15000), catchError(() => of(null))
+      );
+    return forkJoin({
+      weather: consultar('https://api.open-meteo.com/v1/forecast', {
+        hourly: 'weather_code,wind_speed_10m,visibility', wind_speed_unit: 'kmh'
+      }),
+      marine: consultar('https://marine-api.open-meteo.com/v1/marine', {
+        hourly: 'wave_height,sea_surface_temperature', cell_selection: 'sea'
+      })
+    }).pipe(map(({ weather, marine }) => {
+      const w = weather?.hourly;
+      const m = marine?.hourly;
+      const horas = [...new Set([...(w?.time ?? []), ...(m?.time ?? [])])]
+        .filter(hora => hora.startsWith(`${fecha}T`)).sort();
+      const numero = (datos: PronosticoOpenMeteo['hourly'], campo: string, indice: number) => {
+        const valor = datos?.[campo]?.[indice];
+        return typeof valor === 'number' && Number.isFinite(valor) ? valor : null;
+      };
+      const items: HoraMarina[] = horas.map(hora => {
+        const wi = w?.time.indexOf(hora) ?? -1;
+        const mi = m?.time.indexOf(hora) ?? -1;
+        return {
+          hora, oleaje: numero(m, 'wave_height', mi), viento: numero(w, 'wind_speed_10m', wi),
+          visibilidad: numero(w, 'visibility', wi),
+          temperaturaMar: numero(m, 'sea_surface_temperature', mi),
+          condicion: estadoClima(numero(w, 'weather_code', wi))
+        };
+      });
+      return { items, parcial: !w || !m };
+    }));
+  }
   consultar(zona: ZonaMaritima) {
     const params = { latitude: zona.latitud, longitude: zona.longitud, timezone: 'America/Lima' };
     const consultar = (url: string, extras: Record<string, string>) =>

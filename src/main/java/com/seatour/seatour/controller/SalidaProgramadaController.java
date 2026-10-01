@@ -5,7 +5,11 @@ import com.seatour.seatour.dto.SalidaProgramadaRespuesta;
 import com.seatour.seatour.model.Embarcacion;
 import com.seatour.seatour.model.SalidaProgramada;
 import com.seatour.seatour.model.Tour;
+import com.seatour.seatour.model.Usuario;
 import com.seatour.seatour.service.SalidaProgramadaService;
+import com.seatour.seatour.service.ReservaService;
+import com.seatour.seatour.security.UsuarioPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,16 +22,37 @@ import java.util.List;
 public class SalidaProgramadaController {
 
     private final SalidaProgramadaService salidaProgramadaService;
+    private final ReservaService reservas;
 
     public SalidaProgramadaController(
-            SalidaProgramadaService salidaProgramadaService) {
+            SalidaProgramadaService salidaProgramadaService, ReservaService reservas) {
         this.salidaProgramadaService = salidaProgramadaService;
+        this.reservas = reservas;
+    }
+
+    @GetMapping("/mis-salidas")
+    public List<SalidaProgramadaRespuesta> listarPropias(@AuthenticationPrincipal UsuarioPrincipal actor) {
+        return salidaProgramadaService.listarPropias(actor.datos()).stream()
+                .map(this::convertirARespuesta).toList();
+    }
+
+    @GetMapping("/mis-salidas/{id}")
+    public SalidaProgramadaRespuesta detallePropio(@PathVariable Long id,
+            @AuthenticationPrincipal UsuarioPrincipal actor) {
+        return convertirARespuesta(salidaProgramadaService.buscarPropia(id, actor.datos()));
+    }
+
+    @GetMapping("/mis-salidas/{id}/reservas")
+    public List<com.seatour.seatour.dto.ReservaRespuesta> reservasPropias(@PathVariable Long id,
+            @AuthenticationPrincipal UsuarioPrincipal actor) {
+        return reservas.listarPorSalidaPropia(id, actor.datos());
     }
 
     @GetMapping
-    public ResponseEntity<List<SalidaProgramadaRespuesta>> listarTodas() {
+    public ResponseEntity<List<SalidaProgramadaRespuesta>> listarTodas(@AuthenticationPrincipal UsuarioPrincipal actor) {
 
-        List<SalidaProgramadaRespuesta> respuesta = salidaProgramadaService.listarTodas()
+        List<SalidaProgramadaRespuesta> respuesta = (esOperador(actor)
+                ? salidaProgramadaService.listarPropias(actor.datos()) : salidaProgramadaService.listarTodas())
                 .stream()
                 .map(this::convertirARespuesta)
                 .toList();
@@ -37,8 +62,9 @@ public class SalidaProgramadaController {
 
     @GetMapping("/{id}")
     public ResponseEntity<SalidaProgramadaRespuesta> buscarPorId(
-            @PathVariable Long id) {
-        SalidaProgramada salida = salidaProgramadaService.buscarPorId(id);
+            @PathVariable Long id, @AuthenticationPrincipal UsuarioPrincipal actor) {
+        SalidaProgramada salida = esOperador(actor)
+                ? salidaProgramadaService.buscarPropia(id, actor.datos()) : salidaProgramadaService.buscarPorId(id);
 
         return ResponseEntity.ok(
                 convertirARespuesta(salida));
@@ -46,10 +72,11 @@ public class SalidaProgramadaController {
 
     @GetMapping("/tour/{tourId}")
     public ResponseEntity<List<SalidaProgramadaRespuesta>> listarPorTour(
-            @PathVariable Long tourId) {
+            @PathVariable Long tourId, @AuthenticationPrincipal UsuarioPrincipal actor) {
 
         List<SalidaProgramadaRespuesta> respuesta = salidaProgramadaService.listarPorTour(tourId)
                 .stream()
+                .filter(s -> visiblePara(s, actor))
                 .map(this::convertirARespuesta)
                 .toList();
 
@@ -58,11 +85,12 @@ public class SalidaProgramadaController {
 
     @GetMapping("/tour/{tourId}/disponibles")
     public ResponseEntity<List<SalidaProgramadaRespuesta>> listarDisponiblesPorTour(
-            @PathVariable Long tourId) {
+            @PathVariable Long tourId, @AuthenticationPrincipal UsuarioPrincipal actor) {
 
         List<SalidaProgramadaRespuesta> respuesta = salidaProgramadaService
                 .listarDisponiblesPorTour(tourId)
                 .stream()
+                .filter(s -> visiblePara(s, actor))
                 .map(this::convertirARespuesta)
                 .toList();
 
@@ -112,9 +140,10 @@ public class SalidaProgramadaController {
 
     @PatchMapping("/{id}/estado")
     public ResponseEntity<SalidaProgramadaRespuesta> cambiarEstado(@PathVariable Long id,
-            @Valid @RequestBody com.seatour.seatour.dto.SalidaProgramadaEstado datos) {
-        return ResponseEntity.ok(convertirARespuesta(salidaProgramadaService.cambiarEstado(
-                id, datos.estado(), datos.motivoCancelacion())));
+            @Valid @RequestBody com.seatour.seatour.dto.SalidaProgramadaEstado datos,
+            @AuthenticationPrincipal UsuarioPrincipal actor) {
+        return ResponseEntity.ok(convertirARespuesta(salidaProgramadaService.cambiarEstadoAutorizado(
+                id, datos.estado(), datos.motivoCancelacion(), actor.datos())));
     }
 
     @PatchMapping("/{id}/embarcacion")
@@ -127,6 +156,15 @@ public class SalidaProgramadaController {
     @GetMapping("/embarcaciones/activas")
     public java.util.List<com.seatour.seatour.dto.EmbarcacionRespuesta> embarcacionesActivas() {
         return salidaProgramadaService.listarEmbarcacionesActivas();
+    }
+
+    private boolean esOperador(UsuarioPrincipal actor) {
+        return actor != null && "OPERADOR".equals(actor.datos().rol());
+    }
+
+    private boolean visiblePara(SalidaProgramada salida, UsuarioPrincipal actor) {
+        return !esOperador(actor) || salida.getOperador() != null
+                && salida.getOperador().getId().equals(actor.datos().id());
     }
 
     private SalidaProgramada convertirAEntidad(
@@ -152,6 +190,10 @@ public class SalidaProgramadaController {
 
         salida.setEmbarcacion(embarcacion);
 
+        Usuario operador = new Usuario();
+        operador.setId(datos.getOperadorId());
+        salida.setOperador(operador);
+
         return salida;
     }
 
@@ -169,6 +211,14 @@ public class SalidaProgramadaController {
                 salida.getEmbarcacion().getId(),
                 salida.getEmbarcacion().getNombre());
         respuesta.setPrecioPorPasajero(salida.getTour().getPrecioBase());
+        respuesta.setDuracionMinutos(salida.getTour().getDuracionMinutos());
+        respuesta.setInicioReal(salida.getInicioReal());
+        respuesta.setFinReal(salida.getFinReal());
+        if (salida.getOperador() != null) {
+            respuesta.setOperadorId(salida.getOperador().getId());
+            respuesta.setOperadorNombre(salida.getOperador().getNombre());
+            respuesta.setOperadorApellido(salida.getOperador().getApellido());
+        }
         respuesta.setTieneReservas(salidaProgramadaService.tieneReservas(salida.getId()));
         respuesta.setCambioOperativoConsumido(salidaProgramadaService.cambioOperativoConsumido(salida.getId()));
         respuesta.setPasajerosReservados(salidaProgramadaService.pasajerosReservados(salida.getId()));

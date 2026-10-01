@@ -1,3 +1,4 @@
+import { UbicacionTour } from '../ubicacion-tour/ubicacion-tour';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { Tour, Tours } from '../../services/tours';
 import { CategoriasService } from '../../services/categorias.service';
@@ -39,7 +40,7 @@ interface PuntoMapa {
 
 @Component({
   selector: 'app-rutas-interactivas',
-  imports: [RouterLink],
+  imports: [UbicacionTour,RouterLink],
   templateUrl: './rutas-interactivas.html',
   styleUrl: './rutas-interactivas.css'
 })

@@ -1,0 +1,857 @@
+<main
+  class="relative min-h-screen overflow-hidden bg-cover bg-no-repeat text-white"
+  [style.background-image]="clienteShell ? null : 'url(\'/images/dashboard/hero-cliente.png\')'"
+  style="background-position: center 80%"
+>
+  <!-- ================================================== -->
+  <!-- FONDO / OVERLAY -->
+  <!-- ================================================== -->
+
+  @if (!clienteShell) {
+    <div
+      class="absolute inset-0 bg-gradient-to-r from-[#071923]/85 via-[#0b2736]/55 to-[#071923]/25"
+      aria-hidden="true"
+    ></div>
+
+    <div
+      class="absolute inset-0 bg-gradient-to-t from-[#06141d]/80 via-transparent to-[#06141d]/20"
+      aria-hidden="true"
+    ></div>
+
+    <!-- ================================================== -->
+    <!-- NAVEGACIÓN -->
+    <!-- ================================================== -->
+  }
+
+  <!-- ================================================== -->
+  <!-- CONTENIDO -->
+  <!-- ================================================== -->
+
+  <section
+    class="relative z-[2] flex min-h-screen flex-col px-7 pb-8 pt-[118px] lg:px-[max(4vw,28px)]"
+  >
+    <!-- ================================================== -->
+    <!-- CABECERA DE LA PÁGINA -->
+    <!-- ================================================== -->
+
+    <div class="max-w-[720px]">
+      <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-300">
+        EL MAR TE ESPERA
+      </p>
+
+      <h1
+        class="mt-3 max-w-[650px] text-[clamp(2.6rem,5vw,5rem)] font-bold leading-[0.95] tracking-[-0.055em] text-white"
+      >
+        Mis reservas
+      </h1>
+
+      <p class="mt-5 max-w-[610px] text-sm leading-6 text-white/75 md:text-[15px]">
+        Gestiona tus próximas experiencias, consulta sus detalles y mantén todo preparado antes de
+        volver al mar.
+      </p>
+    </div>
+
+    <!-- ================================================== -->
+    <!-- CONTROLES -->
+    <!-- ================================================== -->
+
+    <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+      <!-- FILTROS -->
+      <div
+        class="flex flex-wrap items-center gap-2 rounded-2xl border border-white/15 bg-black/15 p-1.5 backdrop-blur-xl"
+        aria-label="Filtrar reservas"
+      >
+        <button
+          type="button"
+          (click)="cambiarFiltro('')"
+          class="rounded-xl px-4 py-2 text-xs font-semibold transition"
+          [class.bg-white]="filtro() === ''"
+          [class.text-[#102d41]]="filtro() === ''"
+          [class.text-white/75]="filtro() !== ''"
+          [class.hover:bg-white/10]="filtro() !== ''"
+        >
+          Todas
+        </button>
+
+        <button
+          type="button"
+          (click)="cambiarFiltro('CONFIRMADA')"
+          class="rounded-xl px-4 py-2 text-xs font-semibold transition"
+          [class.bg-white]="filtro() === 'CONFIRMADA'"
+          [class.text-[#102d41]]="filtro() === 'CONFIRMADA'"
+          [class.text-white/75]="filtro() !== 'CONFIRMADA'"
+          [class.hover:bg-white/10]="filtro() !== 'CONFIRMADA'"
+        >
+          Confirmadas
+        </button>
+
+        <button
+          type="button"
+          (click)="cambiarFiltro('PENDIENTE')"
+          class="rounded-xl px-4 py-2 text-xs font-semibold transition"
+          [class.bg-white]="filtro() === 'PENDIENTE'"
+          [class.text-[#102d41]]="filtro() === 'PENDIENTE'"
+          [class.text-white/75]="filtro() !== 'PENDIENTE'"
+          [class.hover:bg-white/10]="filtro() !== 'PENDIENTE'"
+        >
+          Pendientes
+        </button>
+
+        <button
+          type="button"
+          (click)="cambiarFiltro('CANCELADA')"
+          class="rounded-xl px-4 py-2 text-xs font-semibold transition"
+          [class.bg-white]="filtro() === 'CANCELADA'"
+          [class.text-[#102d41]]="filtro() === 'CANCELADA'"
+          [class.text-white/75]="filtro() !== 'CANCELADA'"
+          [class.hover:bg-white/10]="filtro() !== 'CANCELADA'"
+        >
+          Canceladas
+        </button>
+      </div>
+
+      <!-- ACCIONES -->
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          (click)="cargar()"
+          [disabled]="cargando()"
+          class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-xl transition hover:bg-white/10 disabled:opacity-40"
+          aria-label="Actualizar reservas"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            class="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path
+              d="M20 6v5h-5M4 18v-5h5"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+
+            <path
+              d="M6.1 9A7 7 0 0 1 18.4 6.6L20 11M4 13l1.6 4.4A7 7 0 0 0 17.9 15"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+
+        <a
+          routerLink="/app/tours"
+          class="rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur-xl transition hover:bg-white/20"
+        >
+          Nueva reserva
+        </a>
+      </div>
+    </div>
+
+    <!-- ================================================== -->
+    <!-- ESTADOS -->
+    <!-- ================================================== -->
+
+    @if (cargando()) {
+      <div class="flex flex-1 items-center justify-center py-16" role="status">
+        <div
+          class="rounded-2xl border border-white/15 bg-black/20 px-6 py-5 text-sm text-white/70 backdrop-blur-xl"
+        >
+          Cargando tus reservas...
+        </div>
+      </div>
+    } @else if (error()) {
+      <div
+        class="mt-8 max-w-xl rounded-2xl border border-red-300/20 bg-red-950/30 p-5 backdrop-blur-xl"
+        role="alert"
+      >
+        <p class="text-sm leading-6 text-red-100">
+          {{ error() }}
+        </p>
+
+        <button
+          type="button"
+          (click)="cargar()"
+          class="mt-4 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-[#102d41]"
+        >
+          Reintentar
+        </button>
+      </div>
+    } @else {
+      <!-- ================================================== -->
+      <!-- CARRUSEL -->
+      <!-- ================================================== -->
+
+      <div class="relative mt-auto w-full pt-10">
+        <!-- FLECHA IZQUIERDA -->
+        @if (hayAnterior()) {
+          <button
+            type="button"
+            (click)="moverCarrusel(-1)"
+            class="absolute -left-5 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-[#081c28]/80 text-white shadow-lg backdrop-blur-xl transition hover:bg-[#0b2d3e]"
+            aria-label="Ver reservas anteriores"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+              <path
+                d="M15 18l-6-6 6-6"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        }
+
+        <!-- CARDS -->
+        <div
+          #carrusel
+          (scroll)="actualizarEstadoCarrusel()"
+          (window:resize)="actualizarEstadoCarrusel()"
+          class="flex w-full snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          @for (r of visibles(); track r.id) {
+            <article
+              class="group w-[88vw] shrink-0 snap-start overflow-hidden rounded-[22px] border border-white/20 bg-[#102d41]/45 p-5 shadow-[0_20px_55px_rgba(0,0,0,0.18)] backdrop-blur-[18px] transition duration-300 hover:-translate-y-1 hover:bg-[#102d41]/55 sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)]"
+            >
+              <!-- CABECERA -->
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                    Reserva #{{ r.id }}
+                  </p>
+
+                  <h2
+                    class="mt-2 h-11 line-clamp-2 text-base font-semibold leading-[22px] text-white"
+                  >
+                    {{ r.tourNombre }}
+                  </h2>
+                </div>
+
+                <span
+                  class="shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide"
+                  [class.border-emerald-300/30]="r.estado === 'CONFIRMADA'"
+                  [class.bg-emerald-400/15]="r.estado === 'CONFIRMADA'"
+                  [class.text-emerald-200]="r.estado === 'CONFIRMADA'"
+                  [class.border-amber-300/30]="r.estado === 'PENDIENTE'"
+                  [class.bg-amber-400/15]="r.estado === 'PENDIENTE'"
+                  [class.text-amber-200]="r.estado === 'PENDIENTE'"
+                  [class.border-red-300/30]="r.estado === 'CANCELADA'"
+                  [class.bg-red-400/15]="r.estado === 'CANCELADA'"
+                  [class.text-red-200]="r.estado === 'CANCELADA'"
+                >
+                  {{ etiquetaEstado(r.estado) }}
+                </span>
+              </div>
+
+              <!-- FECHA / HORA -->
+              <div class="mt-4 grid grid-cols-2 gap-3">
+                <!-- FECHA -->
+                <div class="rounded-2xl border border-white/[0.07] bg-white/[0.04] p-3.5">
+                  <div class="flex items-center gap-1.5 text-white/45">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-3.5 w-3.5"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                      <path
+                        d="M16 3v4M8 3v4M3 10h18"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+
+                    <p class="text-[10px] uppercase tracking-wide">Fecha</p>
+                  </div>
+
+                  <p class="mt-1.5 text-sm font-semibold text-white">
+                    {{ r.fecha | date: 'dd MMM yyyy' }}
+                  </p>
+                </div>
+
+                <!-- HORA -->
+                <div class="rounded-2xl border border-white/[0.07] bg-white/[0.04] p-3.5">
+                  <div class="flex items-center gap-1.5 text-white/45">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-3.5 w-3.5"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="9"></circle>
+                      <path
+                        d="M12 7v5l3 2"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+
+                    <p class="text-[10px] uppercase tracking-wide">Hora</p>
+                  </div>
+
+                  <p class="mt-1.5 text-sm font-semibold text-white">
+                    {{ r.horaSalida.slice(0, 5) }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- DATOS -->
+              <div class="mt-4 flex items-end justify-between gap-4">
+                <div>
+                  <!-- PASAJEROS -->
+                  <div class="flex items-center gap-1.5 text-white/50">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="8" r="3"></circle>
+                      <path
+                        d="M3.5 19c.5-3.3 2.4-5 5.5-5s5 1.7 5.5 5M16 11a2.5 2.5 0 1 0 0-5M16 14c2.6.1 4.1 1.6 4.5 4"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+
+                    <p class="text-xs">
+                      {{ r.pasajeros }}
+                      {{ r.pasajeros === 1 ? 'pasajero' : 'pasajeros' }}
+                    </p>
+                  </div>
+
+                  <!-- PRECIO -->
+                  <div class="mt-1 flex items-center gap-1.5">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-4 w-4 text-cyan-300"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M20 13l-7 7-9-9V4h7l9 9z"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <circle cx="8.5" cy="8.5" r="1"></circle>
+                    </svg>
+
+                    <p class="text-xl font-bold tracking-[-0.4px] text-white">
+                      {{ r.precioTotal | currency: 'PEN' : 'S/ ' : '1.2-2' }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- VER DETALLE -->
+                <button
+                  type="button"
+                  (click)="abrirDetalle(r)"
+                  class="group/button flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#102d41] transition hover:bg-cyan-50"
+                >
+                  Ver detalle
+
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    class="h-3.5 w-3.5 transition-transform group-hover/button:translate-x-0.5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M9 6l6 6-6 6"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </article>
+          } @empty {
+            <div
+              class="w-full rounded-[24px] border border-white/15 bg-black/20 px-7 py-9 text-center backdrop-blur-xl"
+            >
+              <p class="text-base font-semibold text-white">No hay reservas para mostrar</p>
+
+              <p class="mt-2 text-sm text-white/55">
+                Cuando reserves una experiencia aparecerá aquí.
+              </p>
+
+              <a
+                routerLink="/app/tours"
+                class="mt-5 inline-flex rounded-xl bg-white px-5 py-3 text-xs font-bold text-[#102d41]"
+              >
+                Explorar tours
+              </a>
+            </div>
+          }
+        </div>
+
+        <!-- FLECHA DERECHA -->
+        @if (haySiguiente()) {
+          <button
+            type="button"
+            (click)="moverCarrusel(1)"
+            class="absolute -right-5 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-[#081c28]/80 text-white shadow-lg backdrop-blur-xl transition hover:bg-[#0b2d3e]"
+            aria-label="Ver más reservas"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+              <path
+                d="M9 6l6 6-6 6"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- ================================================== -->
+  <!-- OFFCANVAS DETALLE -->
+  <!-- ================================================== -->
+
+  @if (detalleMontado()) {
+    <div class="fixed inset-0 z-50">
+      <!-- OVERLAY -->
+      <button
+        type="button"
+        (click)="cerrarDetalle()"
+        aria-label="Cerrar detalle"
+        class="absolute inset-0 h-full w-full bg-black/45 backdrop-blur-[3px] transition-opacity duration-300 ease-out"
+        [class.opacity-100]="detalleAbierto()"
+        [class.opacity-0]="!detalleAbierto()"
+      ></button>
+
+      <!-- PANEL -->
+      <aside
+        aria-label="Detalle de reserva"
+        class="absolute right-0 top-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden border-l border-slate-200 bg-white text-[#102d41] shadow-[-30px_0_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-transform duration-300"
+        [class.translate-x-0]="detalleAbierto()"
+        [class.translate-x-full]="!detalleAbierto()"
+      >
+        <!-- HEADER -->
+        <header class="relative border-b border-slate-200 px-6 pb-5 pt-6">
+          <div class="absolute left-0 top-0 h-px w-full bg-slate-200"></div>
+
+          <div class="flex items-start justify-between gap-5">
+            <div class="min-w-0">
+              <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">
+                SeaTour Perú
+              </p>
+
+              <h2 class="mt-2 text-xl font-semibold tracking-[-0.4px]">Detalle de reserva</h2>
+            </div>
+
+            <button
+              type="button"
+              (click)="cerrarDetalle()"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 hover:text-[#102d41]"
+              aria-label="Cerrar"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+                <path d="M6 6l12 12M18 6L6 18" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- BODY -->
+        <div class="flex-1 overflow-y-auto px-6 py-6">
+          @if (cargandoDetalle()) {
+            <div class="flex min-h-[300px] items-center justify-center" role="status">
+              <div class="text-center">
+                <div
+                  class="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-[#102d41]"
+                ></div>
+
+                <p class="mt-4 text-sm text-slate-600">Consultando reserva...</p>
+              </div>
+            </div>
+          } @else if (reservaSeleccionada(); as r) {
+            <!-- IDENTIDAD -->
+            <section>
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                    Reserva #{{ r.id }}
+                  </p>
+
+                  <h3 class="mt-2 text-[23px] font-semibold leading-[29px] tracking-[-0.5px]">
+                    {{ r.tourNombre }}
+                  </h3>
+                </div>
+
+                <span
+                  class="shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-wide"
+                  [class.border-emerald-200]="r.estado === 'CONFIRMADA'"
+                  [class.bg-emerald-50]="r.estado === 'CONFIRMADA'"
+                  [class.text-emerald-800]="r.estado === 'CONFIRMADA'"
+                  [class.border-amber-200]="r.estado === 'PENDIENTE'"
+                  [class.bg-amber-50]="r.estado === 'PENDIENTE'"
+                  [class.text-amber-800]="r.estado === 'PENDIENTE'"
+                  [class.border-red-200]="r.estado === 'CANCELADA'"
+                  [class.bg-red-50]="r.estado === 'CANCELADA'"
+                  [class.text-red-800]="r.estado === 'CANCELADA'"
+                >
+                  {{ etiquetaEstado(r.estado) }}
+                </span>
+              </div>
+            </section>
+
+            <!-- DATOS DEL VIAJE -->
+            <section class="mt-6">
+              <div class="overflow-hidden rounded-[20px] border border-slate-200 bg-slate-50">
+                <div class="grid grid-cols-2 divide-x divide-slate-200">
+                  <!-- FECHA -->
+                  <div class="flex gap-3 p-4">
+                    <div
+                      class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
+                        <path
+                          d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
+                          stroke-width="1.7"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </div>
+
+                    <div>
+                      <p class="text-[10px] uppercase tracking-[0.12em] text-slate-600">Fecha</p>
+
+                      <p class="mt-1 text-sm font-semibold">
+                        {{ r.fecha | date: 'dd MMM yyyy' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- HORA -->
+                  <div class="flex gap-3 p-4">
+                    <div
+                      class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
+                        <circle cx="12" cy="12" r="8" stroke-width="1.7" />
+                        <path
+                          d="M12 8v4l3 2"
+                          stroke-width="1.7"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </div>
+
+                    <div>
+                      <p class="text-[10px] uppercase tracking-[0.12em] text-slate-600">Hora</p>
+
+                      <p class="mt-1 text-sm font-semibold">
+                        {{ r.horaSalida.slice(0, 5) }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- EMBARCACIÓN -->
+                <div class="flex items-center gap-3 border-t border-slate-200 px-4 py-3.5">
+                  <div
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
+                      <path
+                        d="M4 15l8-3 8 3-2 4H6l-2-4Z"
+                        stroke-width="1.7"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M12 12V5M12 5h4l-4 3"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <p class="text-[10px] uppercase tracking-[0.12em] text-slate-600">
+                      Embarcación
+                    </p>
+
+                    <p class="mt-1 text-sm font-medium text-[#102d41]">
+                      {{ r.embarcacionNombre }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- PASAJEROS -->
+            <section class="mt-7">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-600"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
+                      <path
+                        d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+                        stroke-width="1.7"
+                      />
+                      <path
+                        d="M3 19c0-3 2-5 5-5s5 2 5 5M11 19c0-3 2-5 5-5s5 2 5 5"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <p class="text-sm font-semibold">Pasajeros</p>
+
+                    <p class="mt-0.5 text-xs text-slate-600">Distribución de la reserva</p>
+                  </div>
+                </div>
+
+                <span
+                  class="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-semibold text-[#102d41]"
+                >
+                  {{ r.pasajeros }}
+                </span>
+              </div>
+
+              @if (
+                $any(r).ninos !== undefined ||
+                $any(r).adultos !== undefined ||
+                $any(r).adultosMayores !== undefined
+              ) {
+                <div class="mt-4 grid grid-cols-3 gap-2.5">
+                  <div
+                    class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
+                  >
+                    <p class="text-base font-semibold">
+                      {{ $any(r).ninos ?? 0 }}
+                    </p>
+
+                    <p class="mt-0.5 text-[10px] text-slate-600">Niños</p>
+                  </div>
+
+                  <div
+                    class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
+                  >
+                    <p class="text-base font-semibold">
+                      {{ $any(r).adultos ?? 0 }}
+                    </p>
+
+                    <p class="mt-0.5 text-[10px] text-slate-600">Adultos</p>
+                  </div>
+
+                  <div
+                    class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
+                  >
+                    <p class="text-base font-semibold">
+                      {{ $any(r).adultosMayores ?? 0 }}
+                    </p>
+
+                    <p class="mt-0.5 text-[10px] text-slate-600">Adultos mayores</p>
+                  </div>
+                </div>
+              }
+            </section>
+
+            <!-- ADICIONALES -->
+            @if ($any(r).adicionales?.length) {
+              <section class="mt-7">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-600"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
+                      <path d="M12 5v14M5 12h14" stroke-width="1.7" stroke-linecap="round" />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <p class="text-sm font-semibold">Servicios adicionales</p>
+
+                    <p class="mt-0.5 text-xs text-slate-600">Incluidos en tu reserva</p>
+                  </div>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                  @for (adicional of $any(r).adicionales; track adicional.id) {
+                    <div
+                      class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                    >
+                      <div>
+                        <p class="text-sm font-medium text-[#102d41]">
+                          {{ adicional.nombre }}
+                        </p>
+
+                        @if (adicional.cantidad > 1) {
+                          <p class="mt-0.5 text-[10px] text-slate-600">
+                            Cantidad {{ adicional.cantidad }}
+                          </p>
+                        }
+                      </div>
+
+                      <p class="text-sm font-medium text-slate-600">
+                        {{ adicional.subtotal | currency: 'PEN' : 'S/ ' : '1.2-2' }}
+                      </p>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+
+            <!-- TOTAL -->
+            <section class="mt-7 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+              <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-600"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
+                      <path
+                        d="M6 4h12v16l-3-2-3 2-3-2-3 2V4Z"
+                        stroke-width="1.7"
+                        stroke-linejoin="round"
+                      />
+                      <path d="M9 9h6M9 13h4" stroke-width="1.7" stroke-linecap="round" />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <p class="text-[10px] uppercase tracking-[0.12em] text-slate-600">Total</p>
+
+                    <p class="mt-1 text-xs text-slate-600">Importe de la reserva</p>
+                  </div>
+                </div>
+
+                <p class="text-lg font-semibold text-[#102d41]">
+                  {{ r.precioTotal | currency: 'PEN' : 'S/ ' : '1.2-2' }}
+                </p>
+              </div>
+            </section>
+
+            <!-- FECHAS -->
+            <section
+              class="mt-6 border-t border-slate-200 pt-5 text-[11px] leading-6 text-slate-600"
+            >
+              <p>
+                Creada
+                <span class="ml-1 text-slate-600">
+                  {{ r.creadaEn | date: 'dd/MM/yyyy · HH:mm' : '-0500' }}
+                </span>
+              </p>
+
+              @if (r.confirmadaEn) {
+                <p>
+                  Confirmada
+                  <span class="ml-1 text-slate-600">
+                    {{ r.confirmadaEn | date: 'dd/MM/yyyy · HH:mm' : '-0500' }}
+                  </span>
+                </p>
+              }
+
+              @if (r.canceladaEn) {
+                <p>
+                  Cancelada
+                  <span class="ml-1 text-slate-600">
+                    {{ r.canceladaEn | date: 'dd/MM/yyyy · HH:mm' : '-0500' }}
+                  </span>
+                </p>
+              }
+            </section>
+
+            <!-- MENSAJES -->
+            @if (mensajeDetalle()) {
+              <p
+                class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800"
+                role="status"
+              >
+                {{ mensajeDetalle() }}
+              </p>
+            }
+
+            @if (errorDetalle()) {
+              <p
+                class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-800"
+                role="alert"
+              >
+                {{ errorDetalle() }}
+              </p>
+            }
+          }
+        </div>
+
+        <!-- FOOTER -->
+        @if (reservaSeleccionada(); as r) {
+          <footer class="border-t border-slate-200 bg-white p-5 backdrop-blur-xl">
+            @if (confirmarCancelacion()) {
+              <div>
+                <p class="text-sm font-semibold">¿Cancelar esta reserva?</p>
+
+                <p class="mt-1.5 text-xs leading-5 text-slate-600">
+                  La cancelación es definitiva y los cupos reservados volverán a estar disponibles.
+                </p>
+
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    (click)="cancelarCancelacion()"
+                    [disabled]="cancelando()"
+                    class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                  >
+                    Volver
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="cancelarReserva()"
+                    [disabled]="cancelando()"
+                    class="rounded-xl bg-red-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-50"
+                  >
+                    {{ cancelando() ? 'Cancelando...' : 'Sí, cancelar' }}
+                  </button>
+                </div>
+              </div>
+            } @else {
+              @if (r.puedeCancelar && r.estado !== 'CANCELADA') {
+                <button
+                  type="button"
+                  (click)="solicitarCancelacion()"
+                  class="w-full rounded-xl border border-red-200 bg-red-50 px-5 py-3.5 text-sm font-semibold text-red-800 transition hover:bg-red-100"
+                >
+                  Cancelar reserva
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  (click)="cerrarDetalle()"
+                  class="w-full rounded-xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-semibold text-[#102d41] transition hover:bg-slate-100"
+                >
+                  Cerrar
+                </button>
+              }
+            }
+          </footer>
+        }
+      </aside>
+    </div>
+  }
+</main>

@@ -22,12 +22,14 @@ public class TourService {
     private final TourRepository tours;
     private final CategoriaTourRepository categorias;
     private final SalidaProgramadaRepository salidas;
+    private final AdicionalesBaseService adicionalesBase;
 
     public TourService(TourRepository tours, CategoriaTourRepository categorias,
-            SalidaProgramadaRepository salidas) {
+            SalidaProgramadaRepository salidas, AdicionalesBaseService adicionalesBase) {
         this.tours = tours;
         this.categorias = categorias;
         this.salidas = salidas;
+        this.adicionalesBase = adicionalesBase;
     }
 
     public List<TourRespuesta> listarActivos() {
@@ -41,15 +43,19 @@ public class TourService {
     @Transactional
     public TourRespuesta crear(@Valid TourCreacion datos) {
         Tour tour = new Tour();
+        tour.setZonaMaritima(datos.zonaMaritima());
         tour.setImagenUrl(datos.imagenUrl());
         aplicar(tour, datos.nombre(), datos.descripcion(), datos.duracionMinutos(),
                 datos.precioBase(), datos.activo(), datos.categoriaId());
-        return TourRespuesta.desde(tours.saveAndFlush(tour));
+        tour = tours.saveAndFlush(tour);
+        adicionalesBase.garantizarPara(List.of(tour));
+        return TourRespuesta.desde(tour);
     }
 
     @Transactional
     public TourRespuesta actualizar(Long id, @Valid TourActualizacion datos) {
         Tour tour = buscar(id);
+        tour.setZonaMaritima(datos.zonaMaritima());
         if (datos.imagenUrl() != null && !datos.imagenUrl().isBlank()) {
             tour.setImagenUrl(datos.imagenUrl());
         }

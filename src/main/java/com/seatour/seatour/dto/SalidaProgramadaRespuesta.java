@@ -40,14 +40,35 @@ public class SalidaProgramadaRespuesta {
     private Long id;
     private LocalDate fecha;
     private LocalTime horaSalida;
+    private java.time.LocalDateTime inicioReal;
+    private java.time.LocalDateTime finReal;
+
+    public java.time.LocalDateTime getInicioReal() { return inicioReal; }
+    public void setInicioReal(java.time.LocalDateTime valor) { inicioReal = valor; }
+    public java.time.LocalDateTime getFinReal() { return finReal; }
+    public void setFinReal(java.time.LocalDateTime valor) { finReal = valor; }
     private Integer cuposDisponibles;
     private EstadoSalida estado;
 
     private Long tourId;
     private String tourNombre;
+    private Integer duracionMinutos;
+
+    public Integer getDuracionMinutos() { return duracionMinutos; }
+    public void setDuracionMinutos(Integer valor) { duracionMinutos = valor; }
 
     private Long embarcacionId;
     private String embarcacionNombre;
+    private Long operadorId;
+    private String operadorNombre;
+    private String operadorApellido;
+
+    public Long getOperadorId() { return operadorId; }
+    public void setOperadorId(Long operadorId) { this.operadorId = operadorId; }
+    public String getOperadorNombre() { return operadorNombre; }
+    public void setOperadorNombre(String operadorNombre) { this.operadorNombre = operadorNombre; }
+    public String getOperadorApellido() { return operadorApellido; }
+    public void setOperadorApellido(String operadorApellido) { this.operadorApellido = operadorApellido; }
     private java.math.BigDecimal precioPorPasajero;
     private boolean reservable;
 

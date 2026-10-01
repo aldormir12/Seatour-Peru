@@ -17,16 +17,48 @@ public class SalidaProgramadaService {
     private final TourRepository tours;
     private final EmbarcacionRepository embarcaciones;
     private final ReservaRepository reservas;
+    private final UsuarioRepository usuarios;
 
     public SalidaProgramadaService(SalidaProgramadaRepository salidas, TourRepository tours,
-            EmbarcacionRepository embarcaciones, ReservaRepository reservas) {
+            EmbarcacionRepository embarcaciones, ReservaRepository reservas, UsuarioRepository usuarios) {
         this.salidas = salidas;
         this.tours = tours;
         this.embarcaciones = embarcaciones;
         this.reservas = reservas;
+        this.usuarios = usuarios;
     }
 
     public List<SalidaProgramada> listarTodas() { return salidas.findAll(); }
+
+    public List<SalidaProgramada> listarPropias(com.seatour.seatour.dto.LoginRespuesta actor) {
+        if (!"OPERADOR".equals(actor.rol())) throw error(HttpStatus.FORBIDDEN, "Acceso denegado");
+        return salidas.findByOperador_IdOrderByFechaAscHoraSalidaAsc(actor.id());
+    }
+
+    public SalidaProgramada buscarPropia(Long id, com.seatour.seatour.dto.LoginRespuesta actor) {
+        var salida = buscarPorId(id);
+        validarPropietario(salida, actor);
+        return salida;
+    }
+
+    private void validarPropietario(SalidaProgramada salida, com.seatour.seatour.dto.LoginRespuesta actor) {
+        if (!"OPERADOR".equals(actor.rol()) || salida.getOperador() == null
+                || !salida.getOperador().getId().equals(actor.id()))
+            throw error(HttpStatus.NOT_FOUND, "Salida no encontrada");
+    }
+
+    @Transactional
+    public SalidaProgramada cambiarEstadoAutorizado(Long id, EstadoSalida destino, String motivo,
+            com.seatour.seatour.dto.LoginRespuesta actor) {
+        if ("OPERADOR".equals(actor.rol())) {
+            validarPropietario(bloquear(id), actor);
+            if (destino != EstadoSalida.EN_CURSO && destino != EstadoSalida.COMPLETADA)
+                throw error(HttpStatus.FORBIDDEN, "El operador solo puede iniciar o completar sus salidas");
+        } else if (!"ADMIN".equals(actor.rol())) {
+            throw error(HttpStatus.FORBIDDEN, "Acceso denegado");
+        }
+        return cambiarEstado(id, destino, motivo);
+    }
 
     public boolean tieneReservas(Long id) { return reservas.existsBySalidaId(id); }
     public boolean cambioOperativoConsumido(Long id) { return buscarPorId(id).isCambioOperativoConsumido(); }
@@ -64,6 +96,7 @@ public class SalidaProgramadaService {
         salida.setEstado(EstadoSalida.PROGRAMADA);
         salida.setMotivoReprogramacion(null);
         validarSolapamientos(salida, null);
+        asignarOperador(salida, null);
         return salidas.saveAndFlush(salida);
     }
 
@@ -81,6 +114,10 @@ public class SalidaProgramadaService {
         var nueva = inicio(datos);
         boolean cambiaEmbarcacion = !existente.getEmbarcacion().getId().equals(datos.getEmbarcacion().getId());
         boolean cambiaHorario = !nueva.equals(anterior);
+        boolean cambiaOperador = !java.util.Objects.equals(
+                existente.getOperador() == null ? null : existente.getOperador().getId(),
+                datos.getOperador() == null ? null : datos.getOperador().getId());
+        boolean soloCambiaOperador = cambiaOperador && !cambiaHorario && !cambiaEmbarcacion;
         long pasajeros = pasajerosReservados(id);
         if (pasajeros > 0 && (cambiaHorario || cambiaEmbarcacion)) validarCambioOperativo(existente);
         if (cambiaEmbarcacion && pasajeros > 0)
@@ -90,14 +127,14 @@ public class SalidaProgramadaService {
                 throw error(HttpStatus.CONFLICT, "No se puede cambiar el tour de una salida con reservas");
             var original = existente.getFechaOriginal() == null ? anterior
                     : LocalDateTime.of(existente.getFechaOriginal(), existente.getHoraOriginal());
-            if ((cambiaHorario && !nueva.isAfter(anterior)) || (!cambiaHorario && !cambiaEmbarcacion))
+            if ((cambiaHorario && !nueva.isAfter(anterior)) || (!cambiaHorario && !cambiaEmbarcacion && !cambiaOperador))
                 throw error(HttpStatus.CONFLICT, "Una salida con reservas solo puede moverse hacia adelante");
             if (cambiaHorario && nueva.isAfter(original.plusHours(72)))
                 throw error(HttpStatus.CONFLICT, "La reprogramación no puede superar 72 horas del horario original: "
                         + original.plusHours(72) + " (America/Lima)");
-            if (datos.getMotivoReprogramacion() == null || !java.util.Set.of(
+            if (!soloCambiaOperador && (datos.getMotivoReprogramacion() == null || !java.util.Set.of(
                     "CONDICIONES_MARITIMAS", "AUTORIDAD_MARITIMA", "FALLA_TECNICA",
-                    "SEGURIDAD_OPERATIVA", "FUERZA_MAYOR").contains(datos.getMotivoReprogramacion()))
+                    "SEGURIDAD_OPERATIVA", "FUERZA_MAYOR").contains(datos.getMotivoReprogramacion())))
                 throw error(HttpStatus.BAD_REQUEST, "Selecciona un motivo válido: CONDICIONES_MARITIMAS, AUTORIDAD_MARITIMA, FALLA_TECNICA, SEGURIDAD_OPERATIVA o FUERZA_MAYOR");
             validarOcupacion(existente);
             if (cambiaHorario) {
@@ -112,8 +149,9 @@ public class SalidaProgramadaService {
             datos.setCuposDisponibles(Math.toIntExact(datos.getEmbarcacion().getCapacidad() - pasajeros));
         }
         validarSolapamientos(datos, id);
+        asignarOperador(datos, id);
         if (pasajeros > 0 && cambiaHorario) existente.consumirCambioOperativo();
-        if (conReservas) existente.setMotivoReprogramacion(datos.getMotivoReprogramacion());
+        if (conReservas && !soloCambiaOperador) existente.setMotivoReprogramacion(datos.getMotivoReprogramacion());
         if (!nueva.equals(anterior)) {
             existente.setFechaAnterior(existente.getFecha());
             existente.setHoraAnterior(existente.getHoraSalida());
@@ -124,6 +162,7 @@ public class SalidaProgramadaService {
         existente.setCuposDisponibles(datos.getCuposDisponibles());
         existente.setTour(datos.getTour());
         existente.setEmbarcacion(datos.getEmbarcacion());
+        existente.setOperador(datos.getOperador());
         return salidas.saveAndFlush(existente);
     }
 
@@ -206,6 +245,8 @@ public class SalidaProgramadaService {
             throw error(HttpStatus.BAD_REQUEST, "El motivo de cancelación es obligatorio cuando la salida tiene reservas activas");
         var ahora = LocalDateTime.now(ZONA);
         if (destino == EstadoSalida.EN_CURSO) {
+            if (pasajerosReservados(id) <= 0)
+                throw error(HttpStatus.CONFLICT, "No puedes iniciar una salida sin pasajeros reservados.");
             if (ahora.isBefore(inicio(salida))) throw error(HttpStatus.CONFLICT, "La salida no puede iniciar antes de su hora programada");
             if (!inicioAutomatico && !ahora.isBefore(fin(salida))) throw error(HttpStatus.CONFLICT, "El intervalo programado ya terminó; la salida no puede iniciarse");
             bloquearAsignacion(salida);
@@ -239,6 +280,10 @@ public class SalidaProgramadaService {
             salida.setMotivoCancelacion(motivoCancelacion);
             salida.setFechaCancelacion(LocalDateTime.now(ZONA));
         }
+        if (origen == EstadoSalida.PROGRAMADA && destino == EstadoSalida.EN_CURSO)
+            salida.setInicioReal(LocalDateTime.now(ZONA));
+        if (origen == EstadoSalida.EN_CURSO && destino == EstadoSalida.COMPLETADA)
+            salida.setFinReal(LocalDateTime.now(ZONA));
         salida.setEstado(destino);
         return salidas.saveAndFlush(salida);
     }
@@ -314,6 +359,28 @@ public class SalidaProgramadaService {
                         + ": la embarcación requiere 60 minutos de buffer después de cada tour."
                         + " Su intervalo ocupado termina el " + finOperativo(otra) + " (America/Lima)");
         }
+    }
+
+    private void asignarOperador(SalidaProgramada salida, Long excluirId) {
+        if (salida.getOperador() == null || salida.getOperador().getId() == null)
+            throw error(HttpStatus.BAD_REQUEST, "El operador responsable es obligatorio");
+        validarId(salida.getOperador().getId());
+        // Serializa las asignaciones del mismo operador durante la validacion y guardado.
+        var operador = usuarios.bloquearPorId(salida.getOperador().getId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "El operador indicado no existe"));
+        if (operador.getRol() == null || !"OPERADOR".equals(operador.getRol().getNombre()))
+            throw error(HttpStatus.BAD_REQUEST, "El usuario responsable debe tener rol OPERADOR");
+        if (!operador.isActivo())
+            throw error(HttpStatus.CONFLICT, "El operador responsable debe estar activo");
+        var inicio = inicio(salida);
+        var fin = fin(salida);
+        for (var otra : salidas.findByOperador_IdOrderByFechaAscHoraSalidaAsc(operador.getId())) {
+            if (otra.getId().equals(excluirId) || otra.getEstado() == EstadoSalida.CANCELADA) continue;
+            if (inicio.isBefore(fin(otra)) && inicio(otra).isBefore(fin))
+                throw error(HttpStatus.CONFLICT, "El operador tiene un solapamiento con la salida "
+                        + otra.getId() + "; su tour termina el " + fin(otra) + " (America/Lima)");
+        }
+        salida.setOperador(operador);
     }
 
     private static LocalDateTime inicio(SalidaProgramada salida) {

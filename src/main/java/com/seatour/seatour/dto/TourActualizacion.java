@@ -2,6 +2,7 @@ package com.seatour.seatour.dto;
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+import com.seatour.seatour.model.ZonaMaritima;
 
 public record TourActualizacion(
         @NotBlank(message = "El nombre es obligatorio")
@@ -17,7 +18,8 @@ public record TourActualizacion(
         @Digits(integer = 8, fraction = 2, message = "El precio admite como máximo 2 decimales.") BigDecimal precioBase,
         @NotNull Boolean activo,
         @NotNull @Positive Long categoriaId,
-        @Size(max = 2048) String imagenUrl) {
+        @Size(max = 2048) String imagenUrl,
+        @NotNull(message = "La ubicación es obligatoria.") ZonaMaritima zonaMaritima) {
     public TourActualizacion {
         nombre = CategoriaTourCreacion.normalizarNombre(nombre);
         descripcion = CategoriaTourCreacion.limpiarEspacios(descripcion);

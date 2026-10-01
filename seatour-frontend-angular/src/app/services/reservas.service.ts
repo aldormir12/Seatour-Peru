@@ -9,7 +9,26 @@ export interface Salida {
   tourId: number; tourNombre: string; embarcacionNombre: string;
   precioPorPasajero: number; reservable: boolean;
 }
+export type TipoPasajero = 'NINO' | 'ADULTO' | 'ADULTO_MAYOR';
+export interface CantidadesPasajeros { ninos: number; adultos: number; adultosMayores: number; }
+export interface TarifaPasajero {
+  tipo: TipoPasajero;
+  nombre: string;
+  edadMinima: number;
+  edadMaxima: number | null;
+  porcentajeDescuento: number;
+}
+export type TipoCobro = 'POR_PERSONA' | 'POR_RESERVA' | 'POR_UNIDAD';
+export interface Adicional {
+  id: number; nombre: string; descripcion: string; precio: number; tipoCobro: TipoCobro; activo: boolean;
+}
+export interface ReservaAdicional {
+  adicionalId: number; nombre: string; descripcion: string; tipoCobro: TipoCobro;
+  cantidad: number; precioUnitario: number; subtotal: number;
+}
 export interface Reserva {
+  subtotalAdicionales?: number; adicionales?: ReservaAdicional[];
+  ninos: number | null; adultos: number | null; adultosMayores: number | null; totalPasajeros: number;
   id: number; clienteId: number; clienteNombre: string; salidaId: number; tourNombre: string;
   fecha: string; horaSalida: string; embarcacionNombre: string; pasajeros: number;
   precioUnitario: number; precioTotal: number; moneda: string;
@@ -42,8 +61,10 @@ export class ReservasService {
   salida(id: number) {
     return this.http.get<Salida>(`${API_URL}/salidas/${id}`).pipe(tap(s => this.actualizarCupos(s.id, s.cuposDisponibles)));
   }
-  crear(salidaId: number, pasajeros: number, precioEsperado: number) {
-    return this.http.post<Reserva>(`${API_URL}/reservas`, { salidaId, pasajeros, precioEsperado }).pipe(tap(r => this.actualizar(r)));
+  tarifas() { return this.http.get<TarifaPasajero[]>(`${API_URL}/reservas/tarifas`); }
+  adicionalesPorTour(tourId: number) { return this.http.get<Adicional[]>(`${API_URL}/tours/${tourId}/adicionales`); }
+  crear(salidaId: number, cantidades: CantidadesPasajeros, precioEsperado: number, adicionalesIds: number[] = []) {
+    return this.http.post<Reserva>(`${API_URL}/reservas`, { salidaId, ...cantidades, precioEsperado, adicionalesIds }).pipe(tap(r => this.actualizar(r)));
   }
   listar(gestion = false) { return this.http.get<Reserva[]>(`${API_URL}/reservas${gestion ? '' : '/mis-reservas'}`); }
   consultar(id: number) { return this.http.get<Reserva>(`${API_URL}/reservas/${id}`).pipe(tap(r => this.actualizar(r))); }

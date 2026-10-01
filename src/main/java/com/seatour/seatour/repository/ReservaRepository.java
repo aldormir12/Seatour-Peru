@@ -7,6 +7,18 @@ import org.springframework.data.repository.query.Param;
 import java.util.*;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
+    @EntityGraph(attributePaths = {"salida", "salida.tour"})
+    List<Reserva> findByCreadaEnGreaterThanEqualAndCreadaEnLessThan(java.time.Instant desde, java.time.Instant hasta);
+
+    @Query("""
+            select r.salida.id, sum(r.pasajeros) from Reserva r
+            where r.salida.fecha between :desde and :hasta and r.estado <> :cancelada
+            group by r.salida.id
+            """)
+    List<Object[]> pasajerosPorSalidaEnPeriodo(@Param("desde") java.time.LocalDate desde,
+            @Param("hasta") java.time.LocalDate hasta,
+            @Param("cancelada") com.seatour.seatour.model.EstadoReserva cancelada);
+    List<Reserva> findBySalida_Operador_IdOrderByCreadaEnDescIdDesc(Long operadorId);
     List<Reserva> findByClienteIdOrderByCreadaEnDescIdDesc(Long clienteId);
     List<Reserva> findAllByOrderByCreadaEnDescIdDesc();
     boolean existsBySalidaId(Long salidaId);

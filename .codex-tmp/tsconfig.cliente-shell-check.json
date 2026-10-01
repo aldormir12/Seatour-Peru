@@ -1,0 +1,1 @@
+{"extends": "../seatour-frontend-angular/tsconfig.spec.json", "include": ["../seatour-frontend-angular/src/app/layouts/cliente-shell/cliente-shell.spec.ts"], "exclude": [], "compilerOptions": {"types": ["../seatour-frontend-angular/node_modules/vitest/globals"]}}

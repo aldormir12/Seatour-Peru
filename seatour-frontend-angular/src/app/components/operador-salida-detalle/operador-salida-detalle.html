@@ -1,0 +1,515 @@
+<app-confirmacion-modal />
+<app-toast-container />
+
+<section class="min-h-full bg-slate-50 px-5 py-6 lg:px-8">
+  @if (cargando()) {
+    <div
+      class="flex min-h-80 flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      <div
+        class="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600"
+      ></div>
+
+      <p class="text-sm text-slate-500">Cargando salida...</p>
+    </div>
+  } @else if (salida(); as salidaActual) {
+    <!-- Volver -->
+    <button
+      type="button"
+      (click)="volver()"
+      class="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        class="h-4 w-4"
+        aria-hidden="true"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+      </svg>
+
+      Volver a mis salidas
+    </button>
+
+    <!-- Cabecera -->
+    <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="min-w-0">
+        <div class="mb-2 flex flex-wrap items-center gap-3">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Salida #{{ salidaActual.id }}
+          </p>
+
+          @switch (salidaActual.estado) {
+            @case ('PROGRAMADA') {
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
+              >
+                <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                Programada
+              </span>
+            }
+
+            @case ('EN_CURSO') {
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+              >
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                En curso
+              </span>
+            }
+
+            @case ('COMPLETADA') {
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+              >
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                Completada
+              </span>
+            }
+
+            @case ('CANCELADA') {
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600"
+              >
+                <span class="h-1.5 w-1.5 rounded-full bg-red-400"></span>
+                Cancelada
+              </span>
+            }
+          }
+        </div>
+
+        <h1 class="truncate text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          {{ salidaActual.tourNombre }}
+        </h1>
+
+        <p class="mt-1 text-sm text-slate-500">Información operativa de la salida asignada.</p>
+      </div>
+
+      <!-- Acción principal -->
+      <div class="flex shrink-0">
+        @if (salidaActual.estado === 'PROGRAMADA') {
+          <button
+            type="button"
+            (click)="iniciar()"
+            [disabled]="procesando() || !puedeIniciar()"
+            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 5v14l11-7L7 5Z" />
+            </svg>
+
+            @if (procesando()) {
+              Procesando...
+            } @else {
+              Iniciar salida
+            }
+          </button>
+        } @else if (puedeCompletar()) {
+          <button
+            type="button"
+            (click)="completar()"
+            [disabled]="procesando()"
+            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
+            </svg>
+
+            @if (procesando()) {
+              Procesando...
+            } @else {
+              Completar salida
+            }
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Datos principales -->
+    @if (mensajeExito()) {
+      <p role="status" class="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        {{ mensajeExito() }}
+      </p>
+    }
+
+    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <!-- Fecha -->
+      <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div
+          class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <rect x="4" y="5" width="16" height="15" rx="2" />
+            <path d="M8 3v4M16 3v4M4 10h16" />
+          </svg>
+        </div>
+
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Fecha</p>
+
+        <p class="mt-1 text-base font-bold text-slate-800">
+          {{ formatearFecha(salidaActual.fecha) }}
+        </p>
+      </article>
+
+      <!-- Hora -->
+      <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div
+          class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path stroke-linecap="round" d="M12 7v5l3 2" />
+          </svg>
+        </div>
+
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Hora de salida</p>
+
+        <p class="mt-1 text-base font-bold text-slate-800">
+          {{ formatearHora(salidaActual.horaSalida) }}
+        </p>
+      </article>
+
+      <!-- Embarcación -->
+      <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div
+          class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3 17l2.3 2.3A2.4 2.4 0 0 0 7 20h10a2.4 2.4 0 0 0 1.7-.7L21 17M4 15h16l-2-7H6l-2 7Zm5-7V5h6v3"
+            />
+          </svg>
+        </div>
+
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Embarcación</p>
+
+        <p class="mt-1 truncate text-base font-bold text-slate-800">
+          {{ salidaActual.embarcacionNombre }}
+        </p>
+      </article>
+
+      <!-- Pasajeros -->
+      <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div
+          class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4" />
+            <circle cx="9.5" cy="7" r="4" />
+          </svg>
+        </div>
+
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Pasajeros</p>
+
+        <p class="mt-1 text-base font-bold text-slate-800">
+          {{ totalPasajeros() }}
+        </p>
+      </article>
+    </div>
+
+    <!-- Contenido -->
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.75fr)]">
+      <!-- Reservas -->
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Pasajeros
+            </p>
+
+            <h2 class="mt-1 text-lg font-bold text-slate-900">Reservas de la salida</h2>
+          </div>
+
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {{ totalReservas() }}
+            reservas
+          </span>
+        </div>
+
+        @if (reservas().length === 0) {
+          <div class="flex min-h-56 flex-col items-center justify-center px-6 py-10 text-center">
+            <div
+              class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                class="h-6 w-6"
+                aria-hidden="true"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4" />
+                <circle cx="9.5" cy="7" r="4" />
+              </svg>
+            </div>
+
+            <h3 class="text-sm font-semibold text-slate-800">No hay reservas</h3>
+
+            <p class="mt-1 text-sm text-slate-500">
+              Esta salida todavía no tiene pasajeros reservados.
+            </p>
+          </div>
+        } @else {
+          <div class="divide-y divide-slate-100">
+            @for (reserva of reservas(); track reserva.id) {
+              <div class="grid gap-4 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-600"
+                    >
+                      {{ titularReserva(reserva).charAt(0) }}
+                    </div>
+
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-semibold text-slate-800">
+                        {{ titularReserva(reserva) }}
+                      </p>
+
+                      @if (correoReserva(reserva)) {
+                        <p class="mt-0.5 truncate text-xs text-slate-400">
+                          {{ correoReserva(reserva) }}
+                        </p>
+                      }
+                      <div class="mt-2 text-xs text-slate-500">
+                        @if (reserva.adicionales?.length) {
+                          <p class="font-semibold text-slate-600">Adicionales contratados</p>
+                          <ul class="mt-1 space-y-1">
+                            @for (adicional of reserva.adicionales; track adicional.adicionalId) {
+                              <li>
+                                {{ adicional.nombre }} · Cantidad: {{ adicional.cantidad }}
+                                · {{ reserva.moneda }} {{ adicional.subtotal | number: '1.2-2' }}
+                              </li>
+                            }
+                          </ul>
+                        } @else {
+                          <p>Sin adicionales contratados</p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <div class="text-right">
+                    <p class="text-xs text-slate-400">Pasajeros</p>
+
+                    <p class="text-sm font-bold text-slate-800">
+                      {{ cantidadPasajerosReserva(reserva) }}
+                    </p>
+                  </div>
+
+                  <span
+                    class="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700"
+                  >
+                    Reserva #{{ reserva.id }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- Resumen operativo -->
+      <aside class="space-y-4">
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Resumen</p>
+
+          <h2 class="mt-1 text-lg font-bold text-slate-900">Información operativa</h2>
+
+          <div class="mt-5 space-y-4">
+            <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <span class="text-sm text-slate-500">Duración estimada</span>
+              <strong class="text-sm text-slate-800">
+                {{ salidaActual.duracionMinutos ? salidaActual.duracionMinutos + ' min' : 'No disponible' }}
+              </strong>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <span class="text-sm text-slate-500">Fin estimado (Lima)</span>
+              <strong class="text-right text-sm text-slate-800">
+                {{ finEstimado() ?? 'No disponible' }}
+              </strong>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <span class="text-sm text-slate-500"> Reservas </span>
+
+              <strong class="text-sm text-slate-800">
+                {{ totalReservas() }}
+              </strong>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <span class="text-sm text-slate-500"> Pasajeros </span>
+
+              <strong class="text-sm text-slate-800">
+                {{ totalPasajeros() }}
+              </strong>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <span class="text-sm text-slate-500"> Cupos disponibles </span>
+
+              <strong class="text-sm text-slate-800">
+                {{ salidaActual.cuposDisponibles }}
+              </strong>
+            </div>
+
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-sm text-slate-500"> Estado </span>
+
+              <strong class="text-sm text-slate-800">
+                {{ etiquetaEstado() }}
+              </strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- Aviso según estado -->
+        @if (salidaActual.estado === 'PROGRAMADA') {
+          <section class="rounded-2xl border border-teal-100 bg-teal-50/60 p-5">
+            <div class="flex gap-3">
+              <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-teal-700 shadow-sm"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 11v5M12 8h.01" />
+                </svg>
+              </div>
+
+              <div>
+                <h3 class="text-sm font-semibold text-teal-900">Salida pendiente</h3>
+
+                @if (salidaActual.pasajerosReservados <= 0) {
+                  <p class="mt-1 text-xs leading-5 text-teal-800/80">
+                    No puedes iniciar una salida sin pasajeros reservados.
+                  </p>
+                }
+
+                <p class="mt-1 text-xs leading-5 text-teal-800/80">
+                  Podrás iniciar la operación desde el {{ formatearFecha(salidaActual.fecha) }}
+                  a las {{ formatearHora(salidaActual.horaSalida) }} (hora de Lima).
+                </p>
+              </div>
+            </div>
+          </section>
+        }
+
+        @if (salidaActual.estado === 'EN_CURSO') {
+          <section class="rounded-2xl border border-amber-100 bg-amber-50/70 p-5">
+            <div class="flex gap-3">
+              <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-amber-700 shadow-sm"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 5v14l11-7L7 5Z" />
+                </svg>
+              </div>
+
+              <div>
+                <h3 class="text-sm font-semibold text-amber-900">Salida en curso</h3>
+
+                <p class="mt-1 text-xs leading-5 text-amber-800/80">
+                  La operación ya comenzó. Finalízala cuando el recorrido haya terminado.
+                </p>
+              </div>
+            </div>
+          </section>
+        }
+
+        @if (salidaActual.estado === 'COMPLETADA') {
+          <section class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5">
+            <div class="flex gap-3">
+              <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
+                </svg>
+              </div>
+
+              <div>
+                <h3 class="text-sm font-semibold text-emerald-900">Operación completada</h3>
+
+                <p class="mt-1 text-xs leading-5 text-emerald-800/80">
+                  Esta salida ya fue finalizada.
+                </p>
+              </div>
+            </div>
+          </section>
+        }
+      </aside>
+    </div>
+  }
+</section>

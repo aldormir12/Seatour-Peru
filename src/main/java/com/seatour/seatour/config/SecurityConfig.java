@@ -52,6 +52,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/usuarios").permitAll()
 
+                        .requestMatchers("/api/admin/adicionales", "/api/admin/adicionales/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/dashboard", "/api/admin/dashboard/**").hasRole("ADMIN")
+                        .requestMatchers("/api/intelligence/**").hasRole("CLIENTE")
+
+                        .requestMatchers(HttpMethod.POST, "/api/reservas/*/pagos").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.POST, "/api/reservas").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.GET, "/api/reservas/mis-reservas").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.HEAD, "/api/reservas/mis-reservas").hasRole("CLIENTE")
@@ -64,12 +69,15 @@ public class SecurityConfig {
                         .hasAnyRole("OPERADOR", "ADMIN")
 
                         // Solo las consultas son publicas. HEAD conserva los permisos de GET.
+                        .requestMatchers("/api/salidas/mis-salidas", "/api/salidas/mis-salidas/**")
+                        .hasRole("OPERADOR")
                         .requestMatchers(HttpMethod.GET, "/api/tours/**", "/api/categorias/**", "/api/salidas/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.HEAD, "/api/tours/**", "/api/categorias/**", "/api/salidas/**")
                         .permitAll()
 
                         // El resto de operaciones de usuarios es administrativo.
+                        .requestMatchers("/api/usuarios/me/preferencias").hasRole("CLIENTE")
                         .requestMatchers(
                                 "/api/usuarios/**")
                         .hasRole("ADMIN")
@@ -83,11 +91,21 @@ public class SecurityConfig {
                         .hasRole("ADMIN")
 
                         // Gestion de salidas programadas.
+                        .requestMatchers(HttpMethod.PATCH, "/api/salidas/*/estado")
+                        .hasAnyRole("OPERADOR", "ADMIN")
                         .requestMatchers(
                                 "/api/salidas/**")
-                        .hasAnyRole("OPERADOR", "ADMIN")
+                        .hasRole("ADMIN")
 
-                        // Administracion e imagenes de embarcaciones: exclusivamente ADMIN.
+                        // Consulta de cliente; ADMIN conserva su acceso. HEAD replica GET.
+                        .requestMatchers(HttpMethod.GET, "/api/embarcaciones/{id}",
+                                "/api/embarcaciones/imagenes/{nombre}")
+                        .hasAnyRole("CLIENTE", "ADMIN")
+                        .requestMatchers(HttpMethod.HEAD, "/api/embarcaciones/{id}",
+                                "/api/embarcaciones/imagenes/{nombre}")
+                        .hasAnyRole("CLIENTE", "ADMIN")
+
+                        // El resto de operaciones de embarcaciones sigue siendo administrativo.
                         .requestMatchers("/api/admin/embarcaciones", "/api/admin/embarcaciones/**",
                                 "/api/embarcaciones", "/api/embarcaciones/**")
                         .hasRole("ADMIN")

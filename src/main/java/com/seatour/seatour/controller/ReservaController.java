@@ -14,7 +14,12 @@ import java.util.List;
 @RequestMapping("/api/reservas")
 public class ReservaController {
     private final ReservaService reservas;
-    public ReservaController(ReservaService reservas) { this.reservas = reservas; }
+    private final com.seatour.seatour.service.TarifasPasajerosService tarifas;
+    public ReservaController(ReservaService reservas, com.seatour.seatour.service.TarifasPasajerosService tarifas) {
+        this.reservas = reservas; this.tarifas = tarifas;
+    }
+    @GetMapping("/tarifas")
+    public List<TarifaPasajeroRespuesta> tarifas() { return tarifas.listar(); }
     @PostMapping
     public ResponseEntity<ReservaRespuesta> crear(@Valid @RequestBody ReservaCreacion datos,
             @AuthenticationPrincipal UsuarioPrincipal actor) {

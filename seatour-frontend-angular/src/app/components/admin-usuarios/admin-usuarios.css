@@ -1,0 +1,64 @@
+/* Estilos pendientes de ADMIN > Usuarios. */
+:host {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  container-type: inline-size;
+}
+
+.usuarios-filtros > *,
+input,
+select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.usuarios-filtros select {
+  width: 100%;
+  text-overflow: ellipsis;
+}
+
+.usuarios-tabla {
+  display: none;
+}
+
+.usuarios-tabla th,
+.usuarios-tabla td {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.usuarios-tabla th {
+  font-size: 0.6875rem;
+  letter-spacing: normal;
+}
+
+.usuarios-acciones button {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+}
+
+@container (min-width: 640px) {
+  .usuarios-filtros,
+  .usuarios-tarjetas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 1080px) {
+  .usuarios-filtros {
+    grid-template-columns:
+      minmax(0, 1.5fr)
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .usuarios-tabla {
+    display: block;
+  }
+
+  .usuarios-tarjetas {
+    display: none;
+  }
+}

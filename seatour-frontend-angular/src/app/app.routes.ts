@@ -18,12 +18,19 @@ import {
   RoleLayout
 } from './layouts/layouts';
 
+import { ClienteShell } from './layouts/cliente-shell/cliente-shell';
+
 import { AdminLayout } from './layouts/admin-layout/admin-layout';
+import { OperatorLayout } from './layouts/operator-layout/operator-layout';
 
 
 const area = () =>
   import('./components/area/area')
     .then(m => m.AreaComponent);
+
+const adminDashboard = () =>
+  import('./components/admin-dashboard/admin-dashboard')
+    .then(m => m.AdminDashboard);
 
 const adminCategorias = () =>
   import('./components/admin-categorias/admin-categorias')
@@ -32,6 +39,10 @@ const adminCategorias = () =>
 const adminTours = () =>
   import('./components/admin-tours/admin-tours')
     .then(m => m.AdminTours);
+
+const adminUsuarios = () =>
+  import('./components/admin-usuarios/admin-usuarios')
+    .then(m => m.AdminUsuarios);
 
 const adminEmbarcaciones = () =>
   import('./components/admin-embarcaciones/admin-embarcaciones')
@@ -76,6 +87,8 @@ const reservasAnteriores: RedirectFunction = ({
   queryParams
 }) => {
 
+  if (inject(AuthService).usuario()?.rol === 'ADMIN') return '/app/admin';
+
   const base = reservasPorRol(
     inject(AuthService).usuario()?.rol ?? 'CLIENTE'
   );
@@ -99,7 +112,7 @@ function gestion(admin: boolean): Routes {
     {
       path: '',
       pathMatch: 'full',
-      loadComponent: area,
+      loadComponent: admin ? adminDashboard : area,
       data: {
         titulo: admin
           ? 'Administración'
@@ -113,6 +126,7 @@ function gestion(admin: boolean): Routes {
       loadComponent: adminSalidas
     },
 
+    ...(admin ? [] : [
     {
       path: 'reservas',
       loadComponent: reservas,
@@ -124,7 +138,8 @@ function gestion(admin: boolean): Routes {
     {
       path: 'reservas/:id',
       loadComponent: detalle
-    },
+    }
+    ]),
 
     ...(
       admin
@@ -147,7 +162,9 @@ function gestion(admin: boolean): Routes {
           ? adminCategorias
           : admin && path === 'embarcaciones'
             ? adminEmbarcaciones
-            : area,
+            : admin && path === 'usuarios'
+              ? adminUsuarios
+              : area,
 
       data: {
         titulo:
@@ -258,7 +275,37 @@ export const routes: Routes = [
 
 
       // =========================
-      // CLIENTE + OPERADOR
+      // OPERADOR
+      // =========================
+
+      {
+        path: 'operador',
+        component: OperatorLayout,
+        canActivate: [roleGuard],
+        canActivateChild: [roleGuard],
+        data: { roles: ['OPERADOR'] },
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () => import('./components/operador-hoy/operador-hoy')
+              .then(m => m.OperadorHoy)
+          },
+          {
+            path: 'mis-salidas',
+            loadComponent: () => import('./components/operador-mis-salidas/operador-mis-salidas')
+              .then(m => m.OperadorMisSalidas)
+          },
+          {
+            path: 'mis-salidas/:id',
+            loadComponent: () => import('./components/operador-salida-detalle/operador-salida-detalle')
+              .then(m => m.OperadorSalidaDetalle)
+          }
+        ]
+      },
+
+      // =========================
+      // CLIENTE
       // =========================
 
       {
@@ -267,33 +314,6 @@ export const routes: Routes = [
         component: PrivateLayout,
 
         children: [
-
-          // -------------------------
-          // OPERADOR
-          // -------------------------
-
-          {
-            path: 'operador',
-
-            component: RoleLayout,
-
-            canActivate: [
-              roleGuard
-            ],
-
-            canActivateChild: [
-              roleGuard
-            ],
-
-            data: {
-              roles: [
-                'OPERADOR'
-              ]
-            },
-
-            children: gestion(false)
-          },
-
 
           // -------------------------
           // CLIENTE
@@ -321,14 +341,19 @@ export const routes: Routes = [
             children: [
 
               {
-                path: 'dashboard',
-
-                loadComponent: area,
-
-                data: {
-                  titulo: 'Mi panel',
-                  panel: true
-                }
+                path: '',
+                component: ClienteShell,
+                children: [
+                  {
+                    path: 'dashboard',
+                    loadComponent: () => import('./components/dashboard-cliente/dashboard-cliente')
+                      .then(m => m.DashboardClienteComponent)
+                  },
+                  {
+                    path: 'mis-reservas',
+                    loadComponent: reservas
+                  }
+                ]
               },
 
               {
@@ -358,11 +383,6 @@ export const routes: Routes = [
               },
 
               {
-                path: 'mis-reservas',
-                loadComponent: reservas
-              },
-
-              {
                 path: 'mis-reservas/:id',
                 loadComponent: detalle
               },
@@ -377,17 +397,6 @@ export const routes: Routes = [
                     .then(
                       m => m.ReservarComponent
                     )
-              },
-
-              {
-                path: 'perfil',
-
-                loadComponent: area,
-
-                data: {
-                  titulo: 'Mi perfil',
-                  perfil: true
-                }
               }
 
             ]

@@ -1,39 +1,514 @@
-<main class="catalogo">
-  <header class="cabecera">
-    <div class="contenido">
-      <p class="eyebrow">EXPERIENCIAS EN EL MAR</p>
-      <h1>Encuentra tu próxima <em>experiencia</em></h1>
-      <p class="introduccion">Explora nuestros tours y descubre una nueva forma de disfrutar el mar.</p>
+<main class="min-h-screen bg-white text-[#17384b]">
+  <!-- ================================================== -->
+  <!-- HERO -->
+  <!-- ================================================== -->
+
+  <header class="relative h-[500px] overflow-hidden">
+    <div
+      class="absolute left-0 top-0 h-[680px] w-full bg-cover bg-no-repeat [background-image:url('/images/dashboard/hero-cliente.png')] [background-position:center_80%]"
+    ></div>
+
+    <!-- Mismo overlay EXACTO del Dashboard -->
+    <div
+      class="absolute left-0 top-0 h-[680px] w-full bg-[linear-gradient(90deg,rgba(2,20,33,0.72)_0%,rgba(3,28,43,0.48)_42%,rgba(3,31,44,0.12)_74%,rgba(0,0,0,0.02)_100%)]"
+    ></div>
+
+    <!-- Contenido -->
+    <div class="relative z-10 mx-auto flex h-full w-[min(1200px,calc(100%-64px))] items-center">
+      <div class="max-w-[620px]">
+        <p class="mb-3 text-[10px] font-bold uppercase tracking-[4px] text-[#79e4ff]">
+          EXPLORA SEATOUR
+        </p>
+
+        <h1
+          class="max-w-[620px] text-[clamp(42px,4vw,68px)] font-extrabold leading-[0.95] tracking-[-2.5px] text-white"
+        >
+          Explora el norte
+          <br />
+
+          <span class="font-serif font-bold italic text-[#62dafa]"> desde el mar </span>
+        </h1>
+
+        <p class="mt-[18px] max-w-[560px] text-sm leading-[1.55] text-white/[0.84]">
+          Encuentra experiencias únicas y descubre una nueva forma de vivir el mar de Piura.
+        </p>
+        <!-- BUSCADOR -->
+        <div
+          class="mt-9 flex w-full max-w-[800px] items-center rounded-full border border-white/25 bg-white/95 p-1.5 shadow-[0_12px_35px_rgba(0,0,0,0.18)] backdrop-blur-md"
+        >
+          <div class="flex min-w-0 flex-1 items-center gap-3 px-4">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              class="h-5 w-5 shrink-0 text-[#087dab]"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" stroke-width="1.8" />
+              <path d="m16.5 16.5 4 4" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+
+            <input
+              #buscadorTours
+              type="search"
+              aria-label="Buscar experiencias"
+              [value]="busqueda()"
+              (input)="buscar(buscadorTours.value)"
+              (keydown.enter)="buscar(buscadorTours.value)"
+              placeholder="Busca una experiencia en el mar..."
+              class="min-w-0 flex-1 bg-transparent py-3 text-sm text-[#17384b] outline-none placeholder:text-slate-400"
+            />
+          </div>
+
+          <button
+            type="button"
+            (click)="buscar(buscadorTours.value)"
+            class="flex h-11 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-r from-[#0a2538] via-[#0b3650] to-[#087dab] px-6 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(8,45,65,0.22)] ring-1 ring-slate-200 transition duration-200 hover:-translate-y-0.5"
+          >
+            Buscar
+          </button>
+        </div>
+        @if (!cargando() && !error()) {
+          <div class="mt-6 flex items-center gap-2.5 text-sm text-white/75">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              class="h-[18px] w-[18px] text-[#62dafa]"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 16c2-2 4-2 6 0s4 2 6 0 4-2 6 0"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+              <path
+                d="M3 20c2-2 4-2 6 0s4 2 6 0 4-2 6 0"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+              <path d="M12 4v8M8 8h8" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+
+            <span>
+              {{ toursFiltrados().length }}
+              {{
+                toursFiltrados().length === 1
+                  ? 'experiencia disponible'
+                  : 'experiencias disponibles'
+              }}
+            </span>
+          </div>
+        }
+      </div>
     </div>
   </header>
 
-  <section class="listado contenido" aria-label="Catálogo de tours" [attr.aria-busy]="cargando()">
+  <!-- FILTROS POR CATEGORÍA -->
+  <section class="border-b border-slate-100 bg-white">
+    <div class="mx-auto w-[min(1200px,calc(100%-64px))] py-5">
+      <div class="flex items-center gap-3 overflow-x-auto pb-1">
+        <!-- TODOS -->
+        <button
+          type="button"
+          (click)="seleccionarCategoria(null)"
+          class="flex shrink-0 items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition"
+          [class.bg-[#0a3047]]="categoriaSeleccionada() === null"
+          [class.text-white]="categoriaSeleccionada() === null"
+          [class.shadow-md]="categoriaSeleccionada() === null"
+          [class.bg-slate-100]="categoriaSeleccionada() !== null"
+          [class.text-[#17384b]]="categoriaSeleccionada() !== null"
+          [class.hover:bg-slate-200]="categoriaSeleccionada() !== null"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            class="h-[18px] w-[18px]"
+            aria-hidden="true"
+          >
+            <rect x="4" y="4" width="6" height="6" rx="1" stroke-width="1.8" />
+            <rect x="14" y="4" width="6" height="6" rx="1" stroke-width="1.8" />
+            <rect x="4" y="14" width="6" height="6" rx="1" stroke-width="1.8" />
+            <rect x="14" y="14" width="6" height="6" rx="1" stroke-width="1.8" />
+          </svg>
+
+          <span>Todos</span>
+        </button>
+
+        <!-- CATEGORÍAS REALES -->
+        @for (categoria of categoriasDisponibles(); track categoria.id) {
+          <button
+            type="button"
+            (click)="seleccionarCategoria(categoria.id)"
+            class="flex shrink-0 items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition"
+            [class.bg-[#0a3047]]="categoriaSeleccionada() === categoria.id"
+            [class.text-white]="categoriaSeleccionada() === categoria.id"
+            [class.shadow-md]="categoriaSeleccionada() === categoria.id"
+            [class.bg-slate-100]="categoriaSeleccionada() !== categoria.id"
+            [class.text-[#17384b]]="categoriaSeleccionada() !== categoria.id"
+            [class.hover:bg-slate-200]="categoriaSeleccionada() !== categoria.id"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              class="h-[18px] w-[18px]"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4-2"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+              <path
+                d="M4 19c2-2 4-2 6 0s4 2 6 0 4-2 4-2"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+
+            <span>{{ categoria.nombre }}</span>
+          </button>
+        }
+      </div>
+
+      <!-- CONTADOR -->
+      <p class="mt-5 text-sm font-semibold text-[#17384b]">
+        {{ toursFiltrados().length }}
+        {{ toursFiltrados().length === 1 ? 'experiencia encontrada' : 'experiencias encontradas' }}
+      </p>
+    </div>
+  </section>
+  <!-- ================================================== -->
+  <!-- CONTENIDO / EXPLORAR -->
+  <!-- ================================================== -->
+
+  <section
+    class="cliente-contenido-entrada mx-auto w-[min(1200px,calc(100%-64px))] pt-5 pb-12 sm:pt-6 sm:pb-14 lg:pt-6 lg:pb-16"
+    aria-label="Catálogo de tours"
+    [attr.aria-busy]="cargando()"
+  >
+    <!-- ================================================== -->
+    <!-- CARGANDO -->
+    <!-- ================================================== -->
+
     @if (cargando()) {
-      <div class="estado" role="status"><span class="indicador" aria-hidden="true"></span><h2>Cargando tours</h2><p>Estamos consultando las experiencias disponibles.</p></div>
-    } @else if (error()) {
-      <div class="estado" role="alert"><h2>No se pudo cargar el catálogo</h2><p>{{ error() }}</p><button type="button" (click)="cargar()">Reintentar</button></div>
-    } @else if (tours().length === 0) {
-      <div class="estado" role="status"><h2>Aún no hay tours disponibles</h2><p>Vuelve más adelante para descubrir nuevas experiencias.</p></div>
-    } @else {
-      <div class="encabezado-listado"><h2>Nuestros tours</h2><p>{{ tours().length }} {{ tours().length === 1 ? 'experiencia disponible' : 'experiencias disponibles' }}</p></div>
-      <div class="cuadricula">
-        @for (tour of tours(); track tour.id) {
-          <article class="tarjeta">
-            <div class="imagen">
-              @if (tour.imagenUrl && !imagenesFallidas().has(tour.id)) {
-                <img [src]="servicio.urlImagen(tour.imagenUrl)" [alt]="tour.nombre" loading="lazy" (error)="imagenFallida(tour.id)" />
-              } @else {
-                <span class="sin-imagen">Imagen no disponible</span>
-              }
+      <div
+        class="flex min-h-[300px] flex-col items-center justify-center rounded-[24px] border border-slate-200 bg-white px-6 text-center"
+        role="status"
+      >
+        <span
+          class="h-8 w-8 animate-spin rounded-full border-[3px] border-slate-200 border-t-[#087dab]"
+          aria-hidden="true"
+        ></span>
+
+        <h2 class="mt-5 text-xl font-semibold text-slate-900">Cargando experiencias</h2>
+
+        <p class="mt-2 text-sm text-slate-500">Estamos consultando los tours disponibles.</p>
+      </div>
+    }
+
+    <!-- ================================================== -->
+    <!-- ERROR -->
+    <!-- ================================================== -->
+
+    @else if (error()) {
+      <div
+        class="flex min-h-[300px] flex-col items-center justify-center rounded-[24px] border border-red-100 bg-red-50/40 px-6 text-center"
+        role="alert"
+      >
+        <div
+          class="flex h-11 w-11 items-center justify-center rounded-full bg-red-100 text-red-600"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            class="h-5 w-5"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" stroke-width="1.8" />
+
+            <path d="M12 8v5M12 16.5v.5" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+        </div>
+
+        <h2 class="mt-4 text-xl font-semibold text-slate-900">No se pudo cargar el catálogo</h2>
+
+        <p class="mt-2 max-w-md text-sm leading-6 text-slate-500">
+          {{ error() }}
+        </p>
+
+        <button
+          type="button"
+          (click)="cargar()"
+          class="mt-6 rounded-full border-[3px] border-white bg-gradient-to-r from-[#0a2538] via-[#0b3650] to-[#087dab] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(8,45,65,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(8,45,65,0.24)]"
+        >
+          Reintentar
+        </button>
+      </div>
+    }
+
+    <!-- ================================================== -->
+    <!-- VACÍO -->
+    <!-- ================================================== -->
+
+    @else if (toursFiltrados().length === 0) {
+      <div
+        class="flex min-h-[300px] flex-col items-center justify-center rounded-[24px] border border-slate-200 bg-slate-50 px-6 text-center"
+        role="status"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          class="h-8 w-8 text-slate-400"
+          aria-hidden="true"
+        >
+          <path d="M3 16c2-2 4-2 6 0s4 2 6 0 4-2 6 0" stroke-width="1.7" stroke-linecap="round" />
+
+          <path d="M3 20c2-2 4-2 6 0s4 2 6 0 4-2 6 0" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+
+        <h2 class="mt-4 text-xl font-semibold text-slate-900">
+          {{
+            tours().length ? 'No encontramos experiencias' : 'Aún no hay experiencias disponibles'
+          }}
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-500">
+          {{
+            tours().length
+              ? 'Prueba con otro nombre, descripción o categoría, o borra la búsqueda para ver todas las experiencias.'
+              : 'Vuelve más adelante para descubrir nuevos tours.'
+          }}
+        </p>
+      </div>
+    }
+
+    <!-- ================================================== -->
+    <!-- RESULTADOS -->
+    <!-- ================================================== -->
+
+    @else {
+      <!-- ================================================== -->
+      <!-- LISTADO EDITORIAL -->
+      <!-- ================================================== -->
+
+      <div class="mx-auto w-full max-w-[1240px] space-y-4">
+        @if (errorAfinidades()) {
+          <p role="status" class="text-sm text-slate-500">{{ errorAfinidades() }}</p>
+        }
+        @for (tour of toursFiltrados(); track tour.id; let indice = $index) {
+          <article
+            class="flex w-full flex-col overflow-hidden rounded-[20px] border border-slate-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,45,62,0.07)] transition-shadow duration-300 hover:shadow-[0_12px_34px_rgba(15,45,62,0.10)] md:h-[240px] md:flex-row md:items-stretch md:gap-7 lg:[&:nth-child(even)]:flex-row-reverse"
+          >
+            <!-- ================================================== -->
+            <!-- IMAGEN -->
+            <!-- ================================================== -->
+
+            <div class="w-full shrink-0 md:h-full md:w-[410px] lg:w-[460px]">
+              <div
+                class="group relative aspect-[16/9] h-full overflow-hidden rounded-[16px] bg-slate-100 md:aspect-auto"
+              >
+                @if (tour.imagenUrl && !imagenesFallidas().has(tour.id)) {
+                  <img
+                    [src]="servicio.urlImagen(tour.imagenUrl)"
+                    [alt]="tour.nombre"
+                    loading="lazy"
+                    (error)="imagenFallida(tour.id)"
+                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  />
+                } @else {
+                  <div
+                    class="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-400"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-7 w-7"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="4" width="18" height="16" rx="2" stroke-width="1.6" />
+
+                      <circle cx="9" cy="10" r="2" stroke-width="1.6" />
+
+                      <path
+                        d="M4 17l5-4 4 3 3-2 4 3"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+
+                    <span class="text-xs"> Imagen no disponible </span>
+                  </div>
+                }
+
+                <div
+                  class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"
+                ></div>
+                @if (afinidades()[tour.id]; as afinidad) {
+                  <div class="absolute bottom-3 left-3 right-3 z-10 flex items-center gap-2"
+                    [attr.aria-label]="etiquetasAfinidad[afinidad.nivel] + ': ' + afinidad.score + ' de 100'">
+                    <div class="relative h-14 w-14 shrink-0">
+                      <svg viewBox="0 0 44 44" class="h-14 w-14 -rotate-90" aria-hidden="true">
+                        <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="4" />
+                        <circle cx="22" cy="22" r="18" fill="none" stroke="#22c55e" stroke-width="4"
+                          stroke-linecap="round" stroke-dasharray="113.1"
+                          [attr.stroke-dashoffset]="113.1 * (1 - afinidad.score / 100)" />
+                      </svg>
+                      <div class="absolute inset-0 m-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#10374b]/95 shadow-md backdrop-blur-sm">
+                        <span class="text-[13px] font-bold text-white">{{ afinidad.score }}</span>
+                      </div>
+                    </div>
+                    <span class="rounded-full border border-white/20 bg-[#10374b]/80 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md">
+                      {{ etiquetasAfinidad[afinidad.nivel] }}
+                    </span>
+                  </div>
+                }
+              </div>
             </div>
-            <div class="detalle">
-              <p class="categoria">{{ categorias()[tour.categoriaId] ?? ('Categoría ' + tour.categoriaId) }}</p>
-              <h3>{{ tour.nombre }}</h3>
-              <p class="duracion">Duración: {{ tour.duracionMinutos }} min</p>
-              <p class="descripcion">{{ tour.descripcion }}</p>
-              <div class="pie-tarjeta">
-                <div class="precio"><span>Por persona</span><strong>{{ tour.precioBase | currency:'PEN':'S/ ':'1.2-2' }}</strong></div>
-                <a [routerLink]="['/app/tours', tour.id]" [attr.aria-label]="'Ver tour: ' + tour.nombre">Ver tour</a>
+
+            <!-- ================================================== -->
+            <!-- CONTENIDO: INFORMACIÓN + PRECIO -->
+            <!-- ================================================== -->
+
+            <div class="flex min-w-0 flex-1 flex-col md:h-full md:flex-row md:items-stretch">
+              <!-- ================================================== -->
+              <!-- INFORMACIÓN -->
+              <!-- ================================================== -->
+
+              <div
+                class="flex min-w-0 flex-1 flex-col justify-center py-5 md:h-full md:py-2 md:pr-6"
+              >
+                <!-- CATEGORÍA -->
+
+                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087dab]">
+                  {{ categorias()[tour.categoriaId] ?? 'Categoría ' + tour.categoriaId }}
+                </p>
+
+                <!-- NOMBRE -->
+
+                <h3
+                  class="mt-2 text-[clamp(22px,2.2vw,29px)] font-semibold leading-[1.15] tracking-[-0.7px] text-[#102d41]"
+                >
+                  {{ tour.nombre }}
+                </h3>
+                  <app-ubicacion-tour [zonaMaritima]="tour.zonaMaritima" />
+
+                <!-- DESCRIPCIÓN -->
+
+                <p
+                  class="mt-3 line-clamp-2 max-w-[440px] text-[13px] leading-[1.55] text-slate-500"
+                >
+                  {{ tour.descripcion }}
+                </p>
+
+                <!-- DATOS -->
+
+                <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <!-- DURACIÓN -->
+
+                  <div class="flex items-center gap-1.5 text-[13px] text-slate-600">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-4 w-4 text-[#087dab]"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="9" stroke-width="1.8" />
+
+                      <path
+                        d="M12 7v5l3 2"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+
+                    <span class="font-medium"> {{ tour.duracionMinutos }} min </span>
+                  </div>
+
+                  <span class="hidden h-3.5 w-px bg-slate-300 sm:block"></span>
+
+                  <!-- TIPO -->
+
+                  <div class="flex items-center gap-1.5 text-[13px] text-slate-600">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-4 w-4 text-[#087dab]"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M3 16c2-2 4-2 6 0s4 2 6 0 4-2 6 0"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                      />
+
+                      <path
+                        d="M3 20c2-2 4-2 6 0s4 2 6 0 4-2 6 0"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+
+                    <span> Experiencia marítima </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================================================== -->
+              <!-- PRECIO + BOTÓN -->
+              <!-- ================================================== -->
+
+              <div
+                class="flex shrink-0 items-center justify-between gap-5 border-t border-slate-100 py-4 md:h-full md:w-[205px] md:flex-col md:items-stretch md:justify-center md:border-l md:border-t-0 md:py-0 md:pl-6 lg:w-[220px]"
+              >
+                <!-- PRECIO -->
+
+                <div>
+                  <p class="text-[11px] font-medium text-slate-400">Desde</p>
+
+                  <strong
+                    class="mt-1 block text-[24px] font-bold leading-none tracking-[-0.6px] text-[#102d41]"
+                  >
+                    {{ tour.precioBase | currency: 'PEN' : 'S/ ' : '1.2-2' }}
+                  </strong>
+
+                  <p class="mt-1.5 text-[11px] text-slate-400">por persona</p>
+                </div>
+
+                <!-- BOTÓN -->
+
+                <button
+                  type="button"
+                  (click)="abrirTour(tour)"
+                  [attr.aria-label]="'Ver experiencia: ' + tour.nombre"
+                  class="group mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-full border-[3px] border-white bg-gradient-to-r from-[#0a2538] via-[#0b3650] to-[#087dab] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_6px_18px_rgba(8,45,65,0.16)] ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(8,45,65,0.22)]"
+                >
+                  <span> Ver experiencia </span>
+
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 12h14M14 7l5 5-5 5"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
           </article>
@@ -42,3 +517,5 @@
     }
   </section>
 </main>
+
+<app-recomendaciones #detalleTour [soloDetalle]="true" />

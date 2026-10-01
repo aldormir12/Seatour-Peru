@@ -1,29 +1,241 @@
+<div class="fixed inset-0 z-50 flex justify-end">
+  <!-- Fondo -->
+  <a
+    routerLink="/app/tours"
+    aria-label="Cerrar reserva"
+    class="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
+  ></a>
 
-<main><a routerLink="/app/tours">← Volver a salidas</a><h1>Reserva tu experiencia</h1>
-  @if (cargando()) { <p role="status">Consultando disponibilidad...</p> }
-  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-  @if (salida(); as s) {
-    <section class="panel"><h2>{{ s.tourNombre }}</h2>
-      <p>{{ s.fecha | date:'dd/MM/yyyy' }} · {{ s.horaSalida.slice(0,5) }} (hora de Perú)</p>
-      <p>{{ s.embarcacionNombre }} · {{ s.cuposDisponibles }} cupos disponibles</p>
-      @if (resumen()) {
-        <h2>Revisa tu reserva</h2>
-        <dl><dt>Pasajeros</dt><dd>{{ pasajeros.value }}</dd>
-          <dt>Precio por pasajero</dt><dd>{{ s.precioPorPasajero | currency:'PEN':'S/ ' }}</dd>
-          <dt>Total</dt><dd class="total">{{ total() | currency:'PEN':'S/ ' }}</dd></dl>
-        <p>La reserva quedará pendiente de confirmación del operador. Puedes cancelarla antes de la salida. No se realizará ningún cobro.</p>
-        <div class="actions"><button type="button" (click)="reservar()" [disabled]="enviando()">{{ enviando() ? 'Reservando...' : 'Confirmar solicitud de reserva' }}</button>
-          <button class="secondary" type="button" (click)="resumen.set(false)" [disabled]="enviando()">Modificar pasajeros</button></div>
-      } @else {
-        <form (ngSubmit)="revisar()"><label for="pasajeros">Cantidad de pasajeros</label>
-          <input id="pasajeros" type="number" min="1" step="1" [max]="s.cuposDisponibles" [formControl]="pasajeros" />
-          @if (pasajeros.touched && pasajeros.invalid) { <p class="error" role="alert">Ingresa un número entero entre 1 y {{ s.cuposDisponibles }}.</p> }
-          <p>{{ s.precioPorPasajero | currency:'PEN':'S/ ' }} por pasajero</p>
-          @if (pasajeros.valid) { <p class="total">Total: {{ total() | currency:'PEN':'S/ ' }}</p> }
-          <button type="submit" [disabled]="cargando() || !s.reservable">Revisar resumen</button>
-        </form>
-        @if (!s.reservable) { <p>Esta salida no admite nuevas reservas.</p> }
+  <!-- Drawer -->
+  <aside
+    class="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
+    aria-labelledby="titulo-reserva"
+  >
+    <!-- Cabecera -->
+    <header class="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+      <div>
+        <p class="text-sm font-medium text-sky-600">SeaTour Perú</p>
+
+        <h1 id="titulo-reserva" class="mt-1 text-xl font-semibold text-slate-900">
+          Reserva tu experiencia
+        </h1>
+      </div>
+
+      <a
+        routerLink="/app/tours"
+        aria-label="Cerrar"
+        class="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          class="h-5 w-5"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.8"
+            d="M6 6l12 12M18 6L6 18"
+          />
+        </svg>
+      </a>
+    </header>
+
+    <!-- Contenido -->
+    <div class="flex-1 overflow-y-auto px-6 py-6">
+      @if (cargando()) {
+        <div role="status" aria-busy="true" class="flex min-h-56 items-center justify-center">
+          <p class="text-sm text-slate-500">Consultando disponibilidad...</p>
+        </div>
+      } @else if (error()) {
+        <div class="rounded-2xl border border-red-200 bg-red-50 p-5">
+          <p class="text-sm leading-6 text-red-700" role="alert">
+            {{ error() }}
+          </p>
+
+          <button
+            type="button"
+            (click)="cargar()"
+            class="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+          >
+            Reintentar
+          </button>
+        </div>
+      } @else if (salida(); as s) {
+        <!-- Tour -->
+        <section>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Experiencia</p>
+
+          <h2 class="mt-2 text-2xl font-semibold leading-tight text-slate-900">
+            {{ s.tourNombre }}
+          </h2>
+
+          <div class="mt-5 grid grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-slate-50 p-4">
+              <p class="text-xs text-slate-500">Fecha</p>
+
+              <p class="mt-1 text-sm font-semibold text-slate-900">
+                {{ s.fecha | date: 'dd MMM yyyy' }}
+              </p>
+            </div>
+
+            <div class="rounded-2xl bg-slate-50 p-4">
+              <p class="text-xs text-slate-500">Hora</p>
+
+              <p class="mt-1 text-sm font-semibold text-slate-900">
+                {{ s.horaSalida.slice(0, 5) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-3 rounded-2xl border border-slate-200 p-4">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-xs text-slate-500">Embarcación</p>
+
+                <p class="mt-1 text-sm font-medium text-slate-800">
+                  {{ s.embarcacionNombre }}
+                </p>
+              </div>
+
+              <div class="text-right">
+                <p class="text-xs text-slate-500">Disponibles</p>
+
+                <p class="mt-1 text-sm font-semibold text-slate-900">
+                  {{ s.cuposDisponibles }} cupos
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        @if (s.reservable && s.cuposDisponibles > 0) {
+          <form class="mt-8" (submit)="$event.preventDefault(); continuar()">
+            <!-- Pasajeros -->
+            <div>
+              <div class="flex items-end justify-between gap-4">
+                <div>
+                  <label for="pasajeros" class="text-sm font-semibold text-slate-900">
+                    Pasajeros
+                  </label>
+
+                  <p class="mt-1 text-xs text-slate-500">
+                    Máximo {{ s.cuposDisponibles }} para esta salida
+                  </p>
+                </div>
+
+                <div class="flex items-center rounded-xl border border-slate-200 bg-white p-1">
+                  <button
+                    type="button"
+                    (click)="disminuirPasajeros()"
+                    [disabled]="pasajeros.value <= 1"
+                    aria-label="Reducir pasajeros"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-lg text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path stroke-linecap="round" stroke-width="2" d="M6 12h12" />
+                    </svg>
+                  </button>
+
+                  <input
+                    id="pasajeros"
+                    type="number"
+                    min="1"
+                    step="1"
+                    [max]="s.cuposDisponibles"
+                    [formControl]="pasajeros"
+                    class="w-12 border-0 bg-transparent text-center text-sm font-semibold text-slate-900 outline-none"
+                  />
+
+                  <button
+                    type="button"
+                    (click)="aumentarPasajeros()"
+                    [disabled]="pasajeros.value >= s.cuposDisponibles"
+                    aria-label="Aumentar pasajeros"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      class="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path stroke-linecap="round" stroke-width="2" d="M12 6v12M6 12h12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              @if ((pasajeros.dirty || pasajeros.touched) && pasajeros.invalid) {
+                <p class="mt-2 text-xs text-red-600" role="alert">
+                  Revisa la cantidad de pasajeros.
+                </p>
+              }
+            </div>
+
+            <!-- Resumen -->
+            <div class="mt-8 rounded-2xl bg-slate-950 p-5 text-white">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-400"> Precio por persona </span>
+
+                <span>
+                  {{ s.precioPorPasajero | currency: 'PEN' : 'S/ ' : '1.2-2' }}
+                </span>
+              </div>
+
+              <div class="mt-3 flex items-center justify-between text-sm">
+                <span class="text-slate-400"> Pasajeros </span>
+
+                <span>
+                  {{ pasajeros.value }}
+                </span>
+              </div>
+
+              <div class="my-4 border-t border-white/10"></div>
+
+              <div class="flex items-end justify-between">
+                <span class="text-sm text-slate-300"> Total </span>
+
+                <span class="text-2xl font-semibold">
+                  {{ total() | currency: 'PEN' : 'S/ ' : '1.2-2' }}
+                </span>
+              </div>
+            </div>
+
+            @if (aviso()) {
+              <p
+                class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm leading-5 text-amber-800"
+                role="status"
+              >
+                {{ aviso() }}
+              </p>
+            }
+
+            <button
+              type="submit"
+              [disabled]="!puedeContinuar()"
+              class="mt-5 w-full rounded-xl bg-sky-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Continuar
+            </button>
+          </form>
+        } @else {
+          <div class="mt-8 rounded-2xl bg-slate-100 p-5">
+            <p class="text-sm leading-6 text-slate-600">
+              Esta salida no admite nuevas reservas. Elige otra salida del catálogo.
+            </p>
+          </div>
+        }
       }
-    </section>
-  } @else if (!cargando()) { <button type="button" (click)="cargar()">Reintentar</button> }
-</main>
+    </div>
+  </aside>
+</div>

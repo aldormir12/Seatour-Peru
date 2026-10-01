@@ -35,6 +35,11 @@ public class EmbarcacionService {
                 .map(EmbarcacionRespuesta::desde).toList();
     }
 
+    public EmbarcacionPublicaRespuesta consultarPublica(Long id) {
+        return EmbarcacionPublicaRespuesta.desde(embarcaciones.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Embarcación no encontrada")));
+    }
+
     @Transactional
     public EmbarcacionRespuesta crear(@Valid EmbarcacionSolicitud datos) {
         var embarcacion = new Embarcacion();

@@ -2,6 +2,7 @@ package com.seatour.seatour.dto;
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+import com.seatour.seatour.model.ZonaMaritima;
 
 public record TourCreacion(
         @NotBlank(message = "El nombre es obligatorio")
@@ -18,7 +19,8 @@ public record TourCreacion(
         @NotNull Boolean activo,
         @NotNull @Positive Long categoriaId,
         @NotBlank(message = "La imagen principal es obligatoria.")
-        @Size(max = 2048) String imagenUrl) {
+        @Size(max = 2048) String imagenUrl,
+        @NotNull(message = "La ubicación es obligatoria.") ZonaMaritima zonaMaritima) {
     public TourCreacion {
         nombre = CategoriaTourCreacion.normalizarNombre(nombre);
         descripcion = CategoriaTourCreacion.limpiarEspacios(descripcion);

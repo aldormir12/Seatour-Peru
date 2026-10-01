@@ -26,6 +26,15 @@ public class Tour {
     @Column(length = 2048)
     private String imagenUrl;
 
+    // Nullable para conservar tours anteriores; los DTO exigen ubicación al guardar.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "zona_maritima", length = 30)
+    private ZonaMaritima zonaMaritima;
+
+    public ZonaMaritima getZonaMaritima() { return zonaMaritima; }
+
+    public void setZonaMaritima(ZonaMaritima zonaMaritima) { this.zonaMaritima = zonaMaritima; }
+
     public String getImagenUrl() {
         return imagenUrl;
     }

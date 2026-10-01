@@ -26,14 +26,25 @@ import { ToastService } from '../../services/toast.service';
 import { ConfirmacionService } from '../../services/confirmacion.service';
 import { AuthService } from '../../services/auth.service';
 
+import {
+  UsuariosService
+} from '../../services/usuarios.service';
+
+import type {
+  UsuarioAdministrable
+} from '../../services/usuarios.service';
+
+
 interface FormularioSalida {
   motivoReprogramacion: string;
   tourId: number | null;
   embarcacionId: number | null;
+  operadorId: number | null;
   fecha: string;
   horaSalida: string;
   cuposDisponibles: number | null;
 }
+
 
 @Component({
   selector: 'app-admin-salidas',
@@ -46,10 +57,12 @@ interface FormularioSalida {
   styleUrl: './admin-salidas.css'
 })
 export class AdminSalidas implements OnInit {
+
   readonly salidaCancelacion = signal<SalidaProgramada | null>(null);
   readonly cancelando = signal(false);
   readonly errorCancelacion = signal('');
   motivoCancelacion = '';
+
   readonly motivosCancelacion = [
     { valor: 'CONDICIONES_MARITIMAS', nombre: 'Condiciones marítimas' },
     { valor: 'AUTORIDAD_MARITIMA', nombre: 'Autoridad marítima' },
@@ -58,94 +71,217 @@ export class AdminSalidas implements OnInit {
     { valor: 'FUERZA_MAYOR', nombre: 'Fuerza mayor' }
   ];
 
+
   motivoCancelacionValido(): boolean {
-    return this.motivosCancelacion.some(item => item.valor === this.motivoCancelacion);
+    return this.motivosCancelacion.some(
+      item => item.valor === this.motivoCancelacion
+    );
   }
 
+
   cerrarCancelacion(): void {
-    if (!this.cancelando()) this.salidaCancelacion.set(null);
+    if (!this.cancelando()) {
+      this.salidaCancelacion.set(null);
+    }
   }
+
 
   confirmarCancelacion(): void {
     const salida = this.salidaCancelacion();
-    if (!salida || this.cancelando()) return;
-    if (!this.motivoCancelacionValido()) {
-      this.errorCancelacion.set('Selecciona un motivo de cancelación válido.');
+
+    if (!salida || this.cancelando()) {
       return;
     }
+
+    if (!this.motivoCancelacionValido()) {
+      this.errorCancelacion.set(
+        'Selecciona un motivo de cancelación válido.'
+      );
+      return;
+    }
+
     this.cancelando.set(true);
     this.errorCancelacion.set('');
-    this.salidasService.cambiarEstado(salida.id, 'CANCELADA', this.motivoCancelacion).subscribe({
-      next: actualizada => {
-        this.salidas.update(lista => lista.map(item => item.id === actualizada.id ? actualizada : item));
-        this.cancelando.set(false);
-        this.cerrarCancelacion();
-        this.toast.success('Salida cancelada correctamente.');
-      },
-      error: error => {
-        this.cancelando.set(false);
-        this.errorCancelacion.set(this.obtenerMensajeError(error, 'No se pudo cancelar la salida.'));
-      }
-    });
+
+    this.salidasService
+      .cambiarEstado(
+        salida.id,
+        'CANCELADA',
+        this.motivoCancelacion
+      )
+      .subscribe({
+        next: actualizada => {
+          this.salidas.update(lista =>
+            lista.map(item =>
+              item.id === actualizada.id
+                ? actualizada
+                : item
+            )
+          );
+
+          this.cancelando.set(false);
+          this.cerrarCancelacion();
+
+          this.toast.success(
+            'Salida cancelada correctamente.'
+          );
+        },
+
+        error: error => {
+          this.cancelando.set(false);
+
+          this.errorCancelacion.set(
+            this.obtenerMensajeError(
+              error,
+              'No se pudo cancelar la salida.'
+            )
+          );
+        }
+      });
   }
-  readonly salidaCambioEmbarcacion = signal<SalidaProgramada | null>(null);
+
+
+  readonly salidaCambioEmbarcacion =
+    signal<SalidaProgramada | null>(null);
+
   nuevaEmbarcacionId: number | null = null;
   motivoCambioEmbarcacion = '';
   readonly errorCambioEmbarcacion = signal('');
+
   readonly motivosCambioEmbarcacion = [
     { valor: 'FALLA_TECNICA', nombre: 'Falla técnica' },
     { valor: 'SEGURIDAD_OPERATIVA', nombre: 'Seguridad operativa' }
   ];
 
-  abrirCambioEmbarcacion(salida: SalidaProgramada): void {
-    if (!this.puedeEditar(salida)) return;
+
+  abrirCambioEmbarcacion(
+    salida: SalidaProgramada
+  ): void {
+
+    if (!this.puedeEditar(salida)) {
+      return;
+    }
+
     this.salidaCambioEmbarcacion.set(salida);
     this.nuevaEmbarcacionId = null;
     this.motivoCambioEmbarcacion = '';
     this.errorCambioEmbarcacion.set('');
   }
 
+
   cerrarCambioEmbarcacion(): void {
-    if (!this.guardando()) this.salidaCambioEmbarcacion.set(null);
+    if (!this.guardando()) {
+      this.salidaCambioEmbarcacion.set(null);
+    }
   }
 
-  cuposCambioEmbarcacion(): number | null {
-    const embarcacion = this.embarcaciones().find(item => item.id === this.nuevaEmbarcacionId);
-    return embarcacion ? embarcacion.capacidad - (this.salidaCambioEmbarcacion()?.pasajerosReservados ?? 0) : null;
+
+  cuposCambioEmbarcacion():
+    number | null {
+
+    const embarcacion =
+      this.embarcaciones().find(
+        item =>
+          item.id === this.nuevaEmbarcacionId
+      );
+
+    return embarcacion
+      ? embarcacion.capacidad -
+          (
+            this.salidaCambioEmbarcacion()
+              ?.pasajerosReservados ?? 0
+          )
+      : null;
   }
+
 
   guardarCambioEmbarcacion(): void {
-    const salida = this.salidaCambioEmbarcacion();
-    if (!salida || this.guardando()) return;
+    const salida =
+      this.salidaCambioEmbarcacion();
+
+    if (!salida || this.guardando()) {
+      return;
+    }
+
     this.errorCambioEmbarcacion.set('');
-    if (!this.nuevaEmbarcacionId || this.nuevaEmbarcacionId === salida.embarcacionId) {
-      this.errorCambioEmbarcacion.set('Selecciona una embarcación diferente.');
+
+    if (
+      !this.nuevaEmbarcacionId ||
+      this.nuevaEmbarcacionId ===
+        salida.embarcacionId
+    ) {
+      this.errorCambioEmbarcacion.set(
+        'Selecciona una embarcación diferente.'
+      );
       return;
     }
-    if (!this.motivosCambioEmbarcacion.some(item => item.valor === this.motivoCambioEmbarcacion)) {
-      this.errorCambioEmbarcacion.set('Selecciona el motivo del cambio.');
+
+    if (
+      !this.motivosCambioEmbarcacion.some(
+        item =>
+          item.valor ===
+          this.motivoCambioEmbarcacion
+      )
+    ) {
+      this.errorCambioEmbarcacion.set(
+        'Selecciona el motivo del cambio.'
+      );
       return;
     }
-    const cupos = this.cuposCambioEmbarcacion();
-    if (cupos === null || cupos < 0) {
-      this.errorCambioEmbarcacion.set('La embarcación no tiene capacidad para los pasajeros reservados.');
+
+    const cupos =
+      this.cuposCambioEmbarcacion();
+
+    if (
+      cupos === null ||
+      cupos < 0
+    ) {
+      this.errorCambioEmbarcacion.set(
+        'La embarcación no tiene capacidad para los pasajeros reservados.'
+      );
       return;
     }
+
     this.guardando.set(true);
-    this.salidasService.cambiarEmbarcacion(salida.id, this.nuevaEmbarcacionId, this.motivoCambioEmbarcacion)
+
+    this.salidasService
+      .cambiarEmbarcacion(
+        salida.id,
+        this.nuevaEmbarcacionId,
+        this.motivoCambioEmbarcacion
+      )
       .subscribe({
         next: actualizada => {
-          this.salidas.update(lista => lista.map(item => item.id === actualizada.id ? actualizada : item));
+          this.salidas.update(lista =>
+            lista.map(item =>
+              item.id === actualizada.id
+                ? actualizada
+                : item
+            )
+          );
+
           this.guardando.set(false);
           this.cerrarCambioEmbarcacion();
-          this.toast.success('Embarcación cambiada. Las reservas se mantienen.');
+
+          this.toast.success(
+            'Embarcación cambiada. Las reservas se mantienen.'
+          );
         },
+
         error: error => {
           this.guardando.set(false);
-          this.errorCambioEmbarcacion.set(this.obtenerMensajeError(error, 'No se pudo cambiar la embarcación.'));
+
+          this.errorCambioEmbarcacion.set(
+            this.obtenerMensajeError(
+              error,
+              'No se pudo cambiar la embarcación.'
+            )
+          );
         }
       });
   }
+
+
   readonly motivosReprogramacion = [
     { valor: 'CONDICIONES_MARITIMAS', nombre: 'Condiciones marítimas' },
     { valor: 'AUTORIDAD_MARITIMA', nombre: 'Autoridad marítima' },
@@ -154,81 +290,152 @@ export class AdminSalidas implements OnInit {
     { valor: 'FUERZA_MAYOR', nombre: 'Fuerza mayor' }
   ];
 
-  private readonly salidasService = inject(SalidasService);
-  private readonly toursService = inject(Tours);
-  private readonly toast = inject(ToastService);
-  private readonly confirmacion = inject(ConfirmacionService);
-  private readonly auth = inject(AuthService);
 
-  readonly salidas = signal<SalidaProgramada[]>([]);
-  readonly tours = signal<Tour[]>([]);
-  readonly embarcaciones = signal<EmbarcacionActivaSalida[]>([]);
+  private readonly salidasService =
+    inject(SalidasService);
 
-  readonly cargando = signal(false);
-  readonly guardando = signal(false);
+  private readonly toursService =
+    inject(Tours);
 
-  readonly modalAbierto = signal(false);
-  readonly modoEdicion = signal(false);
+  private readonly usuariosService =
+    inject(UsuariosService);
+
+  private readonly toast =
+    inject(ToastService);
+
+  private readonly confirmacion =
+    inject(ConfirmacionService);
+
+  private readonly auth =
+    inject(AuthService);
+
+
+  readonly salidas =
+    signal<SalidaProgramada[]>([]);
+
+  readonly tours =
+    signal<Tour[]>([]);
+
+  readonly embarcaciones =
+    signal<EmbarcacionActivaSalida[]>([]);
+
+  readonly operadores =
+    signal<UsuarioAdministrable[]>([]);
+
+
+  readonly cargando =
+    signal(false);
+
+  readonly guardando =
+    signal(false);
+
+
+  readonly modalAbierto =
+    signal(false);
+
+  readonly modoEdicion =
+    signal(false);
+
 
   readonly salidaSeleccionada =
     signal<SalidaProgramada | null>(null);
 
-  readonly errorFormulario = signal('');
 
-  readonly busqueda = signal('');
-  readonly vista = signal<'ACTIVAS' | 'HISTORIAL'>('ACTIVAS');
+  readonly errorFormulario =
+    signal('');
 
-  cambiarVista(vista: 'ACTIVAS' | 'HISTORIAL'): void {
-    if (this.vista() === vista) return;
+
+  readonly busqueda =
+    signal('');
+
+  readonly vista =
+    signal<'ACTIVAS' | 'HISTORIAL'>(
+      'ACTIVAS'
+    );
+
+
+  cambiarVista(
+    vista: 'ACTIVAS' | 'HISTORIAL'
+  ): void {
+
+    if (this.vista() === vista) {
+      return;
+    }
+
     this.vista.set(vista);
+
     this.filtroEstado.set('TODOS');
   }
 
-  readonly filtroEstado =
-    signal<'TODOS' | EstadoSalida>('TODOS');
 
-  readonly filtroTour = signal<number | null>(null);
+  readonly filtroEstado =
+    signal<'TODOS' | EstadoSalida>(
+      'TODOS'
+    );
+
+
+  readonly filtroTour =
+    signal<number | null>(null);
+
 
   readonly filtroEmbarcacion =
     signal<number | null>(null);
 
+
   formulario: FormularioSalida =
     this.formularioVacio();
+
 
   readonly total = computed(
     () => this.salidas().length
   );
 
+
   readonly programadas = computed(
     () =>
       this.salidas().filter(
-        salida => salida.estado === 'PROGRAMADA'
+        salida =>
+          salida.estado ===
+          'PROGRAMADA'
       ).length
   );
+
 
   readonly enCurso = computed(
     () =>
       this.salidas().filter(
-        salida => salida.estado === 'EN_CURSO'
+        salida =>
+          salida.estado ===
+          'EN_CURSO'
       ).length
   );
+
 
   readonly completadas = computed(
     () =>
       this.salidas().filter(
-        salida => salida.estado === 'COMPLETADA'
+        salida =>
+          salida.estado ===
+          'COMPLETADA'
       ).length
   );
+
 
   readonly canceladas = computed(
     () =>
       this.salidas().filter(
-        salida => salida.estado === 'CANCELADA'
+        salida =>
+          salida.estado ===
+          'CANCELADA'
       ).length
   );
 
-  embarcacionSeleccionada(): EmbarcacionActivaSalida | null {
-    const id = this.formulario.embarcacionId;
+
+  embarcacionSeleccionada():
+    EmbarcacionActivaSalida | null {
+
+    const id =
+      this.formulario.embarcacionId;
 
     if (!id) {
       return null;
@@ -236,108 +443,175 @@ export class AdminSalidas implements OnInit {
 
     return (
       this.embarcaciones().find(
-        embarcacion => embarcacion.id === id
+        embarcacion =>
+          embarcacion.id === id
       ) ?? null
     );
   }
 
-  readonly tourSeleccionado = computed(() => {
-    const id = this.formulario.tourId;
 
-    if (!id) {
-      return null;
-    }
+  readonly tourSeleccionado =
+    computed(() => {
 
-    return (
-      this.tours().find(
-        tour => tour.id === id
-      ) ?? null
-    );
-  });
+      const id =
+        this.formulario.tourId;
 
-  readonly salidasFiltradas = computed(() => {
-    const vista = this.vista();
-    const texto = this.normalizar(
-      this.busqueda()
-    );
+      if (!id) {
+        return null;
+      }
 
-    const estado = this.filtroEstado();
-    const tourId = this.filtroTour();
-    const embarcacionId =
-      this.filtroEmbarcacion();
+      return (
+        this.tours().find(
+          tour =>
+            tour.id === id
+        ) ?? null
+      );
+    });
 
-    return this.salidas()
-      .filter(salida => {
-        const coincideVista = vista === 'ACTIVAS'
-          ? salida.estado === 'PROGRAMADA' || salida.estado === 'EN_CURSO'
-          : salida.estado === 'COMPLETADA' || salida.estado === 'CANCELADA';
 
-        const coincideTexto =
-          !texto ||
-          this.normalizar(
-            salida.tourNombre
-          ).includes(texto) ||
-          this.normalizar(
-            salida.embarcacionNombre
-          ).includes(texto);
+  readonly salidasFiltradas =
+    computed(() => {
 
-        const coincideEstado =
-          estado === 'TODOS' ||
-          salida.estado === estado;
+      const vista =
+        this.vista();
 
-        const coincideTour =
-          !tourId ||
-          salida.tourId === tourId;
-
-        const coincideEmbarcacion =
-          !embarcacionId ||
-          salida.embarcacionId ===
-            embarcacionId;
-
-        return (
-          coincideVista &&
-          coincideTexto &&
-          coincideEstado &&
-          coincideTour &&
-          coincideEmbarcacion
+      const texto =
+        this.normalizar(
+          this.busqueda()
         );
-      })
-      .sort((a, b) => {
-        const fechaA =
-          `${a.fecha}T${a.horaSalida}`;
 
-        const fechaB =
-          `${b.fecha}T${b.horaSalida}`;
+      const estado =
+        this.filtroEstado();
 
-        return fechaA.localeCompare(fechaB);
-      });
-  });
+      const tourId =
+        this.filtroTour();
+
+      const embarcacionId =
+        this.filtroEmbarcacion();
+
+
+      return this.salidas()
+        .filter(salida => {
+
+          const coincideVista =
+            vista === 'ACTIVAS'
+              ? (
+                  salida.estado ===
+                    'PROGRAMADA' ||
+                  salida.estado ===
+                    'EN_CURSO'
+                )
+              : (
+                  salida.estado ===
+                    'COMPLETADA' ||
+                  salida.estado ===
+                    'CANCELADA'
+                );
+
+
+          const coincideTexto =
+            !texto ||
+            this.normalizar(
+              salida.tourNombre
+            ).includes(texto) ||
+            this.normalizar(
+              salida.embarcacionNombre
+            ).includes(texto) ||
+            this.normalizar(
+              `${salida.operadorNombre ?? ''} ${salida.operadorApellido ?? ''}`
+            ).includes(texto);
+
+
+          const coincideEstado =
+            estado === 'TODOS' ||
+            salida.estado === estado;
+
+
+          const coincideTour =
+            !tourId ||
+            salida.tourId === tourId;
+
+
+          const coincideEmbarcacion =
+            !embarcacionId ||
+            salida.embarcacionId ===
+              embarcacionId;
+
+
+          return (
+            coincideVista &&
+            coincideTexto &&
+            coincideEstado &&
+            coincideTour &&
+            coincideEmbarcacion
+          );
+        })
+        .sort((a, b) => {
+
+          const fechaA =
+            `${a.fecha}T${a.horaSalida}`;
+
+          const fechaB =
+            `${b.fecha}T${b.horaSalida}`;
+
+          return fechaA.localeCompare(
+            fechaB
+          );
+        });
+    });
+
 
   ngOnInit(): void {
     this.cargarDatos();
   }
 
+
   cargarDatos(): void {
     this.cargando.set(true);
 
     forkJoin({
-      salidas: this.salidasService.listar(),
-      tours: this.toursService.listarActivos(),
+      salidas:
+        this.salidasService.listar(),
+
+      tours:
+        this.toursService
+          .listarActivos(),
+
       embarcaciones:
         this.salidasService
-          .listarEmbarcacionesActivas()
+          .listarEmbarcacionesActivas(),
+
+      operadores:
+        this.usuariosService.listar()
     }).subscribe({
       next: resultado => {
-        this.salidas.set(resultado.salidas);
-        this.tours.set(resultado.tours);
+
+        this.salidas.set(
+          resultado.salidas
+        );
+
+        this.tours.set(
+          resultado.tours
+        );
+
         this.embarcaciones.set(
           resultado.embarcaciones
+        );
+
+        this.operadores.set(
+          resultado.operadores.filter(
+            usuario =>
+              usuario.rol ===
+                'OPERADOR' &&
+              usuario.activo
+          )
         );
 
         this.cargando.set(false);
       },
 
       error: error => {
+
         this.cargando.set(false);
 
         this.toast.error(
@@ -350,53 +624,90 @@ export class AdminSalidas implements OnInit {
     });
   }
 
+
   abrirCrear(): void {
     this.modoEdicion.set(false);
-    this.salidaSeleccionada.set(null);
+
+    this.salidaSeleccionada.set(
+      null
+    );
 
     this.formulario =
       this.formularioVacio();
 
     this.errorFormulario.set('');
+
     this.modalAbierto.set(true);
   }
+
 
   abrirEditar(
     salida: SalidaProgramada
   ): void {
 
-    if (salida.pasajerosReservados > 0 && salida.cambioOperativoConsumido) {
-      this.toast.warning('La salida ya consumió su único cambio operativo.');
+    if (
+      salida.pasajerosReservados > 0 &&
+      salida.cambioOperativoConsumido
+    ) {
+
+      this.toast.warning(
+        'La salida ya consumió su único cambio operativo.'
+      );
+
       return;
     }
 
-    if (salida.estado !== 'PROGRAMADA') {
+
+    if (
+      salida.estado !==
+      'PROGRAMADA'
+    ) {
+
       this.toast.warning(
         'Solo las salidas programadas pueden editarse.'
       );
+
       return;
     }
 
+
     this.modoEdicion.set(true);
-    this.salidaSeleccionada.set(salida);
+
+    this.salidaSeleccionada.set(
+      salida
+    );
+
 
     this.formulario = {
       motivoReprogramacion: '',
-      tourId: salida.tourId,
+
+      tourId:
+        salida.tourId,
+
       embarcacionId:
         salida.embarcacionId,
-      fecha: salida.fecha,
+
+      operadorId:
+        salida.operadorId ?? null,
+
+      fecha:
+        salida.fecha,
+
       horaSalida:
         this.normalizarHora(
           salida.horaSalida
         ),
+
       cuposDisponibles:
         salida.cuposDisponibles
     };
 
+
     this.errorFormulario.set('');
+
     this.modalAbierto.set(true);
   }
+
 
   cerrarModal(): void {
     if (this.guardando()) {
@@ -404,8 +715,10 @@ export class AdminSalidas implements OnInit {
     }
 
     this.modalAbierto.set(false);
+
     this.errorFormulario.set('');
   }
+
 
   guardar(): void {
     this.errorFormulario.set('');
@@ -414,30 +727,58 @@ export class AdminSalidas implements OnInit {
       this.validarFormulario();
 
     if (error) {
-      this.errorFormulario.set(error);
+      this.errorFormulario.set(
+        error
+      );
+
       return;
     }
 
-    const datos: SalidaSolicitud = {
-      motivoReprogramacion: this.salidaSeleccionada()?.tieneReservas
-        ? this.formulario.motivoReprogramacion : undefined,
-      fecha: this.formulario.fecha,
+
+    const datos:
+      SalidaSolicitud = {
+
+      motivoReprogramacion:
+        this.salidaSeleccionada()
+          ?.tieneReservas
+          ? this.formulario
+              .motivoReprogramacion
+          : undefined,
+
+      fecha:
+        this.formulario.fecha,
+
       horaSalida:
         this.formulario.horaSalida,
-      tourId: Number(
-        this.formulario.tourId
-      ),
-      embarcacionId: Number(
-        this.modoEdicion()
-          ? this.salidaSeleccionada()?.embarcacionId
-          : this.formulario.embarcacionId
-      )
+
+      tourId:
+        Number(
+          this.formulario.tourId
+        ),
+
+      embarcacionId:
+        Number(
+          this.modoEdicion()
+            ? this
+                .salidaSeleccionada()
+                ?.embarcacionId
+            : this.formulario
+                .embarcacionId
+        ),
+
+      operadorId:
+        Number(
+          this.formulario
+            .operadorId
+        )
     };
+
 
     this.guardando.set(true);
 
     const seleccionada =
       this.salidaSeleccionada();
+
 
     if (
       this.modoEdicion() &&
@@ -451,15 +792,22 @@ export class AdminSalidas implements OnInit {
         )
         .subscribe({
           next: actualizada => {
-            this.salidas.update(lista =>
-              lista.map(item =>
-                item.id === actualizada.id
-                  ? actualizada
-                  : item
-              )
+
+            this.salidas.update(
+              lista =>
+                lista.map(
+                  item =>
+                    item.id ===
+                    actualizada.id
+                      ? actualizada
+                      : item
+                )
             );
 
-            this.guardando.set(false);
+            this.guardando.set(
+              false
+            );
+
             this.cerrarModal();
 
             this.toast.success(
@@ -467,31 +815,42 @@ export class AdminSalidas implements OnInit {
             );
           },
 
-          error: errorActualizacion => {
-            this.guardando.set(false);
+          error:
+            errorActualizacion => {
 
-            this.errorFormulario.set(
-              this.obtenerMensajeError(
-                errorActualizacion,
-                'No se pudo actualizar la salida.'
-              )
-            );
-          }
+              this.guardando.set(
+                false
+              );
+
+              this.errorFormulario.set(
+                this.obtenerMensajeError(
+                  errorActualizacion,
+                  'No se pudo actualizar la salida.'
+                )
+              );
+            }
         });
 
       return;
     }
 
+
     this.salidasService
       .crear(datos)
       .subscribe({
         next: creada => {
-          this.salidas.update(lista => [
-            ...lista,
-            creada
-          ]);
 
-          this.guardando.set(false);
+          this.salidas.update(
+            lista => [
+              ...lista,
+              creada
+            ]
+          );
+
+          this.guardando.set(
+            false
+          );
+
           this.cerrarModal();
 
           this.toast.success(
@@ -500,7 +859,10 @@ export class AdminSalidas implements OnInit {
         },
 
         error: errorCreacion => {
-          this.guardando.set(false);
+
+          this.guardando.set(
+            false
+          );
 
           this.errorFormulario.set(
             this.obtenerMensajeError(
@@ -512,24 +874,33 @@ export class AdminSalidas implements OnInit {
       });
   }
 
+
   async iniciar(
     salida: SalidaProgramada
   ): Promise<void> {
 
     if (
-      salida.estado !== 'PROGRAMADA'
+      salida.estado !==
+      'PROGRAMADA'
     ) {
       return;
     }
 
     const aceptado =
-      await this.confirmacion.confirmar({
-        titulo: 'Iniciar salida',
-        mensaje:
-          `¿Deseas marcar la salida de "${salida.tourNombre}" como en curso?`,
-        variante: 'warning',
-        textoConfirmar: 'Iniciar'
-      });
+      await this.confirmacion
+        .confirmar({
+          titulo:
+            'Iniciar salida',
+
+          mensaje:
+            `¿Deseas marcar la salida de "${salida.tourNombre}" como en curso?`,
+
+          variante:
+            'warning',
+
+          textoConfirmar:
+            'Iniciar'
+        });
 
     if (!aceptado) {
       return;
@@ -542,24 +913,33 @@ export class AdminSalidas implements OnInit {
     );
   }
 
+
   async completar(
     salida: SalidaProgramada
   ): Promise<void> {
 
     if (
-      salida.estado !== 'EN_CURSO'
+      salida.estado !==
+      'EN_CURSO'
     ) {
       return;
     }
 
     const aceptado =
-      await this.confirmacion.confirmar({
-        titulo: 'Completar salida',
-        mensaje:
-          `¿Confirmas que la salida de "${salida.tourNombre}" ha finalizado?`,
-        variante: 'warning',
-        textoConfirmar: 'Completar'
-      });
+      await this.confirmacion
+        .confirmar({
+          titulo:
+            'Completar salida',
+
+          mensaje:
+            `¿Confirmas que la salida de "${salida.tourNombre}" ha finalizado?`,
+
+          variante:
+            'warning',
+
+          textoConfirmar:
+            'Completar'
+        });
 
     if (!aceptado) {
       return;
@@ -572,32 +952,50 @@ export class AdminSalidas implements OnInit {
     );
   }
 
+
   async cancelar(
     salida: SalidaProgramada
   ): Promise<void> {
 
     if (
-      salida.estado !== 'PROGRAMADA'
+      salida.estado !==
+      'PROGRAMADA'
     ) {
       return;
     }
 
-    if (salida.pasajerosReservados > 0) {
+    if (
+      salida.pasajerosReservados > 0
+    ) {
       this.motivoCancelacion = '';
-      this.errorCancelacion.set('');
-      this.salidaCancelacion.set(salida);
+
+      this.errorCancelacion.set(
+        ''
+      );
+
+      this.salidaCancelacion.set(
+        salida
+      );
+
       return;
     }
 
     const aceptado =
-      await this.confirmacion.confirmar({
-        titulo: 'Cancelar salida',
-        mensaje:
-          `¿Deseas cancelar la salida de "${salida.tourNombre}"? ` +
-          'Las reservas activas asociadas también serán canceladas.',
-        variante: 'danger',
-        textoConfirmar: 'Cancelar salida'
-      });
+      await this.confirmacion
+        .confirmar({
+          titulo:
+            'Cancelar salida',
+
+          mensaje:
+            `¿Deseas cancelar la salida de "${salida.tourNombre}"? ` +
+            'Las reservas activas asociadas también serán canceladas.',
+
+          variante:
+            'danger',
+
+          textoConfirmar:
+            'Cancelar salida'
+        });
 
     if (!aceptado) {
       return;
@@ -610,33 +1008,46 @@ export class AdminSalidas implements OnInit {
     );
   }
 
+
   async eliminar(
     salida: SalidaProgramada
   ): Promise<void> {
 
     const aceptado =
-      await this.confirmacion.confirmar({
-        titulo: 'Eliminar salida',
-        mensaje:
-          `¿Deseas eliminar definitivamente la salida de ` +
-          `"${salida.tourNombre}" del ${this.formatearFecha(salida.fecha)}?`,
-        variante: 'danger',
-        textoConfirmar: 'Eliminar'
-      });
+      await this.confirmacion
+        .confirmar({
+          titulo:
+            'Eliminar salida',
+
+          mensaje:
+            `¿Deseas eliminar definitivamente la salida de ` +
+            `"${salida.tourNombre}" del ${this.formatearFecha(salida.fecha)}?`,
+
+          variante:
+            'danger',
+
+          textoConfirmar:
+            'Eliminar'
+        });
 
     if (!aceptado) {
       return;
     }
 
     this.salidasService
-      .eliminar(salida.id)
+      .eliminar(
+        salida.id
+      )
       .subscribe({
         next: () => {
-          this.salidas.update(lista =>
-            lista.filter(
-              item =>
-                item.id !== salida.id
-            )
+
+          this.salidas.update(
+            lista =>
+              lista.filter(
+                item =>
+                  item.id !==
+                  salida.id
+              )
           );
 
           this.toast.success(
@@ -645,6 +1056,7 @@ export class AdminSalidas implements OnInit {
         },
 
         error: error => {
+
           this.toast.error(
             this.obtenerMensajeError(
               error,
@@ -655,38 +1067,59 @@ export class AdminSalidas implements OnInit {
       });
   }
 
+
   puedeEditar(
     salida: SalidaProgramada
   ): boolean {
+
     return (
-      salida.estado === 'PROGRAMADA'
-      && !(salida.pasajerosReservados > 0 && salida.cambioOperativoConsumido)
+      salida.estado ===
+        'PROGRAMADA' &&
+      !(
+        salida.pasajerosReservados >
+          0 &&
+        salida
+          .cambioOperativoConsumido
+      )
     );
   }
+
 
   puedeIniciar(
     salida: SalidaProgramada
   ): boolean {
+
     return (
-      salida.estado === 'PROGRAMADA'
+      salida.estado ===
+      'PROGRAMADA'
     );
   }
+
 
   puedeCancelar(
     salida: SalidaProgramada
   ): boolean {
+
     return (
-      salida.estado === 'PROGRAMADA'
+      salida.estado ===
+      'PROGRAMADA'
     );
   }
+
 
   puedeCompletar(
     salida: SalidaProgramada
   ): boolean {
+
     return (
-      this.auth.tieneRol('OPERADOR') && salida.estado === 'EN_CURSO'
+      this.auth.tieneRol(
+        'OPERADOR'
+      ) &&
+      salida.estado ===
+        'EN_CURSO'
     );
   }
+
 
   etiquetaEstado(
     estado: EstadoSalida
@@ -707,6 +1140,7 @@ export class AdminSalidas implements OnInit {
     }
   }
 
+
   formatearFecha(
     fecha: string
   ): string {
@@ -715,11 +1149,16 @@ export class AdminSalidas implements OnInit {
       return '';
     }
 
-    const [anio, mes, dia] =
+    const [
+      anio,
+      mes,
+      dia
+    ] =
       fecha.split('-');
 
     return `${dia}/${mes}/${anio}`;
   }
+
 
   formatearHora(
     hora: string
@@ -729,22 +1168,34 @@ export class AdminSalidas implements OnInit {
       return '';
     }
 
-    return hora.substring(0, 5);
+    return hora.substring(
+      0,
+      5
+    );
   }
+
 
   cambiarBusqueda(
     valor: string
   ): void {
-    this.busqueda.set(valor);
+
+    this.busqueda.set(
+      valor
+    );
   }
+
 
   cambiarFiltroEstado(
     valor:
       | 'TODOS'
       | EstadoSalida
   ): void {
-    this.filtroEstado.set(valor);
+
+    this.filtroEstado.set(
+      valor
+    );
   }
+
 
   cambiarFiltroTour(
     valor: string
@@ -757,6 +1208,7 @@ export class AdminSalidas implements OnInit {
     );
   }
 
+
   cambiarFiltroEmbarcacion(
     valor: string
   ): void {
@@ -768,20 +1220,44 @@ export class AdminSalidas implements OnInit {
     );
   }
 
-  actualizarCuposPorEmbarcacion(): void {
+
+  actualizarCuposPorEmbarcacion():
+    void {
+
     const embarcacion =
       this.embarcacionSeleccionada();
 
     if (!this.modoEdicion()) {
-      this.formulario.cuposDisponibles = embarcacion?.capacidad ?? null;
+
+      this.formulario
+        .cuposDisponibles =
+          embarcacion
+            ?.capacidad ??
+          null;
+
       return;
     }
 
-    const seleccionada = this.salidaSeleccionada();
-    this.formulario.cuposDisponibles = !embarcacion ? null
-      : embarcacion.id === seleccionada?.embarcacionId ? seleccionada.cuposDisponibles
-      : embarcacion.capacidad - (seleccionada?.pasajerosReservados ?? 0);
+    const seleccionada =
+      this.salidaSeleccionada();
+
+    this.formulario
+      .cuposDisponibles =
+        !embarcacion
+          ? null
+          : embarcacion.id ===
+              seleccionada
+                ?.embarcacionId
+            ? seleccionada
+                .cuposDisponibles
+            : embarcacion.capacidad -
+                (
+                  seleccionada
+                    ?.pasajerosReservados ??
+                  0
+                );
   }
+
 
   private cambiarEstado(
     salida: SalidaProgramada,
@@ -797,12 +1273,15 @@ export class AdminSalidas implements OnInit {
       .subscribe({
         next: actualizada => {
 
-          this.salidas.update(lista =>
-            lista.map(item =>
-              item.id === actualizada.id
-                ? actualizada
-                : item
-            )
+          this.salidas.update(
+            lista =>
+              lista.map(
+                item =>
+                  item.id ===
+                  actualizada.id
+                    ? actualizada
+                    : item
+              )
           );
 
           this.toast.success(
@@ -811,6 +1290,7 @@ export class AdminSalidas implements OnInit {
         },
 
         error: error => {
+
           this.toast.error(
             this.obtenerMensajeError(
               error,
@@ -821,98 +1301,281 @@ export class AdminSalidas implements OnInit {
       });
   }
 
+
   get fechaMinima(): string {
-    const partes = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).formatToParts(new Date());
-    const valor = (tipo: string) => partes.find(parte => parte.type === tipo)!.value;
-    return `${valor('year')}-${valor('month')}-${valor('day')}`;
+
+    const partes =
+      new Intl.DateTimeFormat(
+        'en-US',
+        {
+          timeZone:
+            'America/Lima',
+
+          year:
+            'numeric',
+
+          month:
+            '2-digit',
+
+          day:
+            '2-digit'
+        }
+      )
+        .formatToParts(
+          new Date()
+        );
+
+    const valor =
+      (tipo: string) =>
+        partes.find(
+          parte =>
+            parte.type ===
+            tipo
+        )!.value;
+
+    return (
+      `${valor('year')}-` +
+      `${valor('month')}-` +
+      `${valor('day')}`
+    );
   }
 
+
   get fechaMaxima(): string {
-    // La base es el día calendario de Lima; UTC solo evita la zona local del navegador al sumar.
-    const fecha = new Date(`${this.fechaMinima}T00:00:00Z`);
-    fecha.setUTCDate(fecha.getUTCDate() + 45);
-    return fecha.toISOString().slice(0, 10);
+
+    const fecha =
+      new Date(
+        `${this.fechaMinima}T00:00:00Z`
+      );
+
+    fecha.setUTCDate(
+      fecha.getUTCDate() +
+        45
+    );
+
+    return fecha
+      .toISOString()
+      .slice(
+        0,
+        10
+      );
   }
+
 
   private validarFormulario():
     string | null {
 
-    if (!this.formulario.tourId) {
+    if (
+      !this.formulario.tourId
+    ) {
       return 'Selecciona un tour.';
     }
 
+
     if (
-      !this.formulario.embarcacionId
+      !this.formulario
+        .embarcacionId
     ) {
       return 'Selecciona una embarcación.';
     }
 
-    if (!this.formulario.fecha) {
+
+    if (
+      !this.formulario.operadorId
+    ) {
+      return 'Selecciona un operador responsable.';
+    }
+
+
+    if (
+      !this.formulario.fecha
+    ) {
       return 'Selecciona la fecha de la salida.';
     }
 
-    if (this.formulario.fecha < this.fechaMinima || this.formulario.fecha > this.fechaMaxima) {
-      return `La fecha debe estar entre ${this.fechaMinima} y ${this.fechaMaxima} (America/Lima).`;
-    }
 
     if (
-      !this.formulario.horaSalida
+      this.formulario.fecha <
+        this.fechaMinima ||
+      this.formulario.fecha >
+        this.fechaMaxima
+    ) {
+      return (
+        `La fecha debe estar entre ` +
+        `${this.fechaMinima} y ` +
+        `${this.fechaMaxima} ` +
+        `(America/Lima).`
+      );
+    }
+
+
+    if (
+      !this.formulario
+        .horaSalida
     ) {
       return 'Selecciona la hora de salida.';
     }
 
-    const hora = this.formulario.horaSalida.length === 5
-      ? `${this.formulario.horaSalida}:00` : this.formulario.horaSalida;
-    if (hora < '06:00:00' || hora > '19:00:00') {
-      return 'La hora de inicio debe estar entre 06:00 y 19:00 (America/Lima).';
-    }
 
-    const seleccionada = this.salidaSeleccionada();
-    if (this.modoEdicion() && seleccionada?.tieneReservas) {
-      if (!this.motivosReprogramacion.some(motivo => motivo.valor === this.formulario.motivoReprogramacion)) {
-        return 'Selecciona el motivo de la reprogramación.';
-      }
-      const nueva = Date.parse(`${this.formulario.fecha}T${hora}-05:00`);
-      const anterior = Date.parse(`${seleccionada.fecha}T${seleccionada.horaSalida}-05:00`);
-      const original = Date.parse(`${seleccionada.fechaOriginal ?? seleccionada.fecha}T${seleccionada.horaOriginal ?? seleccionada.horaSalida}-05:00`);
-      const cambiaEmbarcacion = this.formulario.embarcacionId !== seleccionada.embarcacionId;
-      if (nueva < anterior || (nueva === anterior && !cambiaEmbarcacion)) return 'Con reservas, la salida solo puede moverse hacia adelante; puedes cambiar únicamente la embarcación conservando el horario.';
-      if (nueva !== anterior && nueva > original + 72 * 60 * 60 * 1000) {
-        return 'La reprogramación no puede superar 72 horas desde el horario original (America/Lima).';
-      }
-    }
+    const hora =
+      this.formulario
+        .horaSalida.length === 5
+        ? `${this.formulario.horaSalida}:00`
+        : this.formulario
+            .horaSalida;
 
-    const cupos = Number(
-      this.formulario.cuposDisponibles
-    );
 
     if (
-      !Number.isInteger(cupos)
+      hora < '06:00:00' ||
+      hora > '19:00:00'
     ) {
-      return 'Los cupos deben ser un número entero.';
+      return (
+        'La hora de inicio debe estar entre ' +
+        '06:00 y 19:00 (America/Lima).'
+      );
     }
 
-    if (cupos < 0) {
-      return 'La nueva embarcación no tiene capacidad para los pasajeros ya reservados.';
+
+    const seleccionada =
+      this.salidaSeleccionada();
+
+
+    if (
+      this.modoEdicion() &&
+      seleccionada?.tieneReservas
+    ) {
+      const cambiaOperador =
+        this.formulario.operadorId !== (seleccionada.operadorId ?? null);
+      const soloCambiaOperador = cambiaOperador &&
+        this.formulario.embarcacionId === seleccionada.embarcacionId &&
+        Date.parse(`${this.formulario.fecha}T${hora}-05:00`) ===
+          Date.parse(`${seleccionada.fecha}T${seleccionada.horaSalida}-05:00`);
+
+      if (
+        !soloCambiaOperador && !this.motivosReprogramacion
+          .some(
+            motivo =>
+              motivo.valor ===
+              this.formulario
+                .motivoReprogramacion
+          )
+      ) {
+
+        return (
+          'Selecciona el motivo ' +
+          'de la reprogramación.'
+        );
+      }
+
+
+      const nueva =
+        Date.parse(
+          `${this.formulario.fecha}T${hora}-05:00`
+        );
+
+      const anterior =
+        Date.parse(
+          `${seleccionada.fecha}T${seleccionada.horaSalida}-05:00`
+        );
+
+      const original =
+        Date.parse(
+          `${seleccionada.fechaOriginal ?? seleccionada.fecha}` +
+          `T${seleccionada.horaOriginal ?? seleccionada.horaSalida}-05:00`
+        );
+
+
+      const cambiaEmbarcacion =
+        this.formulario
+          .embarcacionId !==
+        seleccionada.embarcacionId;
+
+
+      if (
+        nueva < anterior ||
+        (
+          nueva === anterior &&
+          !cambiaEmbarcacion &&
+          !cambiaOperador
+        )
+      ) {
+
+        return (
+          'Con reservas, la salida solo puede moverse hacia adelante; ' +
+          'puedes cambiar únicamente la embarcación o el operador conservando el horario.'
+        );
+      }
+
+
+      if (
+        nueva !== anterior &&
+        nueva >
+          original +
+            72 *
+              60 *
+              60 *
+              1000
+      ) {
+
+        return (
+          'La reprogramación no puede superar ' +
+          '72 horas desde el horario original ' +
+          '(America/Lima).'
+        );
+      }
     }
+
+
+    const cupos =
+      Number(
+        this.formulario
+          .cuposDisponibles
+      );
+
+
+    if (
+      !Number.isInteger(
+        cupos
+      )
+    ) {
+
+      return (
+        'Los cupos deben ser un número entero.'
+      );
+    }
+
+
+    if (
+      cupos < 0
+    ) {
+
+      return (
+        'La nueva embarcación no tiene capacidad ' +
+        'para los pasajeros ya reservados.'
+      );
+    }
+
 
     const embarcacion =
       this.embarcacionSeleccionada();
 
+
     if (
       embarcacion &&
-      cupos > embarcacion.capacidad
+      cupos >
+        embarcacion.capacidad
     ) {
+
       return (
         `La embarcación admite como máximo ` +
         `${embarcacion.capacidad} pasajeros.`
       );
     }
 
+
     return null;
   }
+
 
   private formularioVacio():
     FormularioSalida {
@@ -921,11 +1584,13 @@ export class AdminSalidas implements OnInit {
       motivoReprogramacion: '',
       tourId: null,
       embarcacionId: null,
+      operadorId: null,
       fecha: '',
       horaSalida: '',
       cuposDisponibles: null
     };
   }
+
 
   private normalizar(
     valor:
@@ -938,17 +1603,24 @@ export class AdminSalidas implements OnInit {
       valor ?? ''
     )
       .trim()
-      .toLocaleLowerCase('es');
+      .toLocaleLowerCase(
+        'es'
+      );
   }
+
 
   private normalizarHora(
     hora: string
   ): string {
 
     return hora
-      ? hora.substring(0, 5)
+      ? hora.substring(
+          0,
+          5
+        )
       : '';
   }
+
 
   private obtenerMensajeError(
     error: any,
@@ -958,26 +1630,44 @@ export class AdminSalidas implements OnInit {
     const respuesta =
       error?.error;
 
+
     if (
-      typeof respuesta === 'string' &&
+      typeof respuesta ===
+        'string' &&
       respuesta.trim()
     ) {
+
       return respuesta;
     }
 
-    if (respuesta?.mensaje) {
+
+    if (
+      respuesta?.mensaje
+    ) {
       return respuesta.mensaje;
     }
 
-    if (respuesta?.detail) return respuesta.detail;
 
-    if (respuesta?.message) {
+    if (
+      respuesta?.detail
+    ) {
+      return respuesta.detail;
+    }
+
+
+    if (
+      respuesta?.message
+    ) {
       return respuesta.message;
     }
 
-    if (respuesta?.error) {
+
+    if (
+      respuesta?.error
+    ) {
       return respuesta.error;
     }
+
 
     return respaldo;
   }

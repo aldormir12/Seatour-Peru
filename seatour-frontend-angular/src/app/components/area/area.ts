@@ -91,12 +91,14 @@ import {
               Ver salidas
             </a>
 
+            @if (auth.usuario()?.rol !== 'ADMIN') {
             <a
               class="action"
               [routerLink]="reservas"
             >
               Gestionar reservas
             </a>
+            }
 
           </div>
 

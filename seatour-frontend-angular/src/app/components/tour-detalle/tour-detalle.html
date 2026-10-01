@@ -15,6 +15,7 @@
         <div class="resumen">
           <p class="categoria">{{ categoria() }}</p>
           <h1>{{ t.nombre }}</h1>
+          <app-ubicacion-tour [zonaMaritima]="t.zonaMaritima" [fechaHora]="salidas()[0] ? salidas()[0].fecha + 'T' + salidas()[0].horaSalida : null" />
           <dl class="datos"><div><dt>Duración</dt><dd>{{ t.duracionMinutos }} min</dd></div><div><dt>Precio por persona</dt><dd>{{ t.precioBase | currency:'PEN':'S/ ':'1.2-2' }}</dd></div></dl>
           <h2>Sobre esta experiencia</h2>
           <p class="descripcion">{{ t.descripcion }}</p>

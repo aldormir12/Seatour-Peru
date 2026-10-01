@@ -69,6 +69,17 @@ public class SalidaProgramada {
     @Column(name = "hora_salida", nullable = false)
     private LocalTime horaSalida;
 
+    @Column(name = "inicio_real")
+    private java.time.LocalDateTime inicioReal;
+
+    @Column(name = "fin_real")
+    private java.time.LocalDateTime finReal;
+
+    public java.time.LocalDateTime getInicioReal() { return inicioReal; }
+    public void setInicioReal(java.time.LocalDateTime valor) { inicioReal = valor; }
+    public java.time.LocalDateTime getFinReal() { return finReal; }
+    public void setFinReal(java.time.LocalDateTime valor) { finReal = valor; }
+
     @NotNull(message = "Los cupos disponibles son obligatorios")
     @PositiveOrZero(message = "Los cupos disponibles no pueden ser negativos")
     @Column(name = "cupos_disponibles", nullable = false)
@@ -88,6 +99,13 @@ public class SalidaProgramada {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "embarcacion_id", nullable = false)
     private Embarcacion embarcacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "operador_id", nullable = true)
+    private Usuario operador;
+
+    public Usuario getOperador() { return operador; }
+    public void setOperador(Usuario operador) { this.operador = operador; }
 
     public SalidaProgramada() {
     }

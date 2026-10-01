@@ -20,11 +20,12 @@ class TourServiceTest {
     @Mock TourRepository tours;
     @Mock CategoriaTourRepository categorias;
     @Mock SalidaProgramadaRepository salidas;
+    @Mock AdicionalesBaseService adicionalesBase;
     private TourService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new TourService(tours, categorias, salidas);
+        servicio = new TourService(tours, categorias, salidas, adicionalesBase);
     }
 
     @Test

@@ -32,6 +32,13 @@ public class SalidaProgramadaCreacion {
     @Positive(message = "El ID de la embarcación debe ser positivo")
     private Long embarcacionId;
 
+    @NotNull(message = "El operador responsable es obligatorio")
+    @Positive(message = "El ID del operador debe ser positivo")
+    private Long operadorId;
+
+    public Long getOperadorId() { return operadorId; }
+    public void setOperadorId(Long operadorId) { this.operadorId = operadorId; }
+
     public SalidaProgramadaCreacion() {
     }
 

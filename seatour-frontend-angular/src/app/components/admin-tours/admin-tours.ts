@@ -1,3 +1,4 @@
+import { UbicacionTour } from '../ubicacion-tour/ubicacion-tour';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,6 +14,7 @@ import { firstValueFrom } from 'rxjs';
 
 import {
   Tour,
+  ZonaMaritimaTour,
   Tours
 } from '../../services/tours';
 
@@ -27,7 +29,7 @@ import { ConfirmacionService } from '../../services/confirmacion.service';
 @Component({
   selector: 'app-admin-tours',
   standalone: true,
-  imports: [FormsModule],
+  imports: [UbicacionTour,FormsModule],
   templateUrl: './admin-tours.html',
   styleUrl: './admin-tours.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -91,6 +93,13 @@ export class AdminTours {
   duracionMinutos: number | null = null;
   precioBase: number | null = null;
   categoriaId: number | null = null;
+  zonaMaritima: ZonaMaritimaTour | null = null;
+  readonly ubicaciones: { valor: ZonaMaritimaTour; nombre: string }[] = [
+    { valor: 'MANCORA', nombre: 'Máncora' },
+    { valor: 'LOS_ORGANOS', nombre: 'Los Órganos' },
+    { valor: 'CABO_BLANCO', nombre: 'Cabo Blanco' },
+    { valor: 'TALARA', nombre: 'Talara' }
+  ];
   imagenUrl = '';
   activo = true;
 
@@ -242,6 +251,11 @@ export class AdminTours {
     return null;
   }
 
+  get ubicacionError(): string | null {
+    return this.ubicaciones.some(ubicacion => ubicacion.valor === this.zonaMaritima)
+      ? null : 'Selecciona una ubicación.';
+  }
+
   get formularioValido(): boolean {
     return (
       !this.nombreError &&
@@ -249,6 +263,7 @@ export class AdminTours {
       !this.duracionError &&
       !this.precioError &&
       !this.categoriaError &&
+      !this.ubicacionError &&
       !this.imagenError
     );
   }
@@ -303,6 +318,7 @@ export class AdminTours {
     this.duracionMinutos = null;
     this.precioBase = null;
     this.categoriaId = null;
+    this.zonaMaritima = null;
     this.imagenUrl = '';
     this.activo = true;
 
@@ -320,6 +336,7 @@ export class AdminTours {
     this.duracionMinutos = tour.duracionMinutos;
     this.precioBase = tour.precioBase;
     this.categoriaId = tour.categoriaId;
+    this.zonaMaritima = tour.zonaMaritima ?? null;
     this.imagenUrl = tour.imagenUrl ?? '';
     this.activo = tour.activo;
 
@@ -369,6 +386,7 @@ export class AdminTours {
       precioBase: this.precioBase as number,
       activo: this.activo,
       categoriaId: this.categoriaId as number,
+      zonaMaritima: this.zonaMaritima as ZonaMaritimaTour,
       imagenUrl: this.imagenUrl.trim() || null
     };
 

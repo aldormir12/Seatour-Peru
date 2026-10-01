@@ -126,6 +126,7 @@
             <h3>
               {{ tour.nombre }}
             </h3>
+                  <app-ubicacion-tour [zonaMaritima]="tour.zonaMaritima" />
 
             <div class="tour-meta">
               <span> ◷ {{ formatearDuracion(tour.duracionMinutos) }} </span>
@@ -161,6 +162,7 @@
       <h3>
         {{ tourSeleccionado.nombre }}
       </h3>
+      <app-ubicacion-tour [zonaMaritima]="tourSeleccionado.zonaMaritima" />
 
       <p>
         {{ tourSeleccionado.descripcion }}

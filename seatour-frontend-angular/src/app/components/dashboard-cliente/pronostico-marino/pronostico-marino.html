@@ -1,0 +1,525 @@
+<section
+  class="mt-7 w-full max-w-[860px] overflow-hidden rounded-[22px] border border-[#dfe9ef] bg-white text-[#102d41] shadow-[0_18px_46px_rgba(15,41,61,0.09)]"
+  aria-labelledby="titulo-pronostico"
+  [attr.aria-busy]="cargando()"
+>
+  <!-- =========================================================
+       CABECERA
+       ========================================================= -->
+
+  <header
+    class="flex flex-wrap items-start justify-between gap-5 border-b border-slate-100 bg-gradient-to-r from-white via-white to-sky-50/50 px-5 pb-4 pt-5"
+  >
+    <div class="min-w-0">
+      <p class="m-0 text-[9px] font-bold uppercase tracking-[0.18em] text-[#087dab]">
+        SeaTour Intelligence
+      </p>
+
+      <div class="mt-1 flex flex-wrap items-center gap-2">
+        <h3
+          id="titulo-pronostico"
+          class="m-0 text-[17px] font-bold tracking-[-0.3px] text-[#102d41]"
+        >
+          Condiciones del mar para tu día
+        </h3>
+
+        <span
+          class="inline-flex items-center gap-1 rounded-full border border-sky-100 bg-sky-50 px-2 py-1 text-[10px] font-medium text-[#5b7483]"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-3 w-3 text-[#087dab]"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"
+            />
+            <circle cx="12" cy="10" r="2" />
+          </svg>
+
+          {{ zona().nombre }}
+        </span>
+      </div>
+
+      <p class="mb-0 mt-1.5 text-[11px] leading-5 text-[#718594]">
+        Evolución del mar durante el día para ayudarte a decidir mejor tu experiencia.
+      </p>
+    </div>
+
+    <!-- SELECTORES -->
+
+    <div class="flex flex-wrap items-end gap-2.5">
+      <label class="text-[10px] font-medium text-[#718594]">
+        Ubicación
+
+        <div class="relative mt-1">
+          <select
+            #ubicacion
+            [value]="zona().id"
+            (change)="cambiarZona(ubicacion.value)"
+            class="h-10 min-w-[138px] appearance-none rounded-[12px] border border-slate-200 bg-white pl-3 pr-9 text-xs font-semibold text-[#102d41] shadow-sm outline-none transition focus:border-[#087dab] focus:shadow-[0_0_0_3px_rgba(8,125,171,0.10)]"
+          >
+            @for (opcion of zonas; track opcion.id) {
+              <option [value]="opcion.id">
+                {{ opcion.nombre }}
+              </option>
+            }
+          </select>
+
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#718594]"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8 10 4 4 4-4" />
+          </svg>
+        </div>
+      </label>
+
+      <label class="text-[10px] font-medium text-[#718594]">
+        Fecha
+
+        <input
+          #dia
+          type="date"
+          required
+          [value]="fecha"
+          (change)="dia.validity.valid ? fechaChange.emit(dia.value) : (dia.value = fecha)"
+          class="mt-1 h-10 rounded-[12px] border border-slate-200 bg-white px-3 text-xs font-semibold text-[#102d41] shadow-sm outline-none transition focus:border-[#087dab] focus:shadow-[0_0_0_3px_rgba(8,125,171,0.10)]"
+        />
+      </label>
+    </div>
+  </header>
+
+  <!-- =========================================================
+       CARGANDO
+       ========================================================= -->
+
+  @if (cargando()) {
+    <div class="flex items-center justify-center gap-3 px-6 py-12">
+      <span
+        class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#087dab]"
+      ></span>
+
+      <span class="text-xs text-slate-500"> Consultando condiciones del mar... </span>
+    </div>
+  }
+
+  <!-- =========================================================
+       CONTENIDO
+       ========================================================= -->
+
+  @else if (horas().length) {
+    @if (parcial()) {
+      <div
+        class="mx-5 mt-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[10px] text-amber-700"
+        role="status"
+      >
+        Algunos datos no están disponibles para esta fecha. Mostramos la mejor información recibida.
+      </div>
+    }
+
+    <div class="px-5 pb-5 pt-5">
+      <!-- =====================================================
+           TARJETAS HORARIAS
+           ===================================================== -->
+
+      <div class="grid grid-cols-5 gap-2.5 max-[760px]:grid-cols-3 max-[560px]:grid-cols-2">
+        @for (hora of horasDestacadas(); track hora.hora) {
+          <div
+            class="rounded-[17px] border border-slate-100 px-3 py-3 text-center shadow-[0_7px_18px_rgba(16,45,65,0.05)] transition hover:-translate-y-[2px] hover:shadow-[0_12px_26px_rgba(16,45,65,0.10)]"
+            [class.bg-gradient-to-b]="true"
+            [class.from-amber-50]="hora.hora.slice(11, 16) === '06:00'"
+            [class.via-white]="hora.hora.slice(11, 16) === '06:00'"
+            [class.to-orange-50]="hora.hora.slice(11, 16) === '06:00'"
+            [class.from-sky-50]="hora.hora.slice(11, 16) === '09:00'"
+            [class.to-white]="hora.hora.slice(11, 16) === '09:00'"
+            [class.from-cyan-50]="hora.hora.slice(11, 16) === '12:00'"
+            [class.to-white]="hora.hora.slice(11, 16) === '12:00'"
+            [class.from-blue-50]="hora.hora.slice(11, 16) === '15:00'"
+            [class.to-white]="hora.hora.slice(11, 16) === '15:00'"
+            [class.from-indigo-50]="hora.hora.slice(11, 16) === '18:00'"
+            [class.to-slate-50]="hora.hora.slice(11, 16) === '18:00'"
+          >
+            <strong class="block text-[11px] font-bold text-[#102d41]">
+              {{ hora.hora.slice(11, 16) }}
+            </strong>
+
+            <!-- ICONO GRANDE -->
+
+            <div
+              class="mx-auto mt-2 flex h-11 w-11 items-center justify-center rounded-full border border-white/70 shadow-md"
+              [class.bg-amber-100]="hora.hora.slice(11, 16) !== '18:00'"
+              [class.text-amber-500]="hora.hora.slice(11, 16) !== '18:00'"
+              [class.shadow-[0_0_24px_rgba(245,158,11,0.30)]]="hora.hora.slice(11, 16) !== '18:00'"
+              [class.bg-indigo-100]="hora.hora.slice(11, 16) === '18:00'"
+              [class.text-indigo-500]="hora.hora.slice(11, 16) === '18:00'"
+              [class.shadow-[0_0_24px_rgba(99,102,241,0.24)]]="hora.hora.slice(11, 16) === '18:00'"
+            >
+              @if (hora.hora.slice(11, 16) === '18:00') {
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-6 w-6"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M20 15.5A7 7 0 1 1 12.5 4 5.5 5.5 0 0 0 20 15.5Z"
+                  />
+                </svg>
+              } @else {
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-6 w-6"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="4" />
+                  <path
+                    stroke-linecap="round"
+                    d="
+                      M12 2.5v2.2
+                      M12 19.3v2.2
+                      M21.5 12h-2.2
+                      M4.7 12H2.5
+                      M18.7 5.3l-1.6 1.6
+                      M6.9 17.1l-1.6 1.6
+                      M18.7 18.7l-1.6-1.6
+                      M6.9 6.9 5.3 5.3
+                    "
+                  />
+                </svg>
+              }
+            </div>
+
+            <!-- OLEAJE -->
+
+            <strong class="mt-2 block text-[13px] font-bold text-[#102d41]">
+              {{ valor(hora.oleaje, 'm') }}
+            </strong>
+
+            <span class="mt-0.5 block text-[9px] leading-4 text-[#718594]">
+              {{ hora.condicion }}
+            </span>
+          </div>
+        }
+      </div>
+
+      <!-- =====================================================
+           CURVA REAL
+           ===================================================== -->
+
+      <div
+        class="mt-4 rounded-[18px] border border-sky-100 bg-gradient-to-r from-amber-50/60 via-sky-50/80 to-indigo-50/70 px-4 pb-3 pt-4 shadow-[0_8px_24px_rgba(14,116,144,0.07)]"
+      >
+        <div class="relative h-[90px]">
+          <svg
+            viewBox="0 0 1000 90"
+            preserveAspectRatio="none"
+            class="absolute inset-0 h-full w-full"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="lineaOleajeArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35" />
+                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+
+            @if (puntosOleaje()) {
+              <polyline
+                [attr.points]="puntosOleaje() + ' 1000,82 0,82'"
+                fill="url(#lineaOleajeArea)"
+                stroke="none"
+              ></polyline>
+
+              <polyline
+                [attr.points]="puntosOleaje()"
+                fill="none"
+                stroke="#229ed2"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></polyline>
+            }
+          </svg>
+
+          <!-- ICONOS SOBRE LA CURVA -->
+
+          <div
+            class="pointer-events-none absolute inset-x-2 top-0 flex items-start justify-between"
+          >
+            @for (hora of horasDestacadas(); track hora.hora) {
+              <div class="flex w-12 justify-center">
+                <div
+                  class="flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/95 shadow-[0_8px_18px_rgba(16,45,65,0.12)] backdrop-blur-sm"
+                >
+                  @if (hora.hora.slice(11, 16) === '18:00') {
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      class="h-5 w-5 text-indigo-500"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M20 15.5A7 7 0 1 1 12.5 4 5.5 5.5 0 0 0 20 15.5Z"
+                      />
+                    </svg>
+                  } @else {
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      class="h-5 w-5 text-amber-500"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="4" />
+
+                      <path
+                        stroke-linecap="round"
+                        d="
+                          M12 2.5v2.2
+                          M12 19.3v2.2
+                          M21.5 12h-2.2
+                          M4.7 12H2.5
+                          M18.7 5.3l-1.6 1.6
+                          M6.9 17.1l-1.6 1.6
+                          M18.7 18.7l-1.6-1.6
+                          M6.9 6.9 5.3 5.3
+                        "
+                      />
+                    </svg>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div
+          class="mt-2 grid grid-cols-5 gap-2 text-center max-[760px]:grid-cols-3 max-[560px]:grid-cols-2"
+        >
+          @for (hora of horasDestacadas(); track hora.hora) {
+            <div>
+              <span class="block text-[10px] font-semibold text-[#102d41]">
+                {{ hora.hora.slice(11, 16) }}
+              </span>
+
+              <span class="block text-[9px] font-medium text-[#718594]">
+                {{ valor(hora.oleaje, 'm') }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- =====================================================
+           MÉTRICAS
+           ===================================================== -->
+
+      @for (hora of horasDestacadas(); track hora.hora) {
+        @if ($index === 2 || (horasDestacadas().length < 3 && $index === 0)) {
+          <div class="mt-4 grid grid-cols-4 gap-2.5 max-[760px]:grid-cols-2">
+            <!-- OLEAJE -->
+
+            <div
+              class="rounded-[16px] border border-cyan-100 bg-gradient-to-br from-cyan-50 to-white p-3 shadow-[0_7px_18px_rgba(8,125,171,0.06)]"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-cyan-100 text-[#087dab]"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    class="h-[18px] w-[18px]"
+                  >
+                    <path d="M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />
+                    <path d="M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />
+                  </svg>
+                </div>
+
+                <div class="min-w-0">
+                  <span class="block text-[9px] font-medium text-[#718594]"> Oleaje </span>
+
+                  <strong class="mt-0.5 block text-[13px] font-bold text-[#102d41]">
+                    {{ valor(hora.oleaje, 'm') }}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- VIENTO -->
+
+            <div
+              class="rounded-[16px] border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-3 shadow-[0_7px_18px_rgba(8,125,171,0.06)]"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-sky-100 text-sky-600"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    class="h-[18px] w-[18px]"
+                  >
+                    <path stroke-linecap="round" d="M4 8h10a2 2 0 1 0-2-2" />
+                    <path stroke-linecap="round" d="M4 12h14a2 2 0 1 1-2 2" />
+                    <path stroke-linecap="round" d="M4 16h7" />
+                  </svg>
+                </div>
+
+                <div class="min-w-0">
+                  <span class="block text-[9px] font-medium text-[#718594]"> Viento </span>
+
+                  <strong class="mt-0.5 block text-[13px] font-bold text-[#102d41]">
+                    {{ valor(hora.viento, 'km/h') }}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- VISIBILIDAD -->
+
+            <div
+              class="rounded-[16px] border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-3 shadow-[0_7px_18px_rgba(99,102,241,0.05)]"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-indigo-100 text-indigo-500"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    class="h-[18px] w-[18px]"
+                  >
+                    <path d="M2.5 12S6 7 12 7s9.5 5 9.5 5S18 17 12 17s-9.5-5-9.5-5Z" />
+                    <circle cx="12" cy="12" r="2.5" />
+                  </svg>
+                </div>
+
+                <div class="min-w-0">
+                  <span class="block text-[9px] font-medium text-[#718594]"> Visibilidad </span>
+
+                  <strong class="mt-0.5 block text-[13px] font-bold text-[#102d41]">
+                    {{ valor(hora.visibilidad, 'km', 1000) }}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- TEMPERATURA -->
+
+            <div
+              class="rounded-[16px] border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-3 shadow-[0_7px_18px_rgba(249,115,22,0.05)]"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-orange-100 text-orange-500"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    class="h-[18px] w-[18px]"
+                  >
+                    <path d="M9 14.8V5a3 3 0 0 1 6 0v9.8a5 5 0 1 1-6 0Z" />
+                    <path d="M12 9v7" />
+                  </svg>
+                </div>
+
+                <div class="min-w-0">
+                  <span class="block text-[9px] font-medium text-[#718594]"> Temp. del mar </span>
+
+                  <strong class="mt-0.5 block text-[13px] font-bold text-[#102d41]">
+                    {{ valor(hora.temperaturaMar, '°C') }}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- =========================================================
+       SIN DATOS
+       ========================================================= -->
+
+  @else {
+    <div class="flex flex-col items-center justify-center px-6 py-10 text-center" role="status">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 text-[#087dab]">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          class="h-5 w-5"
+        >
+          <path d="M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />
+          <path d="M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />
+        </svg>
+      </div>
+
+      <p class="mb-0 mt-3 text-sm font-semibold text-[#102d41]">No hay pronóstico disponible</p>
+
+      <p class="mb-0 mt-1 max-w-[400px] text-[11px] leading-5 text-[#718594]">
+        Esta fecha puede estar fuera del horizonte de previsión disponible.
+      </p>
+
+      <button
+        type="button"
+        (click)="cargar()"
+        class="mt-4 rounded-xl bg-[#087dab] px-4 py-2 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(8,125,171,0.16)] transition hover:bg-[#066f98]"
+      >
+        Reintentar
+      </button>
+    </div>
+  }
+
+  <!-- =========================================================
+       FUENTE
+       ========================================================= -->
+
+  <footer class="border-t border-slate-100 bg-slate-50/40 px-5 py-2.5 text-[9px] text-slate-400">
+    Datos de modelo:
+
+    <a
+      href="https://open-meteo.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="font-medium underline"
+    >
+      Open-Meteo
+    </a>
+
+    · Hora de Perú
+  </footer>
+</section>

@@ -18,19 +18,25 @@ public class ReservaService {
     private final UsuarioRepository usuarios;
     private final TourRepository tours;
     private final EmbarcacionRepository embarcaciones;
+    private final TarifasPasajerosService tarifas;
+    private final AdicionalService adicionales;
     private static final ZoneId ZONA = ZoneId.of("America/Lima");
 
     public ReservaService(ReservaRepository reservas, SalidaProgramadaRepository salidas, UsuarioRepository usuarios,
-            TourRepository tours, EmbarcacionRepository embarcaciones) {
+            TourRepository tours, EmbarcacionRepository embarcaciones, TarifasPasajerosService tarifas, AdicionalService adicionales) {
         this.reservas = reservas; this.salidas = salidas; this.usuarios = usuarios;
-        this.tours = tours; this.embarcaciones = embarcaciones;
+        this.tours = tours; this.embarcaciones = embarcaciones; this.tarifas = tarifas; this.adicionales = adicionales;
     }
 
     @Transactional
     public ReservaRespuesta crear(ReservaCreacion datos, LoginRespuesta actor) {
         if (!"CLIENTE".equals(actor.rol())) throw error(HttpStatus.FORBIDDEN, "Solo un cliente puede reservar");
-        if (datos == null || datos.salidaId() == null || datos.salidaId() <= 0 || datos.pasajeros() == null || datos.pasajeros() <= 0)
-            throw error(HttpStatus.BAD_REQUEST, "Indica una salida y una cantidad positiva de pasajeros");
+        if (datos == null || datos.salidaId() == null || datos.salidaId() <= 0
+                || datos.ninos() == null || datos.adultos() == null || datos.adultosMayores() == null
+                || datos.ninos() < 0 || datos.ninos() > 100 || datos.adultos() < 0 || datos.adultos() > 100
+                || datos.adultosMayores() < 0 || datos.adultosMayores() > 100
+                || datos.totalPasajeros() < 1 || datos.totalPasajeros() > 100)
+            throw error(HttpStatus.BAD_REQUEST, "Indica cantidades enteras no negativas y al menos un pasajero");
         // Toda escritura de cupos (incluida la gestion de salidas) usa el mismo bloqueo.
         SalidaProgramada salida = bloquearSalida(datos.salidaId());
         HorizonteOperativo.validar(salida.getFecha());
@@ -42,22 +48,27 @@ public class ReservaService {
                 || !Boolean.TRUE.equals(salida.getEmbarcacion().getActivo()))
             throw error(HttpStatus.CONFLICT, "La salida ya no admite reservas");
         validarOcupacion(salida);
-        if (datos.pasajeros() > salida.getCuposDisponibles())
+        if (datos.totalPasajeros() > salida.getCuposDisponibles())
             throw error(HttpStatus.CONFLICT, "No hay suficientes cupos disponibles");
         var cliente = usuarios.findById(actor.id()).orElseThrow(() -> error(HttpStatus.UNAUTHORIZED, "Sesion invalida"));
         var precio = salida.getTour().getPrecioBase();
         if (precio == null || precio.signum() <= 0) throw error(HttpStatus.CONFLICT, "El tour no tiene un precio valido");
-        if (datos.precioEsperado() != null && precio.compareTo(datos.precioEsperado()) != 0)
+        var total = tarifas.total(precio, datos.ninos(), datos.adultos(), datos.adultosMayores());
+        var nueva = new Reserva(cliente, salida, precio, datos.ninos(), datos.adultos(), datos.adultosMayores(), total);
+        nueva.agregarAdicionales(adicionales.seleccionar(salida.getTour().getId(), datos.totalPasajeros(), datos.adicionalesIds()));
+        if (datos.precioEsperado() != null && nueva.getPrecioTotal().compareTo(datos.precioEsperado()) != 0)
             throw error(HttpStatus.CONFLICT, "El precio cambio. Revisa el nuevo resumen antes de reservar");
-        salida.setCuposDisponibles(salida.getCuposDisponibles() - datos.pasajeros());
-        var reserva = reservas.saveAndFlush(new Reserva(cliente, salida, datos.pasajeros(), precio));
+        salida.setCuposDisponibles(salida.getCuposDisponibles() - datos.totalPasajeros());
+        var reserva = reservas.saveAndFlush(nueva);
         return respuesta(reserva, actor);
     }
 
     public List<ReservaRespuesta> listar(LoginRespuesta actor, boolean soloMias) {
         if (!soloMias && !gestor(actor)) throw error(HttpStatus.FORBIDDEN, "Acceso denegado");
         var lista = soloMias ? reservas.findByClienteIdOrderByCreadaEnDescIdDesc(actor.id())
-                : reservas.findAllByOrderByCreadaEnDescIdDesc();
+                : "OPERADOR".equals(actor.rol())
+                    ? reservas.findBySalida_Operador_IdOrderByCreadaEnDescIdDesc(actor.id())
+                    : reservas.findAllByOrderByCreadaEnDescIdDesc();
         return lista.stream().map(r -> respuesta(r, actor)).toList();
     }
 
@@ -72,6 +83,26 @@ public class ReservaService {
     public ReservaRespuesta confirmar(Long id, LoginRespuesta actor) {
         if (!gestor(actor)) throw error(HttpStatus.FORBIDDEN, "Acceso denegado");
         Reserva reserva = bloquearReserva(id);
+        autorizar(reserva, actor);
+        confirmarValidada(reserva);
+        return respuesta(reserva, actor);
+    }
+
+    // Solo se invoca desde PagoService dentro de su transaccion y con la reserva bloqueada.
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    void confirmarPorPago(Reserva reserva) {
+        confirmarValidada(reserva);
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    Reserva bloquearParaPago(Long id, LoginRespuesta actor) {
+        Reserva reserva = bloquearReserva(id);
+        if (!"CLIENTE".equals(actor.rol()) || !reserva.getCliente().getId().equals(actor.id()))
+            throw noEncontrada();
+        return reserva;
+    }
+
+    private void confirmarValidada(Reserva reserva) {
         if (reserva.getEstado() != EstadoReserva.PENDIENTE || !abierta(reserva.getSalida()))
             throw error(HttpStatus.CONFLICT, "Solo se puede confirmar una reserva pendiente antes de la salida");
         var salida = reserva.getSalida();
@@ -83,7 +114,6 @@ public class ReservaService {
             throw error(HttpStatus.CONFLICT, "No se puede confirmar una reserva con tour o embarcación inactivos");
         validarOcupacion(salida);
         reserva.confirmar();
-        return respuesta(reserva, actor);
     }
 
     @Transactional
@@ -133,7 +163,22 @@ public class ReservaService {
             throw error(HttpStatus.CONFLICT, "Los cupos y reservas no corresponden a la capacidad de la embarcación");
     }
     private void autorizar(Reserva r, LoginRespuesta a) {
-        if (!gestor(a) && !("CLIENTE".equals(a.rol()) && r.getCliente().getId().equals(a.id()))) throw noEncontrada();
+        if ("ADMIN".equals(a.rol())) return;
+        if ("OPERADOR".equals(a.rol()) && r.getSalida().getOperador() != null
+                && r.getSalida().getOperador().getId().equals(a.id())) return;
+        if ("CLIENTE".equals(a.rol()) && r.getCliente().getId().equals(a.id())) return;
+        throw noEncontrada();
+    }
+
+    public List<ReservaRespuesta> listarPorSalidaPropia(Long salidaId, LoginRespuesta actor) {
+        validarId(salidaId);
+        var salida = salidas.findById(salidaId)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Salida no encontrada"));
+        if (!"OPERADOR".equals(actor.rol()) || salida.getOperador() == null
+                || !salida.getOperador().getId().equals(actor.id()))
+            throw error(HttpStatus.NOT_FOUND, "Salida no encontrada");
+        return reservas.findBySalidaIdOrderByIdAsc(salidaId).stream()
+                .map(r -> respuesta(r, actor)).toList();
     }
     private ResponseStatusException noEncontrada() { return error(HttpStatus.NOT_FOUND, "Reserva no encontrada"); }
     private ResponseStatusException error(HttpStatus estado, String mensaje) { return new ResponseStatusException(estado, mensaje); }
@@ -146,6 +191,8 @@ public class ReservaService {
                 r.getConfirmadaEn(), r.getCanceladaEn(), s.getCuposDisponibles(),
                 gestor(a) && r.getEstado() == EstadoReserva.PENDIENTE && abierta(s)
                         && Boolean.TRUE.equals(s.getTour().getActivo())
-                        && Boolean.TRUE.equals(s.getEmbarcacion().getActivo()), cancelable(r));
+                        && Boolean.TRUE.equals(s.getEmbarcacion().getActivo()), cancelable(r),
+                r.getNinos(), r.getAdultos(), r.getAdultosMayores(), r.getPasajeros(), r.getSubtotalAdicionales(),
+                r.getAdicionales().stream().map(ReservaAdicionalRespuesta::desde).toList());
     }
 }

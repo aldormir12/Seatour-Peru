@@ -15,7 +15,7 @@
 .dashboard-cliente {
   width: 100%;
   min-height: 100vh;
-  background: #f4f8fb;
+
 }
 
 .hero {
@@ -26,23 +26,6 @@
   display: flex;
   align-items: flex-start;
   padding: 108px max(4vw, 28px) 145px;
-  background-image: url('/images/dashboard/hero-cliente.png');
-  background-size: cover;
-  background-position: center 80%;
-  background-repeat: no-repeat;
-}
-
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-
-  background: linear-gradient(
-    90deg,
-    rgba(2, 20, 33, 0.72) 0%,
-    rgba(3, 28, 43, 0.48) 42%,
-    rgba(3, 31, 44, 0.12) 74%,
-    rgba(0, 0, 0, 0.02) 100%
-  );
 }
 
 .hero-content {
@@ -569,7 +552,6 @@
   .hero {
     min-height: 760px;
     padding: 96px 18px 255px;
-    background-position: 58% center;
   }
 
   .hero h1 {

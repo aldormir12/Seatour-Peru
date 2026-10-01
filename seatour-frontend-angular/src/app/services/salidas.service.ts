@@ -1,6 +1,9 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { map, Observable } from 'rxjs';
+import { UsuariosService } from './usuarios.service';
+import type { UsuarioAdministrable } from './usuarios.service';
+import type { Reserva } from './reservas.service';
 
 export type EstadoSalida =
   | 'PROGRAMADA'
@@ -20,14 +23,21 @@ export interface SalidaProgramada {
   id: number;
   fecha: string;
   horaSalida: string;
+  inicioReal: string | null;
+  finReal: string | null;
   cuposDisponibles: number;
   estado: EstadoSalida;
 
   tourId: number;
   tourNombre: string;
+  duracionMinutos: number | null;
 
   embarcacionId: number;
   embarcacionNombre: string;
+
+  operadorId: number | null;
+  operadorNombre: string | null;
+  operadorApellido: string | null;
 
   precioPorPasajero: number;
   reservable: boolean;
@@ -39,6 +49,7 @@ export interface SalidaSolicitud {
   horaSalida: string;
   tourId: number;
   embarcacionId: number;
+  operadorId: number;
 }
 
 export interface CambioEstadoSalida {
@@ -61,8 +72,21 @@ export interface EmbarcacionActivaSalida {
 export class SalidasService {
 
   private readonly apiUrl = 'http://localhost:8080/api/salidas';
+  private readonly usuarios = inject(UsuariosService);
 
   constructor(private http: HttpClient) {}
+
+  listarMisSalidas(): Observable<SalidaProgramada[]> {
+    return this.http.get<SalidaProgramada[]>(`${this.apiUrl}/mis-salidas`);
+  }
+
+  obtenerSalidaPropia(id: number): Observable<SalidaProgramada> {
+    return this.http.get<SalidaProgramada>(`${this.apiUrl}/mis-salidas/${id}`);
+  }
+
+  obtenerReservasSalidaPropia(id: number): Observable<Reserva[]> {
+    return this.http.get<Reserva[]>(`${this.apiUrl}/mis-salidas/${id}/reservas`);
+  }
 
   listar(): Observable<SalidaProgramada[]> {
     return this.http.get<SalidaProgramada[]>(this.apiUrl);
@@ -132,6 +156,12 @@ export class SalidasService {
     Observable<EmbarcacionActivaSalida[]> {
     return this.http.get<EmbarcacionActivaSalida[]>(
       `${this.apiUrl}/embarcaciones/activas`
+    );
+  }
+
+  listarOperadoresActivos(): Observable<UsuarioAdministrable[]> {
+    return this.usuarios.listar().pipe(
+      map(usuarios => usuarios.filter(usuario => usuario.rol === 'OPERADOR' && usuario.activo))
     );
   }
 }

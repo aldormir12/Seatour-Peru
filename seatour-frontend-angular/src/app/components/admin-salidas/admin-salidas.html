@@ -283,6 +283,14 @@
                       </p>
 
                       <p class="mt-0.5 text-xs text-slate-400">Salida #{{ salida.id }}</p>
+                      <p class="mt-2 text-xs text-slate-400">Operador responsable</p>
+                      <p class="mt-0.5 break-words text-xs text-slate-600">
+                        @if (salida.operadorId != null) {
+                          {{ salida.operadorNombre }} {{ salida.operadorApellido }}
+                        } @else {
+                          Sin operador asignado
+                        }
+                      </p>
                     </div>
                   </td>
 
@@ -517,6 +525,17 @@
               }
 
               <div class="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4">
+                <div class="col-span-2">
+                  <p class="text-xs text-slate-400">Operador responsable</p>
+                  <p class="mt-1 break-words text-sm font-semibold text-slate-700">
+                    @if (salida.operadorId != null) {
+                      {{ salida.operadorNombre }} {{ salida.operadorApellido }}
+                    } @else {
+                      Sin operador asignado
+                    }
+                  </p>
+                </div>
+
                 <div>
                   <p class="text-xs text-slate-400">Fecha</p>
 
@@ -811,6 +830,29 @@
                   {{ embarcacion.capacidad }} pasajeros
                 </p>
               }
+            </div>
+
+            <!-- Operador responsable -->
+            <div class="sm:col-span-2">
+              <label for="salida-operador" class="mb-2 block text-sm font-semibold text-slate-700">
+                Operador responsable
+              </label>
+
+              <select
+                id="salida-operador"
+                name="operadorId"
+                [(ngModel)]="formulario.operadorId"
+                required
+                class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
+              >
+                <option [ngValue]="null">Selecciona un operador</option>
+
+                @for (operador of operadores(); track operador.id) {
+                  <option [ngValue]="operador.id">
+                    {{ operador.nombre }} {{ operador.apellido }}
+                  </option>
+                }
+              </select>
             </div>
 
             <!-- Fecha -->

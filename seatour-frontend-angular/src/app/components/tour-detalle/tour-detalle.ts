@@ -4,12 +4,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, Subscription } from 'rxjs';
 import { Tour, Tours } from '../../services/tours';
+import { UbicacionTour } from '../ubicacion-tour/ubicacion-tour';
 import { CategoriasService } from '../../services/categorias.service';
 import { SalidaProgramada, SalidasService } from '../../services/salidas.service';
 
 @Component({
   selector: 'app-tour-detalle',
-  imports: [CurrencyPipe, DatePipe, RouterLink],
+  imports: [CurrencyPipe, DatePipe, RouterLink, UbicacionTour],
   templateUrl: './tour-detalle.html',
   styleUrl: './tour-detalle.css'
 })

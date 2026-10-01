@@ -5,7 +5,10 @@ import { forkJoin, map } from 'rxjs';
 import { API_URL } from './auth.service';
 import { CategoriaTour, CategoriasService } from './categorias.service';
 
+export type ZonaMaritimaTour = 'MANCORA' | 'LOS_ORGANOS' | 'CABO_BLANCO' | 'TALARA';
+
 export interface Tour {
+  zonaMaritima: ZonaMaritimaTour | null;
   id: number;
   nombre: string;
   descripcion: string;
@@ -21,6 +24,7 @@ export interface TourDestacado extends Tour {
 }
 
 export interface TourCreacion {
+  zonaMaritima: ZonaMaritimaTour;
   nombre: string;
   descripcion: string;
   duracionMinutos: number;
@@ -31,6 +35,7 @@ export interface TourCreacion {
 }
 
 export interface TourActualizacion {
+  zonaMaritima: ZonaMaritimaTour;
   nombre: string;
   descripcion: string;
   duracionMinutos: number;

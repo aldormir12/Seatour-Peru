@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, HttpErrorResponse } from '@angular/common/http';
@@ -12,7 +13,7 @@ import { roleGuard } from '../../guards/role.guard';
 
 const salida: Salida = { id: 3, tourId: 1, tourNombre: 'Paseo', fecha: '2099-01-01', horaSalida: '12:00:00',
   embarcacionNombre: 'Barco', cuposDisponibles: 4, estado: 'PROGRAMADA', precioPorPasajero: 80.25, reservable: true };
-const reserva: Reserva = { id: 7, clienteId: 1, clienteNombre: 'Ana Perez', salidaId: 3, tourNombre: 'Paseo',
+const reserva: Reserva = { ninos: 0, adultos: 2, adultosMayores: 0, totalPasajeros: 2, id: 7, clienteId: 1, clienteNombre: 'Ana Perez', salidaId: 3, tourNombre: 'Paseo',
   fecha: salida.fecha, horaSalida: salida.horaSalida, embarcacionNombre: 'Barco', pasajeros: 2,
   precioUnitario: 80.25, precioTotal: 160.50, moneda: 'PEN', estado: 'PENDIENTE',
   creadaEn: '2026-09-26T15:00:00Z', confirmadaEn: null, canceladaEn: null, cuposDisponibles: 2,
@@ -30,7 +31,7 @@ describe('Flujo de reservas', () => {
         tieneRol: (...roles: RolUsuario[]) => roles.includes(rol), estaAutenticado: () => autenticado,
         logout: vi.fn()
       } },
-      { provide: ActivatedRoute, useValue: { snapshot: {
+      { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ salidaId: '3' })), snapshot: {
         paramMap: convertToParamMap({ salidaId: '3', id: '7' }), queryParamMap: convertToParamMap({}), data: {}
       } } }
     ] });
@@ -39,44 +40,66 @@ describe('Flujo de reservas', () => {
   });
   afterEach(() => http.verify());
 
-  it('revisa disponibilidad y total antes de reservar, bloquea doble envio y actualiza cupos', () => {
+  it('muestra la salida real y actualiza el total sin crear reservas al continuar', () => {
     const fixture = TestBed.createComponent(ReservarComponent);
     const c = fixture.componentInstance;
     http.expectOne(`${API_URL}/salidas/3`).flush(salida);
-    c.pasajeros.setValue(2);
-    c.reservar();
-    http.expectNone(`${API_URL}/reservas`);
-    c.revisar();
-    http.expectOne(`${API_URL}/salidas/3`).flush(salida);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Revisa tu reserva');
+    expect(fixture.nativeElement.textContent).toContain('Paseo');
+    expect(fixture.nativeElement.textContent).toContain('01 Jan 2099');
+    expect(fixture.nativeElement.textContent).toContain('12:00');
+    const input = fixture.nativeElement.querySelector('input');
+    input.value = '2';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
     expect(c.total()).toBe(160.50);
-    c.reservar(); c.reservar();
-    const req = http.expectOne(`${API_URL}/reservas`);
-    expect(req.request.body).toEqual({ salidaId: 3, pasajeros: 2, precioEsperado: 80.25 });
-    req.flush(reserva);
-    expect(TestBed.inject(ReservasService).cupos()[3]).toBe(2);
-    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/app/mis-reservas', 7], { queryParams: { creada: '1' } });
+    expect(fixture.nativeElement.textContent).toContain('160.50');
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No se ha creado ninguna reserva');
+    http.expectNone(req => req.method !== 'GET');
+    expect(TestBed.inject(Router).navigate).not.toHaveBeenCalled();
   });
 
-  it.each([0, -1, 1.5, 5])('no permite cantidad invalida %i', pasajeros => {
-    const c = TestBed.createComponent(ReservarComponent).componentInstance;
+  it.each([0, -1, 1.5, 5, NaN])('no permite cantidad invalida %i', pasajeros => {
+    const fixture = TestBed.createComponent(ReservarComponent);
+    const c = fixture.componentInstance;
     http.expectOne(`${API_URL}/salidas/3`).flush(salida);
-    c.pasajeros.setValue(pasajeros); c.revisar();
-    http.expectOne(`${API_URL}/salidas/3`).flush(salida);
-    expect(c.resumen()).toBe(false);
-    c.reservar(); http.expectNone(`${API_URL}/reservas`);
+    c.pasajeros.setValue(pasajeros);
+    c.continuar();
+    fixture.detectChanges();
+    expect(c.puedeContinuar()).toBe(false);
+    expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(true);
+    expect(c.aviso()).toBe('');
+    http.expectNone(req => req.method !== 'GET');
   });
 
-  it('conflicto de cupos o precio regresa al formulario y vuelve a consultar la salida', () => {
+  it.each([1, 4])('permite el limite de %i pasajeros', pasajeros => {
     const c = TestBed.createComponent(ReservarComponent).componentInstance;
     http.expectOne(`${API_URL}/salidas/3`).flush(salida);
-    c.revisar(); http.expectOne(`${API_URL}/salidas/3`).flush(salida);
-    c.reservar();
-    http.expectOne(`${API_URL}/reservas`).flush({ detail: 'No hay suficientes cupos' }, { status: 409, statusText: 'Conflict' });
-    http.expectOne(`${API_URL}/salidas/3`).flush({ ...salida, cuposDisponibles: 0, reservable: false });
-    expect(c.resumen()).toBe(false); expect(c.enviando()).toBe(false);
-    expect(c.error()).toContain('cupos'); expect(c.salida()?.cuposDisponibles).toBe(0);
+    c.pasajeros.setValue(pasajeros);
+    expect(c.puedeContinuar()).toBe(true);
+  });
+
+  it.each([{ cuposDisponibles: 0, reservable: true }, { cuposDisponibles: 4, reservable: false }])(
+    'bloquea salidas no disponibles %o', disponibilidad => {
+      const fixture = TestBed.createComponent(ReservarComponent);
+      http.expectOne(`${API_URL}/salidas/3`).flush({ ...salida, ...disponibilidad });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.puedeContinuar()).toBe(false);
+      expect(fixture.nativeElement.querySelector('input')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('no admite nuevas reservas');
+    });
+
+  it('permite reintentar tras un error de carga', () => {
+    const c = TestBed.createComponent(ReservarComponent).componentInstance;
+    http.expectOne(`${API_URL}/salidas/3`).flush({}, { status: 404, statusText: 'Not Found' });
+    expect(c.error()).toBeTruthy();
+    expect(c.salida()).toBeNull();
+    c.cargar();
+    http.expectOne(`${API_URL}/salidas/3`).flush(salida);
+    expect(c.error()).toBe('');
+    expect(c.salida()).toEqual(salida);
   });
 
   it('cancelar requiere confirmacion y actualiza estado, acciones y cupos', () => {

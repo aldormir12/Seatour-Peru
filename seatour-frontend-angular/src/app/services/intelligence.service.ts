@@ -39,12 +39,54 @@ export interface AfinidadIntelligence {
   nivel: 'IDEAL' | 'ALTA' | 'BUENA' | 'BAJA' | 'MUY_BAJA';
 }
 
+export interface MejorOpcionVentana {
+  inicio: string;
+  fin: string;
+}
+
+export interface MejorOpcionTourSalida {
+  tourId: number;
+  nombre: string;
+  salidaId: number;
+  scoreAfinidad: number;
+  imagenUrl: string | null;
+}
+
+export interface MejorOpcionCondiciones {
+  estado: 'COMPLETO' | 'PARCIAL' | 'NO_DISPONIBLE';
+  oleajeMaximoMetros: number | null;
+  vientoMaximoKmh: number | null;
+  visibilidadMinimaMetros: number | null;
+}
+
+export interface MejorOpcionDisponibilidad {
+  disponible: boolean;
+  cuposDisponibles: number;
+}
+
+export interface MejorOpcionRespuesta {
+  fecha: string;
+  estado: 'RECOMENDACION_DISPONIBLE' | 'SIN_SALIDAS';
+  mejorZona: ZonaMaritimaTour | null;
+  mejorVentanaHoraria: MejorOpcionVentana | null;
+  mejorTourSalida: MejorOpcionTourSalida | null;
+  condicionesMaritimas: MejorOpcionCondiciones;
+  disponibilidad: MejorOpcionDisponibilidad;
+  insight: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class IntelligenceService {
 
   private readonly http = inject(HttpClient);
+
+  mejorOpcion(fecha: string): Observable<MejorOpcionRespuesta> {
+    return this.http.get<MejorOpcionRespuesta>(
+      `${API_URL}/intelligence/mejor-opcion`, { params: { fecha } }
+    );
+  }
 
   afinidades(): Observable<AfinidadIntelligence[]> {
     return this.http.get<AfinidadIntelligence[]>(`${API_URL}/intelligence/afinidades`);

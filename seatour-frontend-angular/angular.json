@@ -73,10 +73,14 @@
               "buildTarget": "seatour-frontend-angular:build:production"
             },
             "development": {
-              "buildTarget": "seatour-frontend-angular:build:development"
+              "buildTarget": "seatour-frontend-angular:build:development",
+              "allowedHosts": true
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "proxyConfig": "src/proxy.conf.json"
+          }
         },
         "test": {
           "builder": "@angular/build:unit-test"

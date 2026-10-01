@@ -1,0 +1,484 @@
+<section
+  class="relative w-full overflow-hidden rounded-[28px] border border-[#dceaf2] bg-white shadow-[0_18px_55px_rgba(20,83,110,0.07)]"
+  aria-live="polite"
+  [attr.aria-busy]="cargando()"
+>
+  @if (cargando()) {
+    <div class="flex min-h-[610px] items-center justify-center">
+      <div class="text-center">
+        <div
+          class="mx-auto h-9 w-9 animate-spin rounded-full border-[3px] border-[#d7edf5] border-t-[#10a7bd]"
+        ></div>
+
+        <p class="mb-0 mt-4 text-xs font-semibold text-[#587493]">
+          Intelligence está analizando tu día...
+        </p>
+      </div>
+    </div>
+  } @else if (error()) {
+    <div class="flex min-h-[610px] items-center justify-center px-8 text-center">
+      <div>
+        <div
+          class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-5 w-5"
+          >
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 8v5M12 16.5h.01"></path>
+          </svg>
+        </div>
+
+        <p class="mb-0 mt-4 text-sm font-semibold text-[#08264b]">No pudimos analizar tu día</p>
+
+        <p class="mb-0 mt-1 text-xs text-[#718594]">
+          {{ error() }}
+        </p>
+      </div>
+    </div>
+  } @else if (respuesta(); as opcion) {
+    @if (opcion.estado === 'SIN_SALIDAS') {
+      <div class="flex min-h-[610px] items-center justify-center px-8 text-center">
+        <div class="max-w-[360px]">
+          <div
+            class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf7fd] text-[#1098d5]"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              class="h-6 w-6"
+            >
+              <path d="M4 17c2-2 4-3 6-3s4 1 6 1 3-.5 4-1.5"></path>
+              <path d="M4 12c2-2 4-3 6-3s4 1 6 1 3-.5 4-1.5"></path>
+              <path d="M7 6h10"></path>
+            </svg>
+          </div>
+
+          <span
+            class="mt-5 inline-flex rounded-full bg-[#e7fbf8] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#087a68]"
+          >
+            SeaTour Intelligence
+          </span>
+
+          <h2 class="mb-0 mt-3 text-[25px] font-extrabold tracking-[-0.03em] text-[#08264b]">
+            Hoy no encontramos una salida ideal
+          </h2>
+
+          <p class="mb-0 mt-3 text-xs leading-5 text-[#607894]">
+            {{ opcion.insight }}
+          </p>
+        </div>
+      </div>
+    } @else {
+      @if (opcion.mejorTourSalida; as tour) {
+        <div class="relative min-h-[610px]">
+          <!-- FOTO SUPERIOR -->
+          <div class="absolute right-0 top-0 h-[245px] w-[67%] overflow-hidden">
+            @if (tour.imagenUrl) {
+              <img
+                [src]="toursService.urlImagen(tour.imagenUrl)"
+                [alt]="tour.nombre"
+                class="h-full w-full object-cover"
+              />
+            } @else {
+              <div
+                class="h-full w-full bg-gradient-to-br from-[#dff5fb] via-[#b9e6ef] to-[#78c9dc]"
+              ></div>
+            }
+
+            <!-- fusión lateral -->
+            <div
+              class="absolute inset-0 bg-[linear-gradient(90deg,#ffffff_0%,rgba(255,255,255,0.94)_13%,rgba(255,255,255,0.36)_40%,rgba(255,255,255,0)_67%)]"
+            ></div>
+
+            <!-- fusión inferior -->
+            <div
+              class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0)_45%,rgba(255,255,255,0.18)_62%,rgba(255,255,255,0.88)_88%,#ffffff_100%)]"
+            ></div>
+
+            <!-- curva -->
+            <div
+              class="absolute -bottom-[88px] -left-[10%] h-[135px] w-[125%] rounded-[50%] bg-white"
+            ></div>
+          </div>
+
+          <!-- CONTENIDO -->
+          <div class="relative z-10 px-6 pb-5 pt-6 sm:px-7">
+            <div class="flex items-center gap-2 text-[#1098d5]">
+              <div class="flex h-7 w-7 items-center justify-center rounded-full bg-[#e8f7fc]">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-3.5 w-3.5"
+                >
+                  <path d="M4 15c3-5 5-7 8-7s5 2 8 7"></path>
+                  <path d="M6 18h12"></path>
+                  <circle cx="12" cy="6" r="2"></circle>
+                </svg>
+              </div>
+
+              <span class="text-[10px] font-extrabold uppercase tracking-[0.18em]">
+                SeaTour Intelligence
+              </span>
+            </div>
+
+            <h2
+              class="mb-0 mt-3 max-w-[290px] text-[30px] font-extrabold leading-[1.04] tracking-[-0.04em] text-[#08264b]"
+            >
+              Tu mejor opción hoy
+            </h2>
+
+            <p class="mb-0 mt-2 max-w-[270px] text-[11px] leading-[1.6] text-[#607894]">
+              Combinamos tus preferencias, salidas disponibles y condiciones del mar.
+            </p>
+
+            <div class="mt-[82px]">
+              <!-- ZONA -->
+              <div
+                class="flex items-center justify-between gap-4 rounded-[22px] border border-[#dff1f3] bg-gradient-to-br from-[#eef9fd] to-[#e9fbf8] px-4 py-3.5"
+              >
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5 text-[#1098d5]">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      class="h-3.5 w-3.5"
+                    >
+                      <path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path>
+                      <circle cx="12" cy="10" r="2"></circle>
+                    </svg>
+
+                    <span class="text-[9px] font-bold uppercase tracking-[0.14em]">
+                      Zona recomendada
+                    </span>
+                  </div>
+
+                  <p
+                    class="mb-0 mt-1 truncate text-[20px] font-extrabold tracking-[-0.025em] text-[#08264b]"
+                  >
+                    {{ nombreZona(opcion.mejorZona) }}
+                  </p>
+                </div>
+
+                <!-- AFINIDAD REAL -->
+                <div class="relative h-[68px] w-[68px] shrink-0">
+                  <svg viewBox="0 0 72 72" class="h-full w-full -rotate-90" aria-hidden="true">
+                    <circle
+                      cx="36"
+                      cy="36"
+                      r="29"
+                      fill="none"
+                      stroke="#dceaf2"
+                      stroke-width="6"
+                    ></circle>
+
+                    <circle
+                      cx="36"
+                      cy="36"
+                      r="29"
+                      fill="none"
+                      [attr.stroke]="colorAfinidad(tour.scoreAfinidad)"
+                      stroke-width="6"
+                      stroke-linecap="round"
+                      pathLength="100"
+                      stroke-dasharray="100"
+                      [attr.stroke-dashoffset]="100 - tour.scoreAfinidad"
+                      class="transition-all duration-700"
+                    ></circle>
+                  </svg>
+
+                  <div
+                    class="absolute inset-[8px] grid place-items-center rounded-full bg-[#082f4d] text-center text-white"
+                  >
+                    <div>
+                      <strong class="block text-[15px] leading-none">
+                        {{ tour.scoreAfinidad }}%
+                      </strong>
+
+                      <span
+                        class="mt-0.5 block text-[6px] uppercase tracking-[0.12em] text-white/65"
+                      >
+                        afinidad
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- VENTANA -->
+              @if (opcion.mejorVentanaHoraria; as ventana) {
+                <div class="mt-5">
+                  <div class="mb-1 flex items-end justify-between gap-3">
+                    <div>
+                      <p
+                        class="mb-0 text-[9px] font-bold uppercase tracking-[0.14em] text-[#607894]"
+                      >
+                        Tu mejor momento
+                      </p>
+
+                      <p class="mb-0 mt-1 text-[15px] font-bold text-[#08264b]">
+                        {{ hora(ventana.inicio) }} – {{ hora(ventana.fin) }}
+                      </p>
+                    </div>
+
+                    <span
+                      class="rounded-full bg-[#daf8f2] px-2.5 py-1 text-[8px] font-extrabold uppercase tracking-wide text-[#087a68]"
+                    >
+                      Mejor ventana
+                    </span>
+                  </div>
+
+                  <!-- TIMELINE -->
+                  <div class="relative mt-4 h-[76px]">
+                    <!-- etiquetas horas reales -->
+                    <div
+                      class="absolute top-0 -translate-x-1/2"
+                      [style.left.%]="porcentajePosicion(ventana.inicio)"
+                    >
+                      <span
+                        class="whitespace-nowrap rounded-full bg-[#e7fbf8] px-2 py-1 text-[8px] font-extrabold text-[#087a68] shadow-sm"
+                      >
+                        {{ hora(ventana.inicio) }}
+                      </span>
+                    </div>
+
+                    <div
+                      class="absolute top-0 -translate-x-1/2"
+                      [style.left.%]="porcentajePosicion(ventana.fin)"
+                    >
+                      <span
+                        class="whitespace-nowrap rounded-full bg-[#eaf7fd] px-2 py-1 text-[8px] font-extrabold text-[#087dab] shadow-sm"
+                      >
+                        {{ hora(ventana.fin) }}
+                      </span>
+                    </div>
+
+                    <!-- línea base -->
+                    <div
+                      class="absolute left-0 right-0 top-[36px] h-[6px] rounded-full bg-[#dceaf2]"
+                    ></div>
+
+                    <!-- marca central -->
+                    <div
+                      class="absolute left-1/2 top-[32px] h-[14px] w-[2px] -translate-x-1/2 rounded-full bg-[#c4d9e4]"
+                    ></div>
+
+                    <!-- ventana destacada -->
+                    <div
+                      class="absolute top-[36px] h-[6px] rounded-full bg-gradient-to-r from-[#18c8bb] via-[#16b7d7] to-[#149ddb] shadow-[0_0_14px_rgba(22,183,215,0.30)]"
+                      [style.left.%]="porcentajePosicion(ventana.inicio)"
+                      [style.width.%]="anchoVentana(ventana.inicio, ventana.fin)"
+                    ></div>
+
+                    <!-- nodo inicio -->
+                    <div
+                      class="absolute top-[30px] h-[18px] w-[18px] -translate-x-1/2 rounded-full border-[4px] border-white bg-[#18c8bb] shadow-[0_3px_10px_rgba(24,200,187,0.35)]"
+                      [style.left.%]="porcentajePosicion(ventana.inicio)"
+                    ></div>
+
+                    <!-- nodo fin -->
+                    <div
+                      class="absolute top-[30px] h-[18px] w-[18px] -translate-x-1/2 rounded-full border-[4px] border-white bg-[#149ddb] shadow-[0_3px_10px_rgba(20,157,219,0.35)]"
+                      [style.left.%]="porcentajePosicion(ventana.fin)"
+                    ></div>
+
+                    <!-- escala -->
+                    <span class="absolute bottom-0 left-0 text-[8px] font-semibold text-[#8296a4]">
+                      06:00
+                    </span>
+
+                    <span
+                      class="absolute bottom-0 left-1/2 -translate-x-1/2 text-[8px] font-semibold text-[#8296a4]"
+                    >
+                      12:00
+                    </span>
+
+                    <span class="absolute bottom-0 right-0 text-[8px] font-semibold text-[#8296a4]">
+                      18:00
+                    </span>
+                  </div>
+                </div>
+              }
+
+              <!-- EXPERIENCIA -->
+              <div class="mt-4 flex gap-3">
+                <div
+                  class="h-[82px] w-[105px] shrink-0 overflow-hidden rounded-[18px] bg-[#eef6f9]"
+                >
+                  @if (tour.imagenUrl) {
+                    <img
+                      [src]="toursService.urlImagen(tour.imagenUrl)"
+                      [alt]="tour.nombre"
+                      class="h-full w-full object-cover"
+                    />
+                  } @else {
+                    <div class="h-full w-full bg-gradient-to-br from-[#d9f1f7] to-[#a4dae7]"></div>
+                  }
+                </div>
+
+                <div class="min-w-0 flex-1 py-1">
+                  <div class="flex items-center gap-1.5 text-[#1098d5]">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="h-3 w-3">
+                      <path
+                        d="m12 2.5 2.8 5.67 6.26.91-4.53 4.42 1.07 6.24L12 16.8l-5.6 2.94 1.07-6.24-4.53-4.42 6.26-.91L12 2.5Z"
+                      ></path>
+                    </svg>
+
+                    <span class="text-[8px] font-extrabold uppercase tracking-[0.13em]">
+                      Mejor experiencia
+                    </span>
+                  </div>
+
+                  <p
+                    class="mb-0 mt-1 line-clamp-2 text-[15px] font-extrabold leading-[1.15] tracking-[-0.02em] text-[#08264b]"
+                  >
+                    {{ tour.nombre }}
+                  </p>
+
+                  <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    @if (opcion.mejorVentanaHoraria; as ventana) {
+                      <span class="flex items-center gap-1 text-[9px] font-semibold text-[#607894]">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          class="h-3 w-3"
+                        >
+                          <circle cx="12" cy="12" r="9"></circle>
+                          <path d="M12 7v5l3 2"></path>
+                        </svg>
+
+                        {{ hora(ventana.inicio) }}
+                      </span>
+                    }
+
+                    <span class="flex items-center gap-1 text-[9px] font-semibold text-[#087a68]">
+                      <span class="h-1.5 w-1.5 rounded-full bg-[#17b978]"></span>
+
+                      {{ etiquetaCondiciones(opcion) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SEÑALES -->
+              <div class="mt-5 grid grid-cols-3 gap-2">
+                <div
+                  class="rounded-[18px] border border-[#e2edf3] bg-[#f8fcfe] px-2 py-3 text-center"
+                >
+                  <div
+                    class="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f6fd] text-[#1098d5]"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      class="h-4 w-4"
+                    >
+                      <path d="M3 15c2-2 4-3 6-3s4 2 6 2 4-1 6-3"></path>
+                      <path d="M3 19c2-2 4-3 6-3s4 2 6 2 4-1 6-3"></path>
+                    </svg>
+                  </div>
+
+                  <p class="mb-0 mt-2 text-[8px] font-bold text-[#607894]">Oleaje</p>
+
+                  <strong class="mt-0.5 block text-[10px] text-[#08264b]">
+                    {{ numero(opcion.condicionesMaritimas.oleajeMaximoMetros, 'm') }}
+                  </strong>
+                </div>
+
+                <div
+                  class="rounded-[18px] border border-[#eee9dc] bg-[#fffdf7] px-2 py-3 text-center"
+                >
+                  <div
+                    class="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#fff5d8] text-[#ffad14]"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      class="h-4 w-4"
+                    >
+                      <path d="M3 12h18M5 8h14M7 16h10"></path>
+                    </svg>
+                  </div>
+
+                  <p class="mb-0 mt-2 text-[8px] font-bold text-[#607894]">Visibilidad</p>
+
+                  <strong class="mt-0.5 block text-[10px] text-[#08264b]">
+                    {{ visibilidadKm(opcion.condicionesMaritimas.visibilidadMinimaMetros) }}
+                  </strong>
+                </div>
+
+                <div
+                  class="rounded-[18px] border border-[#e1eee8] bg-[#f8fdf9] px-2 py-3 text-center"
+                >
+                  <div
+                    class="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#ddf8e9] text-[#17b978]"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      class="h-4 w-4"
+                    >
+                      <path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path>
+                      <path d="M16 10a2.5 2.5 0 1 0 0-5"></path>
+                      <path d="M3 19c0-3 2.2-5 5-5s5 2 5 5"></path>
+                      <path d="M14 14c3 0 5 1.8 5 4.5"></path>
+                    </svg>
+                  </div>
+
+                  <p class="mb-0 mt-2 text-[8px] font-bold text-[#607894]">Disponibilidad</p>
+
+                  <strong class="mt-0.5 block text-[10px] text-[#08264b]">
+                    {{ opcion.disponibilidad.cuposDisponibles }} cupos
+                  </strong>
+                </div>
+              </div>
+
+              <!-- INSIGHT -->
+              <div class="mt-4 flex items-start gap-2.5 rounded-[18px] bg-[#eff7fc] px-3.5 py-3">
+                <div
+                  class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#1098d5]"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    class="h-3.5 w-3.5"
+                  >
+                    <path d="M9 18h6"></path>
+                    <path d="M10 21h4"></path>
+                    <path
+                      d="M8.6 15.3A7 7 0 1 1 15.4 15.3C14.5 16 14 16.7 14 18h-4c0-1.3-.5-2-1.4-2.7Z"
+                    ></path>
+                  </svg>
+                </div>
+
+                <p class="mb-0 text-[9px] font-medium leading-[1.55] text-[#46657c]">
+                  {{ opcion.insight }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    }
+  }
+</section>

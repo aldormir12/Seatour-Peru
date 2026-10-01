@@ -350,6 +350,12 @@ export const routes: Routes = [
                       .then(m => m.DashboardClienteComponent)
                   },
                   {
+                    path: 'live',
+                    data: { sinHero: true },
+                    loadComponent: () => import('./components/cliente-live/cliente-live')
+                      .then(m => m.ClienteLive)
+                  },
+                  {
                     path: 'mis-reservas',
                     loadComponent: reservas
                   }

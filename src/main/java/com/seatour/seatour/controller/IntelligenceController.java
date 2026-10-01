@@ -34,4 +34,12 @@ public class IntelligenceController {
             @RequestParam(name = "zonaMaritima") ZonaMaritima zonaMaritima) {
         return intelligence.planDia(actor.datos(), fecha, zonaMaritima);
     }
+
+    @GetMapping("/mejor-opcion")
+    public com.seatour.seatour.dto.MejorOpcionRespuesta mejorOpcion(
+            @AuthenticationPrincipal UsuarioPrincipal actor,
+            @RequestParam(name = "fecha")
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return intelligence.mejorOpcion(actor.datos(), fecha);
+    }
 }

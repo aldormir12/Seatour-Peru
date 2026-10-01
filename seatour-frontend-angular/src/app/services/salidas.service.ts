@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { UsuariosService } from './usuarios.service';
+import { API_URL } from './auth.service';
 import type { UsuarioAdministrable } from './usuarios.service';
 import type { Reserva } from './reservas.service';
 
@@ -71,7 +72,7 @@ export interface EmbarcacionActivaSalida {
 })
 export class SalidasService {
 
-  private readonly apiUrl = 'http://localhost:8080/api/salidas';
+  private readonly apiUrl = `${API_URL}/salidas`;
   private readonly usuarios = inject(UsuariosService);
 
   constructor(private http: HttpClient) {}

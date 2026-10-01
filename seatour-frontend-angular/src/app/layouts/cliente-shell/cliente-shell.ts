@@ -1,5 +1,7 @@
 import { afterEveryRender, Component, DestroyRef, ElementRef, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { IntelligenceOnboarding } from '../../components/intelligence-onboarding/intelligence-onboarding';
 import { ToastContainer } from '../../components/toast-container/toast-container';
@@ -7,8 +9,11 @@ import { ToastContainer } from '../../components/toast-container/toast-container
 @Component({
   selector: 'app-cliente-shell',
   imports: [RouterOutlet, IntelligenceOnboarding, ToastContainer],
+  host: { '[class.cliente-sin-hero]': 'sinHero()' },
   template: `
-    <div class="cliente-hero" aria-hidden="true"></div>
+    @if (!sinHero()) {
+      <div class="cliente-hero" aria-hidden="true"></div>
+    }
     <router-outlet />
     @if (auth.usuario()?.rol === 'CLIENTE') {
       <app-intelligence-onboarding />
@@ -18,6 +23,12 @@ import { ToastContainer } from '../../components/toast-container/toast-container
   styleUrl: './cliente-shell.css'
 })
 export class ClienteShell {
+  private readonly route = inject(ActivatedRoute);
+  readonly sinHero = toSignal(inject(Router).events.pipe(
+    filter(event => event instanceof NavigationEnd),
+    startWith(null),
+    map(() => this.route.firstChild?.snapshot.data['sinHero'] === true)
+  ), { initialValue: false });
   readonly auth = inject(AuthService);
 
   constructor() {

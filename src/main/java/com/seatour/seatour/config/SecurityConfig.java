@@ -55,6 +55,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/adicionales", "/api/admin/adicionales/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/dashboard", "/api/admin/dashboard/**").hasRole("ADMIN")
                         .requestMatchers("/api/intelligence/**").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/live/salidas").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.POST, "/api/live/salidas/*/token").hasAnyRole("CLIENTE", "OPERADOR")
+                        .requestMatchers("/api/live/**").denyAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/reservas/*/pagos").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.POST, "/api/reservas").hasRole("CLIENTE")

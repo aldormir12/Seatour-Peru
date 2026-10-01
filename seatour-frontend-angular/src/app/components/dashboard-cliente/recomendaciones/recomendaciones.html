@@ -266,7 +266,10 @@
                   >
                     {{ tour.nombre }}
                   </h3>
-                  <app-ubicacion-tour [zonaMaritima]="tour.zonaMaritima" [fechaHora]="fechaHoraRecomendada(tour, recomendacion.mejorSalidaId)" />
+                  <app-ubicacion-tour
+                    [zonaMaritima]="tour.zonaMaritima"
+                    [fechaHora]="fechaHoraRecomendada(tour, recomendacion.mejorSalidaId)"
+                  />
 
                   <p
                     class="mb-0 mt-1 overflow-hidden text-[11px] leading-[1.42] text-[#607887] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"
@@ -440,39 +443,43 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-2 items-end gap-3 border-b border-slate-100 px-5 py-3 max-[600px]:grid-cols-1">
+          <div
+            class="grid grid-cols-2 items-end gap-3 border-b border-slate-100 px-5 py-3 max-[600px]:grid-cols-1"
+          >
             <div class="min-w-0">
-            <label for="zona-plan-dia" class="block text-[11px] font-semibold text-[#102d41]">Zona</label>
-            <select
-              #zonaPlan
-              id="zona-plan-dia"
-              required
-              [value]="zonaPlanDia()"
-              (change)="cambiarZonaPlanDia(zonaPlan.value)"
-              class="mt-2 w-full min-w-0 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-xs text-[#102d41] outline-none focus:border-[#087dab]"
-            >
-              @for (zona of zonasPlanDia; track zona.valor) {
-                <option [value]="zona.valor">{{ zona.nombre }}</option>
-              }
-            </select>
+              <label for="zona-plan-dia" class="block text-[11px] font-semibold text-[#102d41]"
+                >Zona</label
+              >
+              <select
+                #zonaPlan
+                id="zona-plan-dia"
+                required
+                [value]="zonaPlanDia()"
+                (change)="cambiarZonaPlanDia(zonaPlan.value)"
+                class="mt-2 w-full min-w-0 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-xs text-[#102d41] outline-none focus:border-[#087dab]"
+              >
+                @for (zona of zonasPlanDia; track zona.valor) {
+                  <option [value]="zona.valor">{{ zona.nombre }}</option>
+                }
+              </select>
             </div>
             <div class="min-w-0">
-            <label for="fecha-plan-dia" class="block text-[11px] font-semibold text-[#102d41]">
-              Fecha del plan: {{ fechaPlanDia() | date: 'dd/MM/yyyy' }}
-            </label>
-            <input
-              #fechaPlan
-              id="fecha-plan-dia"
-              type="date"
-              required
-              [value]="fechaPlanDia()"
-              (change)="
-                fechaPlan.validity.valid
-                  ? cambiarFechaPlanDia(fechaPlan.value)
-                  : (fechaPlan.value = fechaPlanDia())
-              "
-              class="mt-2 w-full min-w-0 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-xs text-[#102d41] outline-none focus:border-[#087dab]"
-            />
+              <label for="fecha-plan-dia" class="block text-[11px] font-semibold text-[#102d41]">
+                Fecha del plan: {{ fechaPlanDia() | date: 'dd/MM/yyyy' }}
+              </label>
+              <input
+                #fechaPlan
+                id="fecha-plan-dia"
+                type="date"
+                required
+                [value]="fechaPlanDia()"
+                (change)="
+                  fechaPlan.validity.valid
+                    ? cambiarFechaPlanDia(fechaPlan.value)
+                    : (fechaPlan.value = fechaPlanDia())
+                "
+                class="mt-2 w-full min-w-0 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-xs text-[#102d41] outline-none focus:border-[#087dab]"
+              />
             </div>
           </div>
 
@@ -708,7 +715,15 @@
         </aside>
       </div>
     }
-    <app-pronostico-marino [fecha]="fechaPlanDia()" (fechaChange)="cambiarFechaPlanDia($event)" />
+    <div class="mt-7 grid w-full grid-cols-1 items-start gap-5 xl:grid-cols-2">
+      <app-mejor-opcion-hoy class="min-w-0" [fecha]="fechaPlanDia()" />
+
+      <app-pronostico-marino
+        class="min-w-0"
+        [fecha]="fechaPlanDia()"
+        (fechaChange)="cambiarFechaPlanDia($event)"
+      />
+    </div>
   </section>
 }
 
@@ -781,7 +796,16 @@
               >
                 {{ tour.nombre }}
               </h2>
-                  <app-ubicacion-tour [zonaMaritima]="tour.zonaMaritima" [fechaHora]="salidaSeleccionada() ? salidaSeleccionada()!.fecha + 'T' + salidaSeleccionada()!.horaSalida : tour.proximaSalida ? tour.proximaSalida.fecha + 'T' + tour.proximaSalida.horaSalida : null" />
+              <app-ubicacion-tour
+                [zonaMaritima]="tour.zonaMaritima"
+                [fechaHora]="
+                  salidaSeleccionada()
+                    ? salidaSeleccionada()!.fecha + 'T' + salidaSeleccionada()!.horaSalida
+                    : tour.proximaSalida
+                      ? tour.proximaSalida.fecha + 'T' + tour.proximaSalida.horaSalida
+                      : null
+                "
+              />
             </div>
           </div>
 
@@ -1001,7 +1025,16 @@
                   <p class="truncate text-sm font-semibold text-[#102d41]">
                     {{ tour.nombre }}
                   </p>
-                  <app-ubicacion-tour [zonaMaritima]="tour.zonaMaritima" [fechaHora]="salidaSeleccionada() ? salidaSeleccionada()!.fecha + 'T' + salidaSeleccionada()!.horaSalida : tour.proximaSalida ? tour.proximaSalida.fecha + 'T' + tour.proximaSalida.horaSalida : null" />
+                  <app-ubicacion-tour
+                    [zonaMaritima]="tour.zonaMaritima"
+                    [fechaHora]="
+                      salidaSeleccionada()
+                        ? salidaSeleccionada()!.fecha + 'T' + salidaSeleccionada()!.horaSalida
+                        : tour.proximaSalida
+                          ? tour.proximaSalida.fecha + 'T' + tour.proximaSalida.horaSalida
+                          : null
+                    "
+                  />
                 </div>
 
                 <button

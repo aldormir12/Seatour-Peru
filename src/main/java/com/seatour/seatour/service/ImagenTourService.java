@@ -61,10 +61,15 @@ public class ImagenTourService {
             Files.createDirectories(directorio);
             String generado = UUID.randomUUID() + "." + (extension.equals("jpeg") ? "jpg" : extension);
             Files.write(directorio.resolve(generado), datos, StandardOpenOption.CREATE_NEW);
-            return "/api/tours/imagenes/" + generado;
+            return urlPublica(generado);
         } catch (IOException error) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo guardar la imagen");
         }
+    }
+
+    public static String urlPublica(String imagenUrl) {
+        if (imagenUrl == null || imagenUrl.isBlank() || imagenUrl.contains("/")) return imagenUrl;
+        return "/api/tours/imagenes/" + imagenUrl;
     }
 
     public Resource leer(String nombre) {

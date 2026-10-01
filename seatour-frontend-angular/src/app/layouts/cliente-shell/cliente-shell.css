@@ -9,6 +9,17 @@
   background: #071923;
 }
 
+:host.cliente-sin-hero {
+  min-height: calc(100dvh - 84px);
+}
+
+:host.cliente-sin-hero ::ng-deep router-outlet + * {
+  box-sizing: border-box;
+  width: min(100%, 1120px);
+  margin-inline: auto;
+  padding: 32px 24px;
+}
+
 .cliente-hero {
   position: absolute;
   inset: 0 0 auto;

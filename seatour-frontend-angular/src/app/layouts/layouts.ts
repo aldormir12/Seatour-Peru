@@ -5,7 +5,13 @@ import { ReservasNav } from '../components/reservas/reservas-nav';
 @Component({ selector: 'app-public-layout', imports: [RouterOutlet], template: '<router-outlet />' })
 export class PublicLayout {}
 @Component({ selector: 'app-private-layout', imports: [RouterOutlet, ReservasNav],
-  template: '<app-reservas-nav /><router-outlet />' })
+  template: '<app-reservas-nav /><router-outlet />',
+  styles: [`
+    :host:has(app-cliente-live) { display: block; background: #f4f8fb; }
+    :host:has(app-cliente-live) ::ng-deep app-reservas-nav { position: relative; }
+    :host:has(app-cliente-live) ::ng-deep app-reservas-nav .nav-shell { background: #071923; }
+    :host:has(app-cliente-live) ::ng-deep app-reservas-nav .nav-links { flex-wrap: wrap; }
+  `] })
 export class PrivateLayout {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);

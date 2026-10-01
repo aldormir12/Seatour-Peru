@@ -13,14 +13,20 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.seatour.seatour.model.ZonaMaritima;
 
 @ExtendWith(MockitoExtension.class)
 class TourServiceTest {
-    @Mock TourRepository tours;
-    @Mock CategoriaTourRepository categorias;
-    @Mock SalidaProgramadaRepository salidas;
-    @Mock AdicionalesBaseService adicionalesBase;
+    @Mock
+    TourRepository tours;
+    @Mock
+    CategoriaTourRepository categorias;
+    @Mock
+    SalidaProgramadaRepository salidas;
+    @Mock
+    AdicionalesBaseService adicionalesBase;
     private TourService servicio;
 
     @BeforeEach
@@ -35,10 +41,13 @@ class TourServiceTest {
         categoria.setActivo(true);
         when(categorias.findById(1L)).thenReturn(Optional.of(categoria));
         when(tours.saveAndFlush(any(Tour.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
-        var resultado = servicio.crear(new TourCreacion("  avistamiento   de ballenas ", " Paseo ",
-                60, BigDecimal.TEN, true, 1L, "/api/tours/imagenes/fixture.jpg"));
+        var resultado = servicio.crear(new TourCreacion(
+                "  avistamiento   de ballenas ", " Paseo ",
+                60, BigDecimal.TEN, true, 1L,
+                "/api/tours/imagenes/fixture.jpg", ZonaMaritima.MANCORA));
         assertEquals("Avistamiento de ballenas", resultado.nombre());
         assertEquals(1L, resultado.categoriaId());
+
     }
 
     @Test
@@ -49,4 +58,5 @@ class TourServiceTest {
         assertEquals(409, error.getStatusCode().value());
         verify(tours, never()).delete(any());
     }
+
 }

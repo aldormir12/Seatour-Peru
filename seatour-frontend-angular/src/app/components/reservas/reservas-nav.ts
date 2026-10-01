@@ -1342,6 +1342,10 @@ export class ReservasNav {
           {
             label: 'Mis reservas',
             route: '/app/mis-reservas'
+          },
+          {
+            label: 'SeaTour Live',
+            route: '/app/live'
           }
         ];
       }

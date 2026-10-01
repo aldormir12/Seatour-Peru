@@ -23,6 +23,7 @@ import {
 
 import { RouterLink } from '@angular/router';
 import { PronosticoMarino } from '../pronostico-marino/pronostico-marino';
+import { MejorOpcionHoyComponent } from '../mejor-opcion-hoy/mejor-opcion-hoy';
 
 import {
   AbstractControl,
@@ -146,6 +147,7 @@ function validarLuhn(
   standalone: true,
 
   imports: [UbicacionTour,
+    MejorOpcionHoyComponent,
     RouterLink,
     PronosticoMarino,
     CurrencyPipe,

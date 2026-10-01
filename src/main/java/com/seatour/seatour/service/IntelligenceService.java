@@ -20,10 +20,72 @@ public class IntelligenceService {
     private final PreferenciasClienteService preferencias;
     private final TourRepository tours;
     private final SalidaProgramadaService salidas;
+    private final PronosticoMarinoService pronostico;
 
     public IntelligenceService(PreferenciasClienteService preferencias, TourRepository tours,
-            SalidaProgramadaService salidas) {
+            SalidaProgramadaService salidas, PronosticoMarinoService pronostico) {
         this.preferencias = preferencias; this.tours = tours; this.salidas = salidas;
+        this.pronostico = pronostico;
+    }
+
+    public MejorOpcionRespuesta mejorOpcion(LoginRespuesta actor, LocalDate fecha) {
+        var perfil = preferencias.consultar(actor);
+        var ahora = LocalDateTime.now(ZoneId.of("America/Lima"));
+        List<Opcion> opciones = new ArrayList<>();
+        var climaPorZona = new EnumMap<ZonaMaritima, PronosticoMarinoService.Datos>(ZonaMaritima.class);
+        for (var tour : tours.findByActivoTrueOrderByNombreAsc()) {
+            if (tour.getZonaMaritima() == null || tour.getDuracionMinutos() == null
+                    || tour.getDuracionMinutos() <= 0) continue;
+            for (var salida : salidas.listarDisponiblesPorTour(tour.getId())) {
+                if (!fecha.equals(salida.getFecha()) || salida.getHoraSalida() == null
+                        || salida.getCuposDisponibles() == null || salida.getCuposDisponibles() <= 0
+                        || !dentroDelHorizonte(salida)) continue;
+                var inicio = fecha.atTime(salida.getHoraSalida());
+                if (!inicio.isAfter(ahora)) continue;
+                var fin = inicio.plusMinutes(tour.getDuracionMinutos());
+                var datos = climaPorZona.computeIfAbsent(tour.getZonaMaritima(),
+                        zona -> pronostico.consultar(zona, fecha));
+                opciones.add(new Opcion(tour, salida, evaluar(tour, salida, perfil).score(),
+                        inicio, fin, pronostico.condiciones(datos, inicio, fin)));
+            }
+        }
+        if (opciones.isEmpty()) {
+            return new MejorOpcionRespuesta(fecha, "SIN_SALIDAS", null, null, null,
+                    new MejorOpcionRespuesta.Condiciones("NO_DISPONIBLE", null, null, null),
+                    new MejorOpcionRespuesta.Disponibilidad(false, 0),
+                    "No hay salidas disponibles en las cuatro zonas para esta fecha.");
+        }
+        // El score existente no se modifica. El clima solo desempata afinidades iguales.
+        int mayorAfinidad = opciones.stream().mapToInt(Opcion::score).max().orElseThrow();
+        var finalistas = opciones.stream().filter(o -> o.score() == mayorAfinidad).toList();
+        // Comparar solo con cobertura completa evita premiar zonas con datos ausentes.
+        boolean usarClima = finalistas.stream().allMatch(o -> "COMPLETO".equals(o.condiciones().estado()));
+        Comparator<Opcion> orden = Comparator.comparingInt((Opcion o) -> usarClima ? nivelMarino(o) : 0)
+                .thenComparing(Comparator.comparingInt((Opcion o) -> o.salida().getCuposDisponibles()).reversed())
+                .thenComparing(Opcion::inicio).thenComparing(o -> o.salida().getId());
+        var mejor = finalistas.stream().min(orden).orElseThrow();
+        String insight = usarClima
+                ? "Mayor afinidad disponible; el pronóstico de toda la salida ayuda a elegir entre opciones equivalentes."
+                : "Recomendación por afinidad y cupos; pronóstico incompleto para comparar las opciones.";
+        if (usarClima && nivelMarino(mejor) == 2) {
+            insight = "Mayor afinidad disponible, con condiciones marítimas menos favorables; consulta al operador.";
+        }
+        return new MejorOpcionRespuesta(fecha, "RECOMENDACION_DISPONIBLE", mejor.tour().getZonaMaritima(),
+                new MejorOpcionRespuesta.Ventana(mejor.inicio(), mejor.fin()),
+                new MejorOpcionRespuesta.TourSalida(mejor.tour().getId(), mejor.tour().getNombre(),
+                        mejor.salida().getId(), mejor.score(), ImagenTourService.urlPublica(mejor.tour().getImagenUrl())), mejor.condiciones(),
+                new MejorOpcionRespuesta.Disponibilidad(true, mejor.salida().getCuposDisponibles()), insight);
+    }
+
+    private record Opcion(Tour tour, SalidaProgramada salida, int score, LocalDateTime inicio,
+            LocalDateTime fin, MejorOpcionRespuesta.Condiciones condiciones) {}
+
+    private int nivelMarino(Opcion opcion) {
+        var c = opcion.condiciones();
+        // Mismos umbrales orientativos que las etiquetas marinas existentes; no autorizan navegación.
+        if (c.oleajeMaximoMetros() <= 1 && c.vientoMaximoKmh() <= 20 && c.visibilidadMinimaMetros() >= 8000) return 0;
+        if (c.oleajeMaximoMetros() <= 1.5 && c.vientoMaximoKmh() <= 28 && c.visibilidadMinimaMetros() >= 5000) return 1;
+        return 2;
     }
 
     public List<RecomendacionRespuesta> recomendar(LoginRespuesta actor) {

@@ -10,6 +10,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface SalidaProgramadaRepository extends JpaRepository<SalidaProgramada, Long> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
+    List<SalidaProgramada> findByEstadoOrderByInicioRealDescIdDesc(EstadoSalida estado);
+
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour"})
     List<SalidaProgramada> findByFechaBetweenOrderByFechaAscHoraSalidaAsc(LocalDate desde, LocalDate hasta);
     @Query("""

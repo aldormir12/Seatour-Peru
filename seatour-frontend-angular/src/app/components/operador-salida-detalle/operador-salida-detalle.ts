@@ -25,6 +25,7 @@ import { ConfirmacionService } from '../../services/confirmacion.service';
 import { ConfirmacionModal } from '../confirmacion-modal/confirmacion-modal';
 import { ToastContainer } from '../toast-container/toast-container';
 import { of, switchMap } from 'rxjs';
+import { OperadorLive } from '../operador-live/operador-live';
 
 
 @Component({
@@ -33,7 +34,8 @@ import { of, switchMap } from 'rxjs';
   imports: [
     CommonModule,
     ConfirmacionModal,
-    ToastContainer
+    ToastContainer,
+    OperadorLive
   ],
   templateUrl: './operador-salida-detalle.html',
   styleUrl: './operador-salida-detalle.css'

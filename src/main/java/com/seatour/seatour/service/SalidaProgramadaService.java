@@ -237,6 +237,9 @@ public class SalidaProgramadaService {
             throw error(HttpStatus.BAD_REQUEST, "Motivo de cancelación inválido. Valores permitidos: CONDICIONES_MARITIMAS, AUTORIDAD_MARITIMA, FALLA_TECNICA, SEGURIDAD_OPERATIVA o FUERZA_MAYOR");
         var salida = bloquear(id);
         var origen = salida.getEstado();
+        // El inicio automatico o una peticion anterior puede haber iniciado la salida.
+        // Comprobar bajo bloqueo evita repetir la transicion y modificar inicioReal.
+        if (origen == EstadoSalida.EN_CURSO && destino == EstadoSalida.EN_CURSO) return salida;
         boolean valida = origen == EstadoSalida.PROGRAMADA
                 && (destino == EstadoSalida.EN_CURSO || destino == EstadoSalida.CANCELADA)
                 || origen == EstadoSalida.EN_CURSO && destino == EstadoSalida.COMPLETADA;

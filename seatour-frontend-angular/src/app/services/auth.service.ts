@@ -9,7 +9,7 @@ export interface UsuarioSesion { id: number; nombre: string; correo: string; rol
 export interface LoginRespuesta extends UsuarioSesion { token: string; }
 export interface RegistroSolicitud extends LoginSolicitud { nombre: string; apellido: string; }
 export class LoginTrasRegistroError extends Error {}
-export const API_URL = 'http://localhost:8080/api';
+export const API_URL = '/api';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

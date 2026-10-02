@@ -26,13 +26,10 @@ describe('App', () => {
     fixture.detectChanges();
     await router.navigateByUrl('/');
     fixture.detectChanges();
-    TestBed.inject(HttpTestingController).match('http://localhost:8080/api/tours')
-      .forEach(request => request.flush([]));
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('h1')?.textContent).toContain('Explora el norte');
-    expect(compiled.querySelector('.hero')?.nextElementSibling?.tagName)
-      .toBe('APP-RUTAS-INTERACTIVAS');
+    expect(compiled.querySelector('.hero')?.nextElementSibling).toBeNull();
     expect(compiled.querySelector('app-login')).toBeNull();
 
     await router.navigateByUrl('/login');
@@ -40,7 +37,6 @@ describe('App', () => {
     expect(compiled.querySelector('app-login form')).not.toBeNull();
     expect(compiled.querySelector('.hero')).toBeNull();
     expect(compiled.querySelector('.navbar')).toBeNull();
-    expect(compiled.querySelector('app-rutas-interactivas')).toBeNull();
     TestBed.inject(HttpTestingController).expectNone('http://localhost:8080/api/tours');
   });
 

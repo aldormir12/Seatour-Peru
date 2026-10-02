@@ -67,7 +67,7 @@
           </span>
 
           <h2 class="mb-0 mt-3 text-[25px] font-extrabold tracking-[-0.03em] text-[#08264b]">
-            Hoy no encontramos una salida ideal
+            No encontramos una salida disponible
           </h2>
 
           <p class="mb-0 mt-3 text-xs leading-5 text-[#607894]">
@@ -133,7 +133,7 @@
             <h2
               class="mb-0 mt-3 max-w-[290px] text-[30px] font-extrabold leading-[1.04] tracking-[-0.04em] text-[#08264b]"
             >
-              Tu mejor opción hoy
+              {{ titulo(opcion) }}
             </h2>
 
             <p class="mb-0 mt-2 max-w-[270px] text-[11px] leading-[1.6] text-[#607894]">
@@ -227,7 +227,7 @@
                       </p>
 
                       <p class="mb-0 mt-1 text-[15px] font-bold text-[#08264b]">
-                        {{ hora(ventana.inicio) }} – {{ hora(ventana.fin) }}
+                        {{ fechaHora(ventana.inicio) }} – {{ horaAmPm(ventana.fin) }}
                       </p>
                     </div>
 
@@ -359,7 +359,7 @@
                           <path d="M12 7v5l3 2"></path>
                         </svg>
 
-                        {{ hora(ventana.inicio) }}
+                        {{ fechaHora(ventana.inicio) }}
                       </span>
                     }
 

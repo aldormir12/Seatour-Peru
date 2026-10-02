@@ -13,6 +13,11 @@
       <p class="text-sm text-slate-500">Cargando salida...</p>
     </div>
   } @else if (salida(); as salidaActual) {
+    @if (salidaActual.esDemo) {
+      <p role="status" class="mb-4 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950">
+        SALIDA DEMO · Puedes iniciar sin pasajeros ni esperar el horario programado. SeaTour Live requiere transmitir con cámara real.
+      </p>
+    }
     <!-- Volver -->
     <button
       type="button"
@@ -439,16 +444,18 @@
               <div>
                 <h3 class="text-sm font-semibold text-teal-900">Salida pendiente</h3>
 
-                @if (salidaActual.pasajerosReservados <= 0) {
+                @if (!salidaActual.esDemo && salidaActual.pasajerosReservados <= 0) {
                   <p class="mt-1 text-xs leading-5 text-teal-800/80">
                     No puedes iniciar una salida sin pasajeros reservados.
                   </p>
                 }
 
-                <p class="mt-1 text-xs leading-5 text-teal-800/80">
-                  Podrás iniciar la operación desde el {{ formatearFecha(salidaActual.fecha) }}
-                  a las {{ formatearHora(salidaActual.horaSalida) }} (hora de Lima).
-                </p>
+                @if (!salidaActual.esDemo) {
+                  <p class="mt-1 text-xs leading-5 text-teal-800/80">
+                    Podrás iniciar la operación desde el {{ formatearFecha(salidaActual.fecha) }}
+                    a las {{ formatearHora(salidaActual.horaSalida) }} (hora de Lima).
+                  </p>
+                }
               </div>
             </div>
           </section>

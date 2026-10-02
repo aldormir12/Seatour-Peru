@@ -159,6 +159,21 @@
 
     </nav>
 
+    <div class="px-4 pb-4">
+      <button type="button" (click)="cambiarModoDemo()"
+        [disabled]="!demo.disponible() || demo.cambiando()"
+        [attr.aria-pressed]="demo.activo()"
+        class="w-full rounded-lg border border-amber-400 px-3 py-2 text-sm font-semibold text-amber-200 disabled:opacity-50">
+        {{ demo.cambiando() ? 'Actualizando…' : demo.activo() ? 'Modo Demo · Desactivar' : 'Modo Demo' }}
+      </button>
+      @if (demo.activo()) {
+        <p role="status" class="mt-2 rounded-lg bg-amber-300 px-3 py-2 text-center text-xs font-bold text-slate-950">MODO DEMO ACTIVO</p>
+      }
+      @if (!demo.disponible()) {
+        <p role="status" class="mt-2 text-xs text-amber-200">No se pudo consultar Modo Demo.</p>
+      }
+    </div>
+
     <!-- Usuario -->
     @if (usuario(); as admin) {
       <div class="border-t border-white/10 p-4">

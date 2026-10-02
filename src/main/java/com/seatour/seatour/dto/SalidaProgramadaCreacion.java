@@ -8,6 +8,12 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class SalidaProgramadaCreacion {
+    // Intención del formulario para rechazar una creación demo pendiente tras desactivar.
+    // La clasificación y el bypass los decide siempre el backend.
+    private boolean esDemo;
+    public boolean isEsDemo() { return esDemo; }
+    public void setEsDemo(boolean valor) { esDemo = valor; }
+
     private String motivoReprogramacion;
     public String getMotivoReprogramacion() { return motivoReprogramacion; }
     public void setMotivoReprogramacion(String valor) { motivoReprogramacion = valor; }

@@ -1,0 +1,311 @@
+<section
+  class="mx-auto my-8 w-[calc(100%-48px)] max-w-[1200px] overflow-hidden rounded-[24px] shadow-[0_18px_50px_rgba(6,31,49,0.16)] max-[600px]:w-[calc(100%-28px)]"
+  aria-labelledby="live-resumen-titulo"
+>
+  <!-- ====================================================== -->
+  <!-- CARGANDO -->
+  <!-- ====================================================== -->
+
+  @if (cargando()) {
+    <div class="flex min-h-[180px] items-center justify-center gap-3 bg-[#061f31] text-white">
+      <span
+        class="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-cyan-300"
+      ></span>
+
+      <span class="text-xs text-white/60"> Consultando transmisiones... </span>
+    </div>
+  }
+
+  <!-- ====================================================== -->
+  <!-- ERROR -->
+  <!-- ====================================================== -->
+
+  @else if (error()) {
+    <div
+      class="flex min-h-[180px] items-center justify-between gap-6 bg-[#061f31] px-8 py-7 text-white max-[650px]:flex-col max-[650px]:items-start"
+    >
+      <div>
+        <p class="m-0 text-base font-semibold">No pudimos cargar SeaTour Live</p>
+
+        <p class="mb-0 mt-1.5 text-xs text-white/50">
+          {{ error() }}
+        </p>
+      </div>
+
+      <a
+        routerLink="/app/live"
+        class="text-xs font-semibold text-cyan-300 transition hover:text-white"
+      >
+        Abrir SeaTour Live →
+      </a>
+    </div>
+  }
+
+  <!-- ====================================================== -->
+  <!-- SIN TRANSMISIONES -->
+  <!-- ====================================================== -->
+
+  @else if (!salidas().length) {
+    <div
+      class="flex min-h-[170px] items-center gap-5 bg-[linear-gradient(110deg,#061f31_0%,#07354d_65%,#07526b_100%)] px-8 py-7 text-white"
+    >
+      <div
+        class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-cyan-300"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          class="h-6 w-6"
+          aria-hidden="true"
+        >
+          <path d="M4 15c3-2 5-2 8 0s5 2 8 0"></path>
+          <path d="M7 11h10l-2-4H9l-2 4Z"></path>
+        </svg>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-white/30"></span>
+
+          <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-white/55">
+            SeaTour Live
+          </span>
+        </div>
+
+        <h2
+          id="live-resumen-titulo"
+          class="mb-0 mt-2 text-[22px] font-bold tracking-[-0.45px] text-white"
+        >
+          No hay experiencias en vivo ahora
+        </h2>
+
+        <p class="mb-0 mt-1.5 text-xs text-white/45">
+          Cuando una salida comience podrás seguirla aquí en tiempo real.
+        </p>
+      </div>
+    </div>
+  }
+
+  <!-- ====================================================== -->
+  <!-- HAY TRANSMISIONES -->
+  <!-- ====================================================== -->
+
+  @else {
+    @if (salidas()[0]; as principal) {
+      <div class="relative min-h-[330px] overflow-hidden bg-[#061f31]">
+        <!-- ================================================== -->
+        <!-- IMAGEN GRANDE DE FONDO -->
+        <!-- ================================================== -->
+
+        @if (principal.imagenUrl && !imagenesFallidas().has(principal.id)) {
+          <img
+            [src]="principal.imagenUrl"
+            [alt]="principal.tour.nombre"
+            (error)="imagenFallida(principal.id)"
+            class="absolute inset-y-0 right-0 h-full w-[62%] object-cover object-center max-[750px]:w-full"
+          />
+        }
+
+        <!-- ================================================== -->
+        <!-- FUSIÓN IMAGEN -> NAVY -->
+        <!-- ================================================== -->
+
+        <div
+          class="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#061f31_0%,#061f31_30%,rgba(6,31,49,0.97)_42%,rgba(6,31,49,0.78)_57%,rgba(6,31,49,0.28)_82%,rgba(6,31,49,0.08)_100%)] max-[750px]:bg-[linear-gradient(90deg,rgba(6,31,49,0.97)_0%,rgba(6,31,49,0.85)_100%)]"
+        ></div>
+
+        <!-- DIFUMINADO INFERIOR -->
+
+        <div
+          class="pointer-events-none absolute inset-0 bg-[linear-gradient(0deg,rgba(3,17,28,0.72)_0%,rgba(3,17,28,0.15)_50%,transparent_80%)]"
+        ></div>
+
+        <!-- BRILLO CIAN -->
+
+        <div
+          class="pointer-events-none absolute -right-16 -top-20 h-[320px] w-[320px] rounded-full bg-cyan-300/10 blur-[90px]"
+        ></div>
+
+        <!-- ================================================== -->
+        <!-- CONTENIDO -->
+        <!-- ================================================== -->
+
+        <div
+          class="relative z-10 flex min-h-[330px] flex-col justify-between px-8 py-7 max-[700px]:px-5 max-[700px]:py-5"
+        >
+          <!-- CABECERA -->
+
+          <div class="flex items-start justify-between gap-8 max-[700px]:flex-col">
+            <div class="max-w-[590px]">
+              <div class="flex items-center gap-2.5">
+                <span
+                  class="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.85)]"
+                ></span>
+
+                <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-white/85">
+                  SeaTour Live
+                </span>
+
+                <span
+                  class="rounded-full bg-red-500 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white"
+                >
+                  En vivo
+                </span>
+              </div>
+
+              <h2
+                id="live-resumen-titulo"
+                class="mb-0 mt-3 max-w-[580px] text-[clamp(28px,3vw,40px)] font-bold leading-[1.04] tracking-[-1.1px] text-white"
+              >
+                {{ salidas().length }}
+
+                {{
+                  salidas().length === 1
+                    ? 'experiencia está ocurriendo ahora'
+                    : 'experiencias están ocurriendo ahora'
+                }}
+              </h2>
+
+              <p class="mb-0 mt-3 max-w-[470px] text-[12px] leading-5 text-white/60">
+                Mira en tiempo real lo que está ocurriendo ahora mismo en las experiencias de
+                SeaTour.
+              </p>
+            </div>
+
+            <a
+              routerLink="/app/live"
+              class="inline-flex shrink-0 items-center gap-2 rounded-[12px] border border-cyan-200/20 bg-cyan-300/10 px-4 py-2.5 text-[11px] font-semibold text-white backdrop-blur-md transition hover:border-cyan-200/35 hover:bg-cyan-300/20"
+            >
+              Ver SeaTour Live
+
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                class="h-3.5 w-3.5"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M5 12h14M15 8l4 4-4 4"
+                ></path>
+              </svg>
+            </a>
+          </div>
+
+          <!-- ================================================== -->
+          <!-- CARDS DE TRANSMISIONES -->
+          <!-- ================================================== -->
+
+          <div class="mt-7 grid max-w-[900px] grid-cols-2 gap-3 max-[850px]:grid-cols-1">
+            @for (salida of salidas().slice(0, 2); track salida.id) {
+              <a
+                routerLink="/app/live"
+                [queryParams]="{ salida: salida.id }"
+                class="group grid min-h-[118px] min-w-0 grid-cols-[138px_minmax(0,1fr)] overflow-hidden rounded-[16px] border border-white/15 bg-[#082b3e]/85 text-inherit no-underline shadow-[0_8px_24px_rgba(0,0,0,0.14)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-200/35 hover:bg-[#0a354b] max-[500px]:grid-cols-[110px_minmax(0,1fr)]"
+              >
+                <!-- IMAGEN -->
+
+                <div class="relative overflow-hidden bg-[#12384b]">
+                  @if (salida.imagenUrl && !imagenesFallidas().has(salida.id)) {
+                    <img
+                      [src]="salida.imagenUrl"
+                      [alt]="salida.tour.nombre"
+                      loading="lazy"
+                      (error)="imagenFallida(salida.id)"
+                      class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    />
+                  } @else {
+                    <div
+                      class="flex h-full min-h-[118px] items-center justify-center text-white/25"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        class="h-7 w-7"
+                      >
+                        <path d="M4 15c3-2 5-2 8 0s5 2 8 0"></path>
+                        <path d="M7 11h10l-2-4H9l-2 4Z"></path>
+                      </svg>
+                    </div>
+                  }
+
+                  <div
+                    class="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent to-[#082b3e]/45"
+                  ></div>
+
+                  <span
+                    class="absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-full bg-red-500 px-2 py-1 text-[7px] font-bold uppercase tracking-[0.08em] text-white shadow-md"
+                  >
+                    <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+
+                    En vivo
+                  </span>
+                </div>
+
+                <!-- DATOS -->
+
+                <div class="flex min-w-0 flex-col justify-center px-4 py-3">
+                  <span class="text-[9px] font-semibold uppercase tracking-[0.08em] text-cyan-300">
+                    {{ zona(salida.zonaMaritima) }}
+                  </span>
+
+                  <h3
+                    class="mb-0 mt-1 overflow-hidden text-[15px] font-bold leading-[1.18] tracking-[-0.2px] text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"
+                  >
+                    {{ salida.tour.nombre }}
+                  </h3>
+
+                  <div class="mt-2 flex items-center gap-2 text-[10px] text-white/55">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      class="h-3 w-3 shrink-0 text-cyan-300"
+                    >
+                      <path d="M3 18h18M5 18l2-7h10l2 7M8 11V7h8v4"></path>
+                    </svg>
+
+                    <span class="truncate">
+                      {{ salida.embarcacion.nombre }}
+                    </span>
+                  </div>
+
+                  <div class="mt-2.5 flex items-center justify-between gap-3">
+                    <span class="inline-flex items-center gap-1 text-[9px] text-white/45">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        class="h-3 w-3"
+                      >
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 7v5l3 2"></path>
+                      </svg>
+
+                      Inicio {{ hora(salida.inicioReal) }}
+                    </span>
+
+                    <span
+                      class="text-[10px] font-semibold text-cyan-300 transition group-hover:text-white"
+                    >
+                      Ver transmisión →
+                    </span>
+                  </div>
+                </div>
+              </a>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+</section>

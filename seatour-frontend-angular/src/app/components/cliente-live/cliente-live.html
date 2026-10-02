@@ -1,0 +1,751 @@
+<!-- ========================================================= -->
+<!-- HERO COMPARTIDO DEL CLIENTE -->
+<!-- ========================================================= -->
+
+<section
+  class="hero relative z-[2] flex h-[320px] items-end overflow-hidden px-[max(28px,calc((100%-1200px)/2))] pb-11 text-white max-[700px]:h-[285px] max-[700px]:px-5 max-[700px]:pb-8"
+  aria-labelledby="titulo-seatour-live"
+>
+  <div class="relative z-10 max-w-[680px]">
+    <div class="mb-3 flex items-center gap-2.5">
+      <span
+        class="h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_5px_rgba(239,68,68,0.13),0_0_16px_rgba(239,68,68,0.55)]"
+      ></span>
+
+      <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200">
+        SeaTour Live
+      </span>
+
+      @if (salidas().length > 0) {
+        <span
+          class="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-white/85 backdrop-blur-md"
+        >
+          {{ salidas().length }}
+          {{ salidas().length === 1 ? 'transmisión activa' : 'transmisiones activas' }}
+        </span>
+      }
+    </div>
+
+    <h1
+      id="titulo-seatour-live"
+      class="m-0 max-w-[650px] text-[clamp(32px,4vw,48px)] font-bold leading-[1.02] tracking-[-1.4px] text-white"
+    >
+      Vive el mar en tiempo real
+    </h1>
+
+    <p class="mb-0 mt-3 max-w-[560px] text-[13px] leading-6 text-white/70">
+      Conéctate con las experiencias que están ocurriendo ahora mismo desde las embarcaciones de
+      SeaTour.
+    </p>
+  </div>
+</section>
+
+<!-- ========================================================= -->
+<!-- CONTENIDO -->
+<!-- ========================================================= -->
+
+<main
+  class="relative z-[3] mx-auto w-[calc(100%-48px)] max-w-[1200px] pb-20 pt-8 text-[#102d41] max-[600px]:w-[calc(100%-28px)]"
+  aria-label="SeaTour Live"
+>
+  <!-- ======================================================= -->
+  <!-- CABECERA -->
+  <!-- ======================================================= -->
+
+  <div
+    class="mb-6 flex items-end justify-between gap-6 max-[700px]:flex-col max-[700px]:items-start"
+  >
+    <div>
+      <div class="flex items-center gap-2">
+        <span
+          class="flex h-7 w-7 items-center justify-center rounded-[9px] bg-[#e6f7fb] text-[#087dab]"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M8 8.5 15.5 12 8 15.5v-7Z"
+            ></path>
+
+            <path stroke-linecap="round" d="M5 5.5a9 9 0 0 0 0 13M19 5.5a9 9 0 0 1 0 13"></path>
+          </svg>
+        </span>
+
+        <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-[#087dab]">
+          Ahora en vivo
+        </span>
+      </div>
+
+      <h2 class="mb-0 mt-2 text-[26px] font-bold tracking-[-0.7px] text-[#102d41]">
+        Transmisiones activas
+      </h2>
+
+      <p class="mb-0 mt-1 text-[12px] text-[#718594]">
+        Señal en tiempo real desde nuestras experiencias en el mar.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      (click)="cargar()"
+      [disabled]="cargando()"
+      class="inline-flex items-center gap-2 rounded-[11px] border border-[#dce9ef] bg-white px-4 py-2.5 text-[11px] font-semibold text-[#36566a] shadow-sm transition hover:border-[#bcd9e6] hover:bg-[#f7fbfd] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        class="h-3.5 w-3.5"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"
+        ></path>
+      </svg>
+
+      {{ cargando() ? 'Actualizando...' : 'Actualizar' }}
+    </button>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- CARGANDO -->
+  <!-- ======================================================= -->
+
+  @if (cargando()) {
+    <div
+      class="flex min-h-[280px] items-center justify-center rounded-[24px] border border-[#dce9ef] bg-white shadow-[0_10px_35px_rgba(16,45,65,0.05)]"
+      role="status"
+    >
+      <div class="flex flex-col items-center gap-3">
+        <span
+          class="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#087dab]"
+        ></span>
+
+        <span class="text-xs text-[#718594]"> Buscando transmisiones activas... </span>
+      </div>
+    </div>
+  }
+
+  <!-- ======================================================= -->
+  <!-- ERROR LISTA -->
+  <!-- ======================================================= -->
+
+  @else if (errorLista()) {
+    <div
+      class="flex min-h-[260px] flex-col items-center justify-center rounded-[24px] border border-rose-100 bg-white px-6 text-center shadow-[0_10px_35px_rgba(16,45,65,0.05)]"
+      role="alert"
+    >
+      <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          class="h-5 w-5"
+        >
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 8v5M12 17h.01"></path>
+        </svg>
+      </div>
+
+      <h3 class="mb-0 mt-4 text-[16px] font-bold text-[#102d41]">No pudimos cargar SeaTour Live</h3>
+
+      <p class="mb-0 mt-1.5 max-w-[400px] text-xs leading-5 text-[#718594]">
+        {{ errorLista() }}
+      </p>
+
+      <button
+        type="button"
+        (click)="cargar()"
+        class="mt-5 rounded-xl bg-[#087dab] px-4 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#06668d]"
+      >
+        Intentar nuevamente
+      </button>
+    </div>
+  }
+
+  <!-- ======================================================= -->
+  <!-- SIN TRANSMISIONES -->
+  <!-- ======================================================= -->
+
+  @else if (!salidas().length) {
+    <section
+      class="relative overflow-hidden rounded-[26px] border border-[#dce9ef] bg-white px-8 py-12 shadow-[0_12px_38px_rgba(16,45,65,0.05)] max-[600px]:px-5"
+    >
+      <div
+        class="pointer-events-none absolute -right-20 -top-24 h-[300px] w-[300px] rounded-full bg-cyan-100/60 blur-[80px]"
+      ></div>
+
+      <div class="relative z-10 mx-auto flex max-w-[520px] flex-col items-center text-center">
+        <div
+          class="flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#eaf7fd] text-[#087dab]"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            class="h-6 w-6"
+          >
+            <path d="M4 15c3-2 5-2 8 0s5 2 8 0"></path>
+            <path d="M7 11h10l-2-4H9l-2 4Z"></path>
+          </svg>
+        </div>
+
+        <span class="mt-5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#149ddb]">
+          SeaTour Live
+        </span>
+
+        <h3 class="mb-0 mt-2 text-[22px] font-bold tracking-[-0.5px] text-[#102d41]">
+          El mar está tranquilo por ahora
+        </h3>
+
+        <p class="mb-0 mt-2 max-w-[430px] text-[12px] leading-5 text-[#718594]">
+          No hay transmisiones activas en este momento. Cuando un operador inicie SeaTour Live,
+          aparecerá aquí automáticamente.
+        </p>
+      </div>
+    </section>
+  }
+
+  <!-- ======================================================= -->
+  <!-- HAY TRANSMISIONES -->
+  <!-- ======================================================= -->
+
+  @else {
+    @if (seleccionada(); as salida) {
+      <section
+        class="grid grid-cols-[minmax(0,1fr)_330px] items-start gap-5 max-[1000px]:grid-cols-1"
+      >
+        <!-- ================================================= -->
+        <!-- VIDEO -->
+        <!-- ================================================= -->
+
+        <div class="min-w-0">
+          <article
+            class="overflow-hidden rounded-[26px] border border-[#17394b] bg-[#061923] shadow-[0_20px_55px_rgba(5,31,46,0.16)]"
+          >
+            <!-- HEADER VIDEO -->
+
+            <div class="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
+              <div class="flex min-w-0 items-center gap-3">
+                <span class="flex items-center gap-2 rounded-full bg-red-500/15 px-2.5 py-1.5">
+                  <span
+                    class="h-2 w-2 animate-pulse rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]"
+                  ></span>
+
+                  <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-red-300">
+                    En vivo
+                  </span>
+                </span>
+
+                <div class="min-w-0">
+                  <h2 class="m-0 truncate text-[15px] font-bold text-white">
+                    {{ salida.tour.nombre }}
+                  </h2>
+
+                  <p class="mb-0 mt-0.5 truncate text-[10px] text-white/45">
+                    {{ salida.embarcacion.nombre }}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                (click)="salir()"
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/65 transition hover:bg-white/10 hover:text-white"
+                aria-label="Salir de la transmisión"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-4 w-4"
+                >
+                  <path d="M6 6l12 12M18 6 6 18"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- REPRODUCTOR -->
+
+            <div
+              #pantallaCompleta
+              class="relative flex min-h-[410px] items-center justify-center overflow-hidden bg-black max-[700px]:min-h-[280px]"
+            >
+              <div
+                class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,#0b3447_0%,#061923_62%,#02080c_100%)]"
+              ></div>
+
+              <div
+                class="pointer-events-none absolute inset-0 opacity-40 bg-[linear-gradient(135deg,transparent_0%,rgba(19,198,195,0.07)_48%,transparent_72%)]"
+              ></div>
+
+              <div
+                #reproductor
+                class="relative z-10 flex h-full w-full items-center justify-center overflow-hidden"
+                aria-label="Video y audio del operador"
+              ></div>
+
+              <!-- FULLSCREEN -->
+
+              <button
+                type="button"
+                (click)="this.pantallaCompleta()"
+                class="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white/80 backdrop-blur-md transition hover:bg-black/65 hover:text-white"
+                aria-label="Ver en pantalla completa"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-4 w-4"
+                >
+                  <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"></path>
+                </svg>
+              </button>
+
+              <!-- ESTADO -->
+
+              @if (estado() && !error()) {
+                <div
+                  class="pointer-events-none absolute bottom-4 left-4 z-20 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[9px] text-white/75 backdrop-blur-md"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span class="h-1.5 w-1.5 rounded-full bg-cyan-300"></span>
+
+                  {{ estado() }}
+                </div>
+              }
+            </div>
+
+            <!-- FOOTER VIDEO -->
+
+            <div
+              class="flex items-center justify-between gap-5 px-5 py-4 max-[600px]:flex-col max-[600px]:items-start"
+            >
+              <div>
+                <p class="m-0 text-[10px] font-medium text-white/40">Transmisión desde</p>
+
+                <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <strong class="text-[13px] font-semibold text-white">
+                    {{ salida.embarcacion.nombre }}
+                  </strong>
+
+                  @if (salida.zonaMaritima) {
+                    <span class="text-white/20">•</span>
+
+                    <span class="text-[11px] text-cyan-200">
+                      {{ salida.zonaMaritima }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              @if (audioBloqueado()) {
+                <button
+                  type="button"
+                  (click)="activarAudio()"
+                  class="inline-flex shrink-0 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2.5 text-[10px] font-semibold text-cyan-100 transition hover:bg-cyan-300/20"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    class="h-3.5 w-3.5"
+                  >
+                    <path d="M5 10v4h3l4 4V6L8 10H5Z"></path>
+                    <path d="M16 9a4 4 0 0 1 0 6"></path>
+                  </svg>
+
+                  Activar audio
+                </button>
+              }
+            </div>
+          </article>
+
+          <!-- ERROR COMPACTO -->
+
+          @if (error()) {
+            <div
+              class="mt-3 flex items-center gap-2.5 rounded-[13px] border border-rose-100 bg-rose-50/80 px-3.5 py-2.5"
+              role="alert"
+            >
+              <div
+                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-rose-500"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-3.5 w-3.5"
+                >
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M12 8v5M12 17h.01"></path>
+                </svg>
+              </div>
+
+              <div class="min-w-0">
+                <p class="m-0 text-[10px] font-semibold text-rose-700">
+                  Problema con la transmisión
+                </p>
+
+                <p class="mb-0 mt-0.5 text-[9px] leading-4 text-rose-600">
+                  {{ error() }}
+                </p>
+              </div>
+            </div>
+          }
+
+          <!-- INFO EXPERIENCIA -->
+
+          <div
+            class="mt-5 rounded-[22px] border border-[#dce9ef] bg-white p-5 shadow-[0_8px_28px_rgba(16,45,65,0.04)]"
+          >
+            <div class="flex items-start justify-between gap-6 max-[600px]:flex-col">
+              <div class="min-w-0">
+                <span class="text-[9px] font-bold uppercase tracking-[0.14em] text-[#149ddb]">
+                  Experiencia actual
+                </span>
+
+                <h3 class="mb-0 mt-1.5 text-[22px] font-bold tracking-[-0.5px] text-[#102d41]">
+                  {{ salida.tour.nombre }}
+                </h3>
+
+                <div
+                  class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-[#607887]"
+                >
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      class="h-3.5 w-3.5 text-[#087dab]"
+                    >
+                      <path d="M3 18h18M5 18l2-7h10l2 7M8 11V7h8v4"></path>
+                    </svg>
+
+                    {{ salida.embarcacion.nombre }}
+                  </span>
+
+                  @if (salida.zonaMaritima) {
+                    <span class="inline-flex items-center gap-1.5">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        class="h-3.5 w-3.5 text-[#087dab]"
+                      >
+                        <path d="M12 21s6-5.4 6-11a6 6 0 1 0-12 0c0 5.6 6 11 6 11Z"></path>
+
+                        <circle cx="12" cy="10" r="2"></circle>
+                      </svg>
+
+                      {{ salida.zonaMaritima }}
+                    </span>
+                  }
+
+                  @if (salida.inicioReal) {
+                    <span class="inline-flex items-center gap-1.5">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        class="h-3.5 w-3.5 text-[#087dab]"
+                      >
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 7v5l3 2"></path>
+                      </svg>
+
+                      Inicio {{ horaInicio(salida.inicioReal) }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              @if (senalActiva()) {
+                <span
+                  class="inline-flex shrink-0 items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[9px] font-semibold text-emerald-700"
+                >
+                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+
+                  Señal activa
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================= -->
+        <!-- OTRAS TRANSMISIONES -->
+        <!-- ================================================= -->
+
+        <aside
+          class="overflow-hidden rounded-[22px] border border-[#dce9ef] bg-white shadow-[0_10px_32px_rgba(16,45,65,0.05)]"
+        >
+          <div class="border-b border-slate-100 px-5 pb-4 pt-5">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h3 class="m-0 text-[16px] font-bold tracking-[-0.3px] text-[#102d41]">
+                  @if (salidas().length > 1) {
+                    También en vivo
+                  } @else {
+                    Transmisión actual
+                  }
+                </h3>
+
+                <p class="mb-0 mt-1 text-[10px] text-[#718594]">
+                  @if (salidas().length > 1) {
+                    Cambia de transmisión cuando quieras.
+                  } @else {
+                    Única transmisión activa en este momento.
+                  }
+                </p>
+              </div>
+
+              <span class="rounded-full bg-[#eaf7fd] px-2 py-1 text-[9px] font-bold text-[#087dab]">
+                {{ salidas().length }}
+              </span>
+            </div>
+          </div>
+
+          @if (salidas().length > 1) {
+            <div class="space-y-1.5 p-3">
+              @for (otra of salidas(); track otra.id) {
+                <button
+                  type="button"
+                  (click)="ver(otra)"
+                  [class]="
+                    otra.id === salida.id
+                      ? 'group flex w-full items-center gap-3 rounded-[15px] bg-[#eaf7fd] p-2.5 text-left transition'
+                      : 'group flex w-full items-center gap-3 rounded-[15px] p-2.5 text-left transition hover:bg-slate-50'
+                  "
+                >
+                  <div
+                    class="relative h-[66px] w-[82px] shrink-0 overflow-hidden rounded-[11px] bg-slate-100"
+                  >
+                    @if (otra.imagenUrl) {
+                      <img
+                        [src]="otra.imagenUrl"
+                        [alt]="otra.tour.nombre"
+                        loading="lazy"
+                        class="h-full w-full object-cover"
+                      />
+                    }
+
+                    <span
+                      class="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-red-500 px-1.5 py-1 text-[6px] font-bold uppercase text-white"
+                    >
+                      Live
+                    </span>
+                  </div>
+
+                  <div class="min-w-0 flex-1">
+                    <p class="m-0 text-[11px] font-bold leading-4 text-[#102d41]">
+                      {{ otra.tour.nombre }}
+                    </p>
+
+                    <p class="mb-0 mt-1 truncate text-[9px] text-[#718594]">
+                      {{ otra.embarcacion.nombre }}
+                    </p>
+
+                    @if (otra.id === salida.id) {
+                      <span
+                        class="mt-1.5 inline-flex items-center gap-1 text-[8px] font-semibold text-[#087dab]"
+                      >
+                        <span class="h-1.5 w-1.5 rounded-full bg-[#13c6c3]"></span>
+
+                        Viendo ahora
+                      </span>
+                    } @else {
+                      <span class="mt-1.5 inline-block text-[8px] font-semibold text-[#149ddb]">
+                        Ver transmisión →
+                      </span>
+                    }
+                  </div>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="p-5">
+              <div class="rounded-[16px] border border-[#e4eef3] bg-[#f8fbfd] p-4">
+                <div class="flex items-center gap-2">
+                  <span class="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
+
+                  <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-red-500">
+                    En vivo ahora
+                  </span>
+                </div>
+
+                <h4 class="mb-0 mt-3 text-[15px] font-bold text-[#102d41]">
+                  {{ salida.tour.nombre }}
+                </h4>
+
+                <div class="mt-4 space-y-3">
+                  <div class="flex items-center justify-between gap-4 text-[10px]">
+                    <span class="text-[#7a909f]"> Embarcación </span>
+
+                    <strong class="text-[#36566a]">
+                      {{ salida.embarcacion.nombre }}
+                    </strong>
+                  </div>
+
+                  @if (salida.zonaMaritima) {
+                    <div class="flex items-center justify-between gap-4 text-[10px]">
+                      <span class="text-[#7a909f]"> Zona </span>
+
+                      <strong class="text-[#36566a]">
+                        {{ salida.zonaMaritima }}
+                      </strong>
+                    </div>
+                  }
+
+                  @if (salida.inicioReal) {
+                    <div class="flex items-center justify-between gap-4 text-[10px]">
+                      <span class="text-[#7a909f]"> Inicio </span>
+
+                      <strong class="text-[#36566a]">
+                        {{ horaInicio(salida.inicioReal) }}
+                      </strong>
+                    </div>
+                  }
+
+                  <div class="flex items-center justify-between gap-4 text-[10px]">
+                    <span class="text-[#7a909f]"> Estado </span>
+
+                    <span
+                      class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700"
+                    >
+                      <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+
+                      Activa
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 rounded-[14px] bg-[#eaf7fd] px-4 py-3">
+                <p class="m-0 text-[10px] leading-4 text-[#4d7083]">
+                  Cuando otra embarcación inicie SeaTour Live, podrás cambiar entre transmisiones
+                  desde este panel.
+                </p>
+              </div>
+            </div>
+          }
+        </aside>
+      </section>
+    }
+
+    <!-- ===================================================== -->
+    <!-- NINGUNA SELECCIONADA -->
+    <!-- ===================================================== -->
+
+    @else {
+      <section class="grid grid-cols-3 gap-4 max-[950px]:grid-cols-2 max-[620px]:grid-cols-1">
+        @for (salida of salidas(); track salida.id) {
+          <article
+            class="group overflow-hidden rounded-[20px] border border-[#dce9ef] bg-white shadow-[0_8px_28px_rgba(16,45,65,0.045)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_38px_rgba(16,45,65,0.10)]"
+          >
+            <div class="relative h-[180px] overflow-hidden bg-[#e5eff4]">
+              @if (salida.imagenUrl) {
+                <img
+                  [src]="salida.imagenUrl"
+                  [alt]="salida.tour.nombre"
+                  loading="lazy"
+                  class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]"
+                />
+              } @else {
+                <div class="flex h-full items-center justify-center bg-[#eaf7fd] text-[#087dab]">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    class="h-8 w-8"
+                  >
+                    <path d="M4 15c3-2 5-2 8 0s5 2 8 0"></path>
+                    <path d="M7 11h10l-2-4H9l-2 4Z"></path>
+                  </svg>
+                </div>
+              }
+
+              <div
+                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent"
+              ></div>
+
+              <span
+                class="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-white shadow-md"
+              >
+                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-white"></span>
+
+                En vivo
+              </span>
+            </div>
+
+            <div class="p-4">
+              @if (salida.zonaMaritima) {
+                <span class="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#149ddb]">
+                  {{ salida.zonaMaritima }}
+                </span>
+              }
+
+              <h3
+                class="mb-0 mt-1 text-[17px] font-bold leading-[1.15] tracking-[-0.3px] text-[#102d41]"
+              >
+                {{ salida.tour.nombre }}
+              </h3>
+
+              <div class="mt-3 flex items-center gap-2 text-[10px] text-[#607887]">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  class="h-3.5 w-3.5 shrink-0 text-[#087dab]"
+                >
+                  <path d="M3 18h18M5 18l2-7h10l2 7M8 11V7h8v4"></path>
+                </svg>
+
+                <span class="truncate">
+                  {{ salida.embarcacion.nombre }}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                (click)="ver(salida)"
+                class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[11px] bg-[#087dab] px-4 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#06668d]"
+              >
+                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-white/15">
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="h-3 w-3">
+                    <path d="m9 7 8 5-8 5V7Z"></path>
+                  </svg>
+                </span>
+
+                Ver transmisión
+              </button>
+            </div>
+          </article>
+        }
+      </section>
+    }
+  }
+</main>

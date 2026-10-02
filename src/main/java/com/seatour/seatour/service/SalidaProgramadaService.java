@@ -18,21 +18,34 @@ public class SalidaProgramadaService {
     private final EmbarcacionRepository embarcaciones;
     private final ReservaRepository reservas;
     private final UsuarioRepository usuarios;
+    private final ModoDemoService modoDemo;
 
     public SalidaProgramadaService(SalidaProgramadaRepository salidas, TourRepository tours,
-            EmbarcacionRepository embarcaciones, ReservaRepository reservas, UsuarioRepository usuarios) {
+            EmbarcacionRepository embarcaciones, ReservaRepository reservas, UsuarioRepository usuarios, ModoDemoService modoDemo) {
         this.salidas = salidas;
         this.tours = tours;
         this.embarcaciones = embarcaciones;
         this.reservas = reservas;
         this.usuarios = usuarios;
+        this.modoDemo = modoDemo;
     }
 
     public List<SalidaProgramada> listarTodas() { return salidas.findAll(); }
 
+    public List<SalidaProgramada> listarDemo() {
+        return modoDemo.activo() ? salidas.listarDemo() : List.of();
+    }
+
+    private SalidaProgramada accesible(SalidaProgramada salida) {
+        if (salida.isEsDemo() && !modoDemo.activo())
+            throw error(HttpStatus.NOT_FOUND, "Salida no encontrada");
+        return salida;
+    }
+
+
     public List<SalidaProgramada> listarPropias(com.seatour.seatour.dto.LoginRespuesta actor) {
         if (!"OPERADOR".equals(actor.rol())) throw error(HttpStatus.FORBIDDEN, "Acceso denegado");
-        return salidas.findByOperador_IdOrderByFechaAscHoraSalidaAsc(actor.id());
+        return salidas.listarPropiasVisibles(actor.id(), modoDemo.activo());
     }
 
     public SalidaProgramada buscarPropia(Long id, com.seatour.seatour.dto.LoginRespuesta actor) {
@@ -42,6 +55,7 @@ public class SalidaProgramadaService {
     }
 
     private void validarPropietario(SalidaProgramada salida, com.seatour.seatour.dto.LoginRespuesta actor) {
+        accesible(salida);
         if (!"OPERADOR".equals(actor.rol()) || salida.getOperador() == null
                 || !salida.getOperador().getId().equals(actor.id()))
             throw error(HttpStatus.NOT_FOUND, "Salida no encontrada");
@@ -66,7 +80,7 @@ public class SalidaProgramadaService {
 
     public SalidaProgramada buscarPorId(Long id) {
         validarId(id);
-        return salidas.findById(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Salida no encontrada"));
+        return accesible(salidas.buscarIncluyendoDemo(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Salida no encontrada")));
     }
 
     public List<SalidaProgramada> listarPorTour(Long tourId) {
@@ -89,14 +103,18 @@ public class SalidaProgramadaService {
 
     @Transactional
     public SalidaProgramada crear(SalidaProgramada salida) {
-        validarDatos(salida, true);
+        if (salida != null) {
+            if (salida.isEsDemo()) modoDemo.exigirActivo();
+            salida.setEsDemo(modoDemo.activo());
+        }
+        validarDatos(salida, true, salida != null && salida.isEsDemo());
         if (salida.getId() != null) throw error(HttpStatus.BAD_REQUEST, "Una salida nueva no debe incluir ID");
         validarEstadoEstructural(salida);
         cargarAsignacion(salida, true);
         salida.setEstado(EstadoSalida.PROGRAMADA);
         salida.setMotivoReprogramacion(null);
-        validarSolapamientos(salida, null);
-        asignarOperador(salida, null);
+        validarSolapamientos(salida, null, salida.isEsDemo());
+        asignarOperador(salida, null, salida.isEsDemo());
         return salidas.saveAndFlush(salida);
     }
 
@@ -106,6 +124,7 @@ public class SalidaProgramadaService {
         if (existente.getEstado() != EstadoSalida.PROGRAMADA)
             throw error(HttpStatus.CONFLICT, "Solo se puede reprogramar una salida PROGRAMADA");
         if (datos == null) throw error(HttpStatus.BAD_REQUEST, "Los datos de la salida son obligatorios");
+        datos.setEsDemo(existente.isEsDemo());
         datos.setCuposDisponibles(existente.getCuposDisponibles());
         validarDatos(datos, false);
         validarEstadoEstructural(datos);
@@ -186,6 +205,7 @@ public class SalidaProgramadaService {
         long pasajeros = pasajerosReservados(id);
         if (pasajeros > 0) validarCambioOperativo(salida);
         var propuesta = new SalidaProgramada();
+        propuesta.setEsDemo(salida.isEsDemo());
         propuesta.setFecha(salida.getFecha());
         propuesta.setHoraSalida(salida.getHoraSalida());
         propuesta.setTour(salida.getTour());
@@ -219,11 +239,24 @@ public class SalidaProgramadaService {
         return salidas.buscarPendientesDeInicio(ahora.toLocalDate(), ahora.toLocalTime());
     }
 
+    public List<Long> listarEnCursoParaCierre() {
+        return salidas.buscarEnCursoParaCierre();
+    }
+
+    @Transactional
+    public void finalizarAutomaticamente(Long id) {
+        // El cierre manual y automatico comparten el bloqueo y la transicion existente.
+        var salida = salidas.bloquearPorId(id).orElse(null);
+        if (salida == null || salida.isEsDemo() || salida.getEstado() != EstadoSalida.EN_CURSO
+                || LocalDateTime.now(ZONA).isBefore(fin(salida))) return;
+        cambiarEstado(id, EstadoSalida.COMPLETADA, null, false);
+    }
+
     @Transactional
     public void iniciarAutomaticamente(Long id) {
         // Revalidar bajo el mismo bloqueo usado por reservas y modificaciones.
         var salida = salidas.bloquearPorId(id).orElse(null);
-        if (salida == null || salida.getEstado() != EstadoSalida.PROGRAMADA
+        if (salida == null || salida.isEsDemo() || salida.getEstado() != EstadoSalida.PROGRAMADA
                 || LocalDateTime.now(ZONA).isBefore(inicio(salida))) return;
         cambiarEstado(id, EstadoSalida.EN_CURSO, null, true);
     }
@@ -240,6 +273,8 @@ public class SalidaProgramadaService {
         // El inicio automatico o una peticion anterior puede haber iniciado la salida.
         // Comprobar bajo bloqueo evita repetir la transicion y modificar inicioReal.
         if (origen == EstadoSalida.EN_CURSO && destino == EstadoSalida.EN_CURSO) return salida;
+        // Si el cierre automatico se adelanto al manual, conservar el cierre ya registrado.
+        if (origen == EstadoSalida.COMPLETADA && destino == EstadoSalida.COMPLETADA) return salida;
         boolean valida = origen == EstadoSalida.PROGRAMADA
                 && (destino == EstadoSalida.EN_CURSO || destino == EstadoSalida.CANCELADA)
                 || origen == EstadoSalida.EN_CURSO && destino == EstadoSalida.COMPLETADA;
@@ -248,15 +283,15 @@ public class SalidaProgramadaService {
             throw error(HttpStatus.BAD_REQUEST, "El motivo de cancelación es obligatorio cuando la salida tiene reservas activas");
         var ahora = LocalDateTime.now(ZONA);
         if (destino == EstadoSalida.EN_CURSO) {
-            if (pasajerosReservados(id) <= 0)
+            if (!salida.isEsDemo() && pasajerosReservados(id) <= 0)
                 throw error(HttpStatus.CONFLICT, "No puedes iniciar una salida sin pasajeros reservados.");
-            if (ahora.isBefore(inicio(salida))) throw error(HttpStatus.CONFLICT, "La salida no puede iniciar antes de su hora programada");
-            if (!inicioAutomatico && !ahora.isBefore(fin(salida))) throw error(HttpStatus.CONFLICT, "El intervalo programado ya terminó; la salida no puede iniciarse");
+            if (!salida.isEsDemo() && ahora.isBefore(inicio(salida))) throw error(HttpStatus.CONFLICT, "La salida no puede iniciar antes de su hora programada");
+            if (!salida.isEsDemo() && !inicioAutomatico && !ahora.isBefore(fin(salida))) throw error(HttpStatus.CONFLICT, "El intervalo programado ya terminó; la salida no puede iniciarse");
             bloquearAsignacion(salida);
             validarRecursos(salida);
-            validarSolapamientos(salida, id);
+            validarSolapamientos(salida, id, salida.isEsDemo());
             // Una salida atrasada no debe iniciar mientras otra usa la embarcación.
-            if (salidas.findByEmbarcacionIdOrderByFechaAscHoraSalidaAsc(salida.getEmbarcacion().getId()).stream()
+            if (!salida.isEsDemo() && salidas.findByEmbarcacionIdOrderByFechaAscHoraSalidaAsc(salida.getEmbarcacion().getId()).stream()
                     .anyMatch(s -> !s.getId().equals(id) && s.getEstado() == EstadoSalida.EN_CURSO)) {
                 throw error(HttpStatus.CONFLICT, "La embarcación ya tiene una salida en curso");
             }
@@ -298,7 +333,7 @@ public class SalidaProgramadaService {
 
     private SalidaProgramada bloquear(Long id) {
         validarId(id);
-        return salidas.bloquearPorId(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Salida no encontrada"));
+        return accesible(salidas.bloquearPorId(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Salida no encontrada")));
     }
 
     private SalidaProgramada bloquearSinReservas(Long id) {
@@ -352,6 +387,11 @@ public class SalidaProgramadaService {
     }
 
     private void validarSolapamientos(SalidaProgramada salida, Long excluirId) {
+        validarSolapamientos(salida, excluirId, false);
+    }
+
+    private void validarSolapamientos(SalidaProgramada salida, Long excluirId, boolean bypassDemo) {
+        if (bypassDemo) { modoDemo.exigirActivo(); return; }
         var inicio = inicio(salida);
         var fin = finOperativo(salida);
         // Se incluyen días adyacentes: un recorrido puede cruzar medianoche.
@@ -365,6 +405,10 @@ public class SalidaProgramadaService {
     }
 
     private void asignarOperador(SalidaProgramada salida, Long excluirId) {
+        asignarOperador(salida, excluirId, false);
+    }
+
+    private void asignarOperador(SalidaProgramada salida, Long excluirId, boolean bypassDemo) {
         if (salida.getOperador() == null || salida.getOperador().getId() == null)
             throw error(HttpStatus.BAD_REQUEST, "El operador responsable es obligatorio");
         validarId(salida.getOperador().getId());
@@ -379,7 +423,7 @@ public class SalidaProgramadaService {
         var fin = fin(salida);
         for (var otra : salidas.findByOperador_IdOrderByFechaAscHoraSalidaAsc(operador.getId())) {
             if (otra.getId().equals(excluirId) || otra.getEstado() == EstadoSalida.CANCELADA) continue;
-            if (inicio.isBefore(fin(otra)) && inicio(otra).isBefore(fin))
+            if (!bypassDemo && inicio.isBefore(fin(otra)) && inicio(otra).isBefore(fin))
                 throw error(HttpStatus.CONFLICT, "El operador tiene un solapamiento con la salida "
                         + otra.getId() + "; su tour termina el " + fin(otra) + " (America/Lima)");
         }
@@ -409,13 +453,18 @@ public class SalidaProgramadaService {
     }
 
     private void validarDatos(SalidaProgramada salida, boolean creacion) {
+        validarDatos(salida, creacion, false);
+    }
+
+    private void validarDatos(SalidaProgramada salida, boolean creacion, boolean bypassDemo) {
+        if (bypassDemo) modoDemo.exigirActivo();
         if (salida == null || salida.getFecha() == null || salida.getHoraSalida() == null)
             throw error(HttpStatus.BAD_REQUEST, "La fecha y hora de salida son obligatorias");
-        HorizonteOperativo.validar(salida.getFecha());
-        if (salida.getHoraSalida().isBefore(LocalTime.of(6, 0))
-                || salida.getHoraSalida().isAfter(LocalTime.of(19, 0)))
+        if (!bypassDemo) HorizonteOperativo.validar(salida.getFecha());
+        if (!bypassDemo && (salida.getHoraSalida().isBefore(LocalTime.of(6, 0))
+                || salida.getHoraSalida().isAfter(LocalTime.of(19, 0))))
             throw error(HttpStatus.BAD_REQUEST, "La hora de inicio debe estar entre 06:00 y 19:00 (America/Lima)");
-        if (!inicio(salida).isAfter(LocalDateTime.now(ZONA)))
+        if (!bypassDemo && !inicio(salida).isAfter(LocalDateTime.now(ZONA)))
             throw error(HttpStatus.BAD_REQUEST, "La fecha y hora deben ser futuras en America/Lima");
         if (!creacion && (salida.getCuposDisponibles() == null || salida.getCuposDisponibles() < 0 || salida.getCuposDisponibles() > 100))
             throw error(HttpStatus.BAD_REQUEST, "Los cupos deben estar entre 0 y 100");

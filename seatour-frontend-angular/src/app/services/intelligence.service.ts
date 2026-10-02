@@ -66,6 +66,8 @@ export interface MejorOpcionDisponibilidad {
 
 export interface MejorOpcionRespuesta {
   fecha: string;
+  fechaSalida?: string | null;
+  esProximaRecomendacion?: boolean;
   estado: 'RECOMENDACION_DISPONIBLE' | 'SIN_SALIDAS';
   mejorZona: ZonaMaritimaTour | null;
   mejorVentanaHoraria: MejorOpcionVentana | null;

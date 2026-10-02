@@ -140,7 +140,9 @@ public class ReservaService {
     }
     private SalidaProgramada bloquearSalida(Long id) {
         validarId(id);
-        return salidas.bloquearPorId(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Salida no encontrada"));
+        var salida = salidas.bloquearPorId(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Salida no encontrada"));
+        if (salida.isEsDemo()) throw error(HttpStatus.NOT_FOUND, "Salida no encontrada");
+        return salida;
     }
     private boolean futura(SalidaProgramada s) {
         return LocalDateTime.of(s.getFecha(), s.getHoraSalida()).isAfter(LocalDateTime.now(ZONA));

@@ -94,11 +94,18 @@
         Historial
       </button>
     </div>
+    @if (demo.activo()) {
+      <div class="border-b border-amber-200 bg-amber-50 p-4">
+        <button type="button" (click)="cambiarVista('DEMO')" [attr.aria-pressed]="vista() === 'DEMO'"
+          class="rounded-xl bg-amber-200 px-4 py-2 text-sm font-bold text-amber-950">Salidas Demo</button>
+        <p class="mt-2 text-sm text-amber-950">Las nuevas salidas serán DEMO. Se muestran exclusivamente en esta vista.</p>
+      </div>
+    }
     <!-- Filtros -->
     <div class="border-b border-slate-200 p-4 sm:p-5">
-      <div class="salidas-filtros grid min-w-0 gap-3">
+      <div class="salidas-filtros flex min-w-0 flex-nowrap items-center gap-3 overflow-x-auto pb-1">
         <!-- Buscar -->
-        <div class="relative">
+        <div class="relative min-w-[220px] flex-[1.4] shrink-0">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -113,6 +120,7 @@
 
           <input
             type="search"
+            aria-label="Buscar por tour o embarcación"
             [ngModel]="busqueda()"
             (ngModelChange)="cambiarBusqueda($event)"
             placeholder="Buscar por tour o embarcación"
@@ -121,27 +129,26 @@
         </div>
 
         <!-- Estado -->
+        @if (vista() === 'HISTORIAL') {
         <select
           [ngModel]="filtroEstado()"
           (ngModelChange)="cambiarFiltroEstado($event)"
-          class="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
+          aria-label="Estado del historial"
+          class="h-11 min-w-[150px] flex-1 shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
         >
           <option value="TODOS">Todos los estados</option>
 
-          @if (vista() === 'ACTIVAS') {
-            <option value="PROGRAMADA">Programadas</option>
-            <option value="EN_CURSO">En curso</option>
-          } @else {
             <option value="COMPLETADA">Completadas</option>
             <option value="CANCELADA">Canceladas</option>
-          }
         </select>
+        }
 
         <!-- Tour -->
         <select
           [ngModel]="filtroTour() ?? ''"
+          aria-label="Filtrar por tour"
           (ngModelChange)="cambiarFiltroTour($event)"
-          class="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
+          class="h-11 min-w-[150px] flex-1 shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
         >
           <option value="">Todos los tours</option>
 
@@ -155,8 +162,9 @@
         <!-- Embarcación -->
         <select
           [ngModel]="filtroEmbarcacion() ?? ''"
+          aria-label="Filtrar por embarcación"
           (ngModelChange)="cambiarFiltroEmbarcacion($event)"
-          class="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
+          class="h-11 min-w-[170px] flex-1 shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50"
         >
           <option value="">Todas las embarcaciones</option>
 
@@ -166,6 +174,25 @@
             </option>
           }
         </select>
+        @if (vista() === 'ACTIVAS') {
+          <input type="date" aria-label="Filtrar por fecha exacta"
+            [ngModel]="filtroFecha()" (ngModelChange)="filtroFecha.set($event)"
+            class="h-11 w-[155px] shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50" />
+          <div class="flex shrink-0 gap-1" role="group" aria-label="Fechas rápidas">
+            <button type="button" (click)="seleccionarFecha('HOY')"
+              [attr.aria-pressed]="filtroFecha() === fechaMinima"
+              [ngClass]="filtroFecha() === fechaMinima ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+              class="h-11 rounded-xl px-3 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-sky-100">Hoy</button>
+            <button type="button" (click)="seleccionarFecha('MANANA')"
+              [attr.aria-pressed]="filtroFecha() === fechaManana"
+              [ngClass]="filtroFecha() === fechaManana ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+              class="h-11 rounded-xl px-3 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-sky-100">Mañana</button>
+            <button type="button" (click)="seleccionarFecha('TODAS')"
+              [attr.aria-pressed]="!filtroFecha()"
+              [ngClass]="!filtroFecha() ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+              class="h-11 rounded-xl px-3 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-sky-100">Todas</button>
+          </div>
+        }
       </div>
     </div>
 
@@ -386,6 +413,10 @@
                   <!-- Acciones -->
                   <td class="px-5 py-4">
                     <div class="salidas-acciones flex flex-wrap items-center justify-end gap-1">
+                      @if (salida.esDemo && demo.activo() && puedeIniciar(salida)) {
+                        <button type="button" (click)="iniciar(salida)" title="Iniciar salida demo"
+                          class="rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-900">Iniciar Demo</button>
+                      }
                       @if (puedeEditar(salida)) {
                         <button type="button" (click)="abrirCambioEmbarcacion(salida)"
                           title="Cambiar embarcación" aria-label="Cambiar embarcación"
@@ -570,6 +601,10 @@
               </div>
 
               <div class="mt-4 flex flex-wrap gap-2">
+                @if (salida.esDemo && demo.activo() && puedeIniciar(salida)) {
+                  <button type="button" (click)="iniciar(salida)"
+                    class="rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-900">Iniciar Demo</button>
+                }
                 @if (puedeEditar(salida)) {
                   <button type="button" (click)="abrirCambioEmbarcacion(salida)"
                     class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
@@ -855,6 +890,9 @@
               </select>
             </div>
 
+            @if (formularioDemo()) {
+              <p role="status" class="rounded-xl bg-amber-100 p-3 text-sm font-semibold text-amber-950">Salida DEMO: horario y solapamientos relajados; permite iniciar sin pasajeros.</p>
+            }
             <!-- Fecha -->
             <div>
               <label for="salida-fecha" class="mb-2 block text-sm font-semibold text-slate-700">
@@ -865,8 +903,8 @@
                 id="salida-fecha"
                 name="fecha"
                 type="date"
-                [min]="fechaMinima"
-                [max]="fechaMaxima"
+                [attr.min]="formularioDemo() ? null : fechaMinima"
+                [attr.max]="formularioDemo() ? null : fechaMaxima"
                 [(ngModel)]="formulario.fecha"
                 class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
               />
@@ -882,8 +920,8 @@
                 id="salida-hora"
                 name="horaSalida"
                 type="time"
-                min="06:00"
-                max="19:00"
+                [attr.min]="formularioDemo() ? null : '06:00'"
+                [attr.max]="formularioDemo() ? null : '19:00'"
                 [(ngModel)]="formulario.horaSalida"
                 class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
               />

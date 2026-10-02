@@ -2,11 +2,10 @@ import { inicioPorRol, reservasPorRol } from '../../navigation';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { Component, inject, signal } from '@angular/core';
-import { RutasInteractivas } from '../rutas-interactivas/rutas-interactivas';
 
 @Component({
   selector: 'app-inicio',
-  imports: [RutasInteractivas, RouterLink],
+  imports: [RouterLink],
   templateUrl: './inicio.html',
   styleUrl: '../../app.css'
 })

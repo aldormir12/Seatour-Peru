@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   inject,
+  DestroyRef,
   OnDestroy,
   OnInit,
   signal
@@ -26,6 +27,7 @@ import { ConfirmacionModal } from '../confirmacion-modal/confirmacion-modal';
 import { ToastContainer } from '../toast-container/toast-container';
 import { of, switchMap } from 'rxjs';
 import { OperadorLive } from '../operador-live/operador-live';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 
 @Component({
@@ -41,6 +43,38 @@ import { OperadorLive } from '../operador-live/operador-live';
   styleUrl: './operador-salida-detalle.css'
 })
 export class OperadorSalidaDetalle implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
+  private sincronizacion?: ReturnType<typeof setInterval>;
+  private verificando = false;
+  private revisionSalida = 0;
+
+  private verificarDemo(): void {
+    const salida = this.salida();
+    if (!salida?.esDemo || this.verificando || this.procesando()) return;
+    const revision = this.revisionSalida;
+    this.verificando = true;
+    this.salidasService.obtenerSalidaPropia(salida.id)
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: actualizada => {
+          this.verificando = false;
+          if (revision === this.revisionSalida && this.salida()?.id === actualizada.id)
+            this.salida.set(actualizada);
+        },
+        error: error => {
+          this.verificando = false;
+          if (error?.status === 404 || error?.status === 403) this.ocultarDemo();
+        }
+      });
+  }
+
+  private ocultarDemo(): void {
+    if (!this.salida()?.esDemo) return;
+    // Desmontar el panel libera la transmisión mediante su ciclo de vida existente.
+    this.salida.set(null);
+    this.reservas.set([]);
+    this.mensajeExito.set('');
+    this.volver();
+  }
 
   private readonly ahora = signal(Date.now());
   private reloj?: ReturnType<typeof setInterval>;
@@ -113,6 +147,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.reloj = setInterval(() => this.ahora.set(Date.now()), 1000);
+    this.sincronizacion = setInterval(() => this.verificarDemo(), 5_000);
 
     const id =
       Number(
@@ -137,6 +172,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.reloj !== undefined) clearInterval(this.reloj);
+    clearInterval(this.sincronizacion);
   }
 
 
@@ -149,6 +185,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
 
     this.salidasService
       .obtenerSalidaPropia(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
 
         next: salida => {
@@ -162,6 +199,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
             .obtenerReservasSalidaPropia(
               id
             )
+            .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
 
               next: reservas => {
@@ -218,8 +256,9 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
 
   puedeIniciar(): boolean {
     const salida = this.salida();
-    return salida?.estado === 'PROGRAMADA' && salida.pasajerosReservados > 0 && this.ahora() >=
-      Date.parse(`${salida.fecha}T${salida.horaSalida}-05:00`);
+    return salida?.estado === 'PROGRAMADA' && (salida.esDemo ||
+      salida.pasajerosReservados > 0 && this.ahora() >=
+      Date.parse(`${salida.fecha}T${salida.horaSalida}-05:00`));
   }
 
 
@@ -264,7 +303,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
         });
 
 
-    if (!aceptado) {
+    if (!aceptado || this.salida()?.id !== salida.id || !this.puedeIniciar()) {
       return;
     }
 
@@ -309,7 +348,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
         });
 
 
-    if (!aceptado) {
+    if (!aceptado || this.salida()?.id !== salida.id || !this.puedeCompletar()) {
       return;
     }
 
@@ -331,6 +370,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
   ): void {
 
     this.procesando.set(true);
+    ++this.revisionSalida;
     this.mensajeExito.set('');
 
 
@@ -345,7 +385,8 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
             && (estado === 'EN_CURSO' ? !!actualizada.inicioReal : !!actualizada.finReal)
             ? of(actualizada)
             : this.salidasService.obtenerSalidaPropia(salida.id)
-        )
+        ),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
 
@@ -370,6 +411,10 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
           this.procesando.set(
             false
           );
+          if (salida.esDemo && (error?.status === 404 || error?.status === 403)) {
+            this.ocultarDemo();
+            return;
+          }
 
           this.toast.error(
             this.obtenerMensajeError(

@@ -27,8 +27,7 @@ export class ClienteShell {
   readonly sinHero = toSignal(inject(Router).events.pipe(
     filter(event => event instanceof NavigationEnd),
     startWith(null),
-    map(() => this.route.firstChild?.snapshot.data['sinHero'] === true)
-  ), { initialValue: false });
+    map(() => this.route.firstChild?.snapshot?.data?.['sinHero'] === true)  ), { initialValue: false });
   readonly auth = inject(AuthService);
 
   constructor() {
@@ -39,10 +38,16 @@ export class ClienteShell {
     // Preserve the dashboard's actual hero crop, including responsive content height.
     afterEveryRender(() => {
       const hero = host.querySelector('.hero');
-      if (hero === observed) return;
-      observer?.disconnect();
-      observed = hero;
-      if (!hero) return;
+
+if (hero === observed) return;
+
+observer?.disconnect();
+observed = hero;
+
+if (!hero) {
+  host.style.removeProperty('--cliente-hero-height');
+  return;
+}
       const resize = () => host.style.setProperty('--cliente-hero-height', `${hero.getBoundingClientRect().height}px`);
       resize();
       if (typeof ResizeObserver !== 'undefined') {

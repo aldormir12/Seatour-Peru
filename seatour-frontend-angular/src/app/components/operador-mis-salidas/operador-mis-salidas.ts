@@ -3,11 +3,14 @@ import {
   Component,
   computed,
   inject,
+  DestroyRef,
+  OnDestroy,
   OnInit,
   signal
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import {
   EstadoSalida,
@@ -28,7 +31,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './operador-mis-salidas.html',
   styleUrl: './operador-mis-salidas.css'
 })
-export class OperadorMisSalidas implements OnInit {
+export class OperadorMisSalidas implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
+  private refresco?: ReturnType<typeof setInterval>;
+  private cargaActual = 0;
 
   private readonly salidasService =
     inject(SalidasService);
@@ -149,18 +155,24 @@ export class OperadorMisSalidas implements OnInit {
 
   ngOnInit(): void {
     this.cargar();
+    this.refresco = setInterval(() => this.cargar(true), 5_000);
   }
 
+  ngOnDestroy(): void { clearInterval(this.refresco); }
 
-  cargar(): void {
+  cargar(silencioso = false): void {
+    if (silencioso && this.cargando()) return;
+    const carga = ++this.cargaActual;
 
-    this.cargando.set(true);
+    if (!silencioso) this.cargando.set(true);
 
     this.salidasService
       .listarMisSalidas()
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
 
         next: salidas => {
+          if (carga !== this.cargaActual) return;
 
           this.salidas.set(
             salidas
@@ -170,8 +182,12 @@ export class OperadorMisSalidas implements OnInit {
         },
 
         error: error => {
+          if (carga !== this.cargaActual) return;
+          // Ante un fallo de refresco no conservar demos cuya autorización no se conoce.
+          this.salidas.update(lista => lista.filter(s => !s.esDemo));
 
           this.cargando.set(false);
+          if (silencioso) return;
 
           this.toast.error(
             this.obtenerMensajeError(

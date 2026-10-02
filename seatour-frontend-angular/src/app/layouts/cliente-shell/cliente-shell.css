@@ -25,7 +25,13 @@
   inset: 0 0 auto;
   height: var(--cliente-hero-height, 680px);
   background:
-    linear-gradient(90deg, rgba(2, 20, 33, 0.72) 0%, rgba(3, 28, 43, 0.48) 42%, rgba(3, 31, 44, 0.12) 74%, rgba(0, 0, 0, 0.02) 100%),
+    linear-gradient(
+      90deg,
+      rgba(2, 20, 33, 0.72) 0%,
+      rgba(3, 28, 43, 0.48) 42%,
+      rgba(3, 31, 44, 0.12) 74%,
+      rgba(0, 0, 0, 0.02) 100%
+    ),
     url('/images/dashboard/hero-cliente.png') center 80% / cover no-repeat;
   pointer-events: none;
 }
@@ -40,7 +46,21 @@
 @media (max-width: 720px) {
   .cliente-hero {
     height: var(--cliente-hero-height, 760px);
-    background-position: center, 58% center;
+    background-position:
+      center,
+      58% center;
   }
 }
 
+:host:has(app-cliente-live) .cliente-hero {
+  height: 320px;
+  background-size: auto 680px;
+  background-position: center top;
+}
+@media (max-width: 720px) {
+  :host:has(app-cliente-live) .cliente-hero {
+    height: 285px;
+    background-size: auto 760px;
+    background-position: 58% top;
+  }
+}

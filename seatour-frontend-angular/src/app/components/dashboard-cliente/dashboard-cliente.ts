@@ -8,12 +8,13 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
 import { RecomendacionesComponent } from './recomendaciones/recomendaciones';
+import { LiveResumen } from './live-resumen/live-resumen';
 
 interface FeatureItem {
   titulo: string;
   descripcion: string;
   ruta: string;
-  icono: 'rutas' | 'tours' | 'reservas';
+  icono: 'tours' | 'reservas';
 }
 
 interface CampoBusqueda {
@@ -43,7 +44,7 @@ interface CondicionActual {
 @Component({
   selector: 'app-dashboard-cliente',
   standalone: true,
-  imports: [RouterLink, RecomendacionesComponent],
+  imports: [RouterLink, RecomendacionesComponent, LiveResumen],
   templateUrl: './dashboard-cliente.html',
   styleUrl: './dashboard-cliente.css'
 })
@@ -67,12 +68,6 @@ export class DashboardClienteComponent {
   };
 
   readonly features: FeatureItem[] = [
-    {
-      titulo: 'Rutas marítimas',
-      descripcion: 'Explora nuestros recorridos',
-      ruta: '/app/rutas',
-      icono: 'rutas'
-    },
     {
       titulo: 'Tours disponibles',
       descripcion: 'Encuentra próximas salidas',

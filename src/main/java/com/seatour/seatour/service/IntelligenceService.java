@@ -31,30 +31,48 @@ public class IntelligenceService {
     public MejorOpcionRespuesta mejorOpcion(LoginRespuesta actor, LocalDate fecha) {
         var perfil = preferencias.consultar(actor);
         var ahora = LocalDateTime.now(ZoneId.of("America/Lima"));
-        List<Opcion> opciones = new ArrayList<>();
-        var climaPorZona = new EnumMap<ZonaMaritima, PronosticoMarinoService.Datos>(ZonaMaritima.class);
-        for (var tour : tours.findByActivoTrueOrderByNombreAsc()) {
-            if (tour.getZonaMaritima() == null || tour.getDuracionMinutos() == null
-                    || tour.getDuracionMinutos() <= 0) continue;
-            for (var salida : salidas.listarDisponiblesPorTour(tour.getId())) {
-                if (!fecha.equals(salida.getFecha()) || salida.getHoraSalida() == null
-                        || salida.getCuposDisponibles() == null || salida.getCuposDisponibles() <= 0
-                        || !dentroDelHorizonte(salida)) continue;
-                var inicio = fecha.atTime(salida.getHoraSalida());
-                if (!inicio.isAfter(ahora)) continue;
-                var fin = inicio.plusMinutes(tour.getDuracionMinutos());
-                var datos = climaPorZona.computeIfAbsent(tour.getZonaMaritima(),
-                        zona -> pronostico.consultar(zona, fecha));
-                opciones.add(new Opcion(tour, salida, evaluar(tour, salida, perfil).score(),
-                        inicio, fin, pronostico.condiciones(datos, inicio, fin)));
-            }
+        var opciones = opcionesEntre(perfil, fecha, fecha, ahora);
+        boolean buscarProximas = fecha.equals(ahora.toLocalDate()) && opciones.isEmpty();
+        if (buscarProximas) {
+            opciones = opcionesEntre(perfil, fecha.plusDays(1), fecha.plusDays(7), ahora);
         }
         if (opciones.isEmpty()) {
             return new MejorOpcionRespuesta(fecha, "SIN_SALIDAS", null, null, null,
                     new MejorOpcionRespuesta.Condiciones("NO_DISPONIBLE", null, null, null),
                     new MejorOpcionRespuesta.Disponibilidad(false, 0),
-                    "No hay salidas disponibles en las cuatro zonas para esta fecha.");
+                    buscarProximas ? "No hay salidas disponibles hoy ni en los próximos 7 días."
+                            : "No hay salidas disponibles en las cuatro zonas para esta fecha.");
         }
+        return elegirMejor(fecha, opciones);
+    }
+
+    private List<Opcion> opcionesEntre(PreferenciasCliente perfil, LocalDate desde, LocalDate hasta,
+            LocalDateTime ahora) {
+        List<Opcion> opciones = new ArrayList<>();
+        var climaPorZonaFecha = new HashMap<ZonaFecha, PronosticoMarinoService.Datos>();
+        for (var tour : tours.findByActivoTrueOrderByNombreAsc()) {
+            if (tour.getZonaMaritima() == null || tour.getDuracionMinutos() == null
+                    || tour.getDuracionMinutos() <= 0) continue;
+            for (var salida : salidas.listarDisponiblesPorTour(tour.getId())) {
+                if (salida.getFecha() == null || salida.getFecha().isBefore(desde)
+                        || salida.getFecha().isAfter(hasta) || salida.getHoraSalida() == null
+                        || salida.getCuposDisponibles() == null || salida.getCuposDisponibles() <= 0
+                        || !dentroDelHorizonte(salida)) continue;
+                var inicio = salida.getFecha().atTime(salida.getHoraSalida());
+                if (!inicio.isAfter(ahora)) continue;
+                var fin = inicio.plusMinutes(tour.getDuracionMinutos());
+                var datos = climaPorZonaFecha.computeIfAbsent(new ZonaFecha(tour.getZonaMaritima(), salida.getFecha()),
+                        clave -> pronostico.consultar(clave.zona(), clave.fecha()));
+                opciones.add(new Opcion(tour, salida, evaluar(tour, salida, perfil).score(),
+                        inicio, fin, pronostico.condiciones(datos, inicio, fin)));
+            }
+        }
+        return opciones;
+    }
+
+    private record ZonaFecha(ZonaMaritima zona, LocalDate fecha) {}
+
+    private MejorOpcionRespuesta elegirMejor(LocalDate fecha, List<Opcion> opciones) {
         // El score existente no se modifica. El clima solo desempata afinidades iguales.
         int mayorAfinidad = opciones.stream().mapToInt(Opcion::score).max().orElseThrow();
         var finalistas = opciones.stream().filter(o -> o.score() == mayorAfinidad).toList();

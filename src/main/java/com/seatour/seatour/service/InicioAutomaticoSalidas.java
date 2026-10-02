@@ -16,12 +16,26 @@ public class InicioAutomaticoSalidas {
 
     @Scheduled(cron = "*/30 * * * * *", zone = "America/Lima")
     public void iniciarPendientes() {
+        // Liberar primero las salidas vencidas antes de intentar nuevos inicios.
+        cerrarEnCurso();
         for (Long id : salidas.listarPendientesDeInicio()) {
             try {
                 // Una transacción por salida: un conflicto no bloquea las demás.
                 salidas.iniciarAutomaticamente(id);
             } catch (RuntimeException e) {
                 log.warn("No se pudo iniciar automáticamente la salida {}: {}", id, e.getMessage());
+            }
+        }
+        // Tambien cerrar las salidas atrasadas que acaban de iniciar en este ciclo.
+        cerrarEnCurso();
+    }
+
+    private void cerrarEnCurso() {
+        for (Long id : salidas.listarEnCursoParaCierre()) {
+            try {
+                salidas.finalizarAutomaticamente(id);
+            } catch (RuntimeException e) {
+                log.warn("No se pudo cerrar automaticamente la salida {}: {}", id, e.getMessage());
             }
         }
     }

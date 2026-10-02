@@ -30,6 +30,11 @@ public class SalidaProgramadaController {
         this.reservas = reservas;
     }
 
+    @GetMapping("/demo")
+    public List<SalidaProgramadaRespuesta> listarDemo() {
+        return salidaProgramadaService.listarDemo().stream().map(this::convertirARespuesta).toList();
+    }
+
     @GetMapping("/mis-salidas")
     public List<SalidaProgramadaRespuesta> listarPropias(@AuthenticationPrincipal UsuarioPrincipal actor) {
         return salidaProgramadaService.listarPropias(actor.datos()).stream()
@@ -45,6 +50,9 @@ public class SalidaProgramadaController {
     @GetMapping("/mis-salidas/{id}/reservas")
     public List<com.seatour.seatour.dto.ReservaRespuesta> reservasPropias(@PathVariable Long id,
             @AuthenticationPrincipal UsuarioPrincipal actor) {
+        var salida = salidaProgramadaService.buscarPropia(id, actor.datos());
+        // Las demos no admiten reservas reales, pero su detalle debe poder cargarse.
+        if (salida.isEsDemo()) return List.of();
         return reservas.listarPorSalidaPropia(id, actor.datos());
     }
 
@@ -66,6 +74,10 @@ public class SalidaProgramadaController {
         SalidaProgramada salida = esOperador(actor)
                 ? salidaProgramadaService.buscarPropia(id, actor.datos()) : salidaProgramadaService.buscarPorId(id);
 
+        if (salida.isEsDemo() && !esOperador(actor)
+                && (actor == null || !"ADMIN".equals(actor.datos().rol())))
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, "Salida no encontrada");
         return ResponseEntity.ok(
                 convertirARespuesta(salida));
     }
@@ -172,6 +184,7 @@ public class SalidaProgramadaController {
 
         SalidaProgramada salida = new SalidaProgramada();
 
+        salida.setEsDemo(datos.isEsDemo());
         salida.setFecha(datos.getFecha());
         salida.setHoraSalida(datos.getHoraSalida());
         salida.setCuposDisponibles(
@@ -210,6 +223,7 @@ public class SalidaProgramadaController {
                 salida.getTour().getNombre(),
                 salida.getEmbarcacion().getId(),
                 salida.getEmbarcacion().getNombre());
+        respuesta.setEsDemo(salida.isEsDemo());
         respuesta.setPrecioPorPasajero(salida.getTour().getPrecioBase());
         respuesta.setDuracionMinutos(salida.getTour().getDuracionMinutos());
         respuesta.setInicioReal(salida.getInicioReal());
@@ -229,7 +243,7 @@ public class SalidaProgramadaController {
         respuesta.setMotivoReprogramacion(salida.getMotivoReprogramacion());
         respuesta.setMotivoCancelacion(salida.getMotivoCancelacion());
         respuesta.setFechaCancelacion(salida.getFechaCancelacion());
-        respuesta.setReservable(salida.getEstado() == com.seatour.seatour.model.EstadoSalida.PROGRAMADA
+        respuesta.setReservable(!salida.isEsDemo() && salida.getEstado() == com.seatour.seatour.model.EstadoSalida.PROGRAMADA
                 && Boolean.TRUE.equals(salida.getTour().getActivo()) && salida.getCuposDisponibles() > 0
                 && Boolean.TRUE.equals(salida.getEmbarcacion().getActivo())
                 && java.time.LocalDateTime.of(salida.getFecha(), salida.getHoraSalida())

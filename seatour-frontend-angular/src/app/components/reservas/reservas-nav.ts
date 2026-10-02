@@ -1311,10 +1311,6 @@ export class ReservasNav {
             route: '/app/tours'
           },
           {
-            label: 'Experiencias',
-            route: '/app/rutas'
-          },
-          {
             label: 'Mis reservas',
             route: '/login'
           }
@@ -1334,10 +1330,6 @@ export class ReservasNav {
           {
             label: 'Tours',
             route: '/app/tours'
-          },
-          {
-            label: 'Experiencias',
-            route: '/app/rutas'
           },
           {
             label: 'Mis reservas',

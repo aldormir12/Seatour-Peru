@@ -351,7 +351,6 @@ export const routes: Routes = [
                   },
                   {
                     path: 'live',
-                    data: { sinHero: true },
                     loadComponent: () => import('./components/cliente-live/cliente-live')
                       .then(m => m.ClienteLive)
                   },
@@ -378,14 +377,8 @@ export const routes: Routes = [
 
               {
                 path: 'rutas',
-
-                loadComponent: () =>
-                  import(
-                    './components/rutas-interactivas/rutas-interactivas'
-                  )
-                    .then(
-                      m => m.RutasInteractivas
-                    )
+                pathMatch: 'full',
+                redirectTo: '/app/tours'
               },
 
               {

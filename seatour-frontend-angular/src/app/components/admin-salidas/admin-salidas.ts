@@ -2,12 +2,14 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
+  untracked,
   inject,
-  OnInit,
   signal
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { ModoDemoService } from '../../services/modo-demo.service';
 
 import {
   EstadoSalida,
@@ -56,7 +58,25 @@ interface FormularioSalida {
   templateUrl: './admin-salidas.html',
   styleUrl: './admin-salidas.css'
 })
-export class AdminSalidas implements OnInit {
+export class AdminSalidas {
+  readonly demo = inject(ModoDemoService);
+  readonly salidasNormales = computed(() => this.salidas().filter(s => !s.esDemo));
+  readonly formularioDemo = computed(() => this.demo.activo() && !this.modoEdicion());
+
+  constructor() {
+    effect(() => {
+      const activo = this.demo.activo();
+      untracked(() => {
+        if (!activo) {
+          this.salidas.update(lista => lista.filter(s => !s.esDemo));
+          if (this.vista() === 'DEMO') this.cambiarVista('ACTIVAS');
+        }
+        this.cerrarModal();
+        this.cargarDatos();
+      });
+    });
+  }
+
 
   readonly salidaCancelacion = signal<SalidaProgramada | null>(null);
   readonly cancelando = signal(false);
@@ -349,13 +369,13 @@ export class AdminSalidas implements OnInit {
     signal('');
 
   readonly vista =
-    signal<'ACTIVAS' | 'HISTORIAL'>(
+    signal<'ACTIVAS' | 'HISTORIAL' | 'DEMO'>(
       'ACTIVAS'
     );
 
 
   cambiarVista(
-    vista: 'ACTIVAS' | 'HISTORIAL'
+    vista: 'ACTIVAS' | 'HISTORIAL' | 'DEMO'
   ): void {
 
     if (this.vista() === vista) {
@@ -365,6 +385,19 @@ export class AdminSalidas implements OnInit {
     this.vista.set(vista);
 
     this.filtroEstado.set('TODOS');
+    if (vista === 'ACTIVAS') this.filtroFecha.set(this.fechaMinima);
+  }
+
+  readonly filtroFecha = signal(this.fechaMinima);
+
+  get fechaManana(): string {
+    const fecha = new Date(`${this.fechaMinima}T00:00:00Z`);
+    fecha.setUTCDate(fecha.getUTCDate() + 1);
+    return fecha.toISOString().slice(0, 10);
+  }
+
+  seleccionarFecha(atajo: 'HOY' | 'MANANA' | 'TODAS'): void {
+    this.filtroFecha.set(atajo === 'HOY' ? this.fechaMinima : atajo === 'MANANA' ? this.fechaManana : '');
   }
 
 
@@ -387,13 +420,13 @@ export class AdminSalidas implements OnInit {
 
 
   readonly total = computed(
-    () => this.salidas().length
+    () => this.salidasNormales().length
   );
 
 
   readonly programadas = computed(
     () =>
-      this.salidas().filter(
+      this.salidasNormales().filter(
         salida =>
           salida.estado ===
           'PROGRAMADA'
@@ -403,7 +436,7 @@ export class AdminSalidas implements OnInit {
 
   readonly enCurso = computed(
     () =>
-      this.salidas().filter(
+      this.salidasNormales().filter(
         salida =>
           salida.estado ===
           'EN_CURSO'
@@ -413,7 +446,7 @@ export class AdminSalidas implements OnInit {
 
   readonly completadas = computed(
     () =>
-      this.salidas().filter(
+      this.salidasNormales().filter(
         salida =>
           salida.estado ===
           'COMPLETADA'
@@ -423,7 +456,7 @@ export class AdminSalidas implements OnInit {
 
   readonly canceladas = computed(
     () =>
-      this.salidas().filter(
+      this.salidasNormales().filter(
         salida =>
           salida.estado ===
           'CANCELADA'
@@ -489,12 +522,15 @@ export class AdminSalidas implements OnInit {
       const embarcacionId =
         this.filtroEmbarcacion();
 
+      const fecha = this.filtroFecha();
+
 
       return this.salidas()
+        .filter(salida => vista === 'DEMO' ? this.demo.activo() && salida.esDemo : !salida.esDemo)
         .filter(salida => {
 
           const coincideVista =
-            vista === 'ACTIVAS'
+            vista === 'DEMO' ? true : vista === 'ACTIVAS'
               ? (
                   salida.estado ===
                     'PROGRAMADA' ||
@@ -517,14 +553,16 @@ export class AdminSalidas implements OnInit {
             this.normalizar(
               salida.embarcacionNombre
             ).includes(texto) ||
-            this.normalizar(
+            (vista === 'HISTORIAL' && this.normalizar(
               `${salida.operadorNombre ?? ''} ${salida.operadorApellido ?? ''}`
-            ).includes(texto);
+            ).includes(texto));
 
 
           const coincideEstado =
-            estado === 'TODOS' ||
+            vista === 'ACTIVAS' || estado === 'TODOS' ||
             salida.estado === estado;
+
+          const coincideFecha = vista !== 'ACTIVAS' || !fecha || salida.fecha === fecha;
 
 
           const coincideTour =
@@ -543,6 +581,7 @@ export class AdminSalidas implements OnInit {
             coincideTexto &&
             coincideEstado &&
             coincideTour &&
+            coincideFecha &&
             coincideEmbarcacion
           );
         })
@@ -561,15 +600,17 @@ export class AdminSalidas implements OnInit {
     });
 
 
-  ngOnInit(): void {
-    this.cargarDatos();
-  }
 
+
+  private cargaActual = 0;
 
   cargarDatos(): void {
+    const carga = ++this.cargaActual;
     this.cargando.set(true);
 
+    const demoAlCargar = this.demo.activo();
     forkJoin({
+      demo: demoAlCargar ? this.salidasService.listarDemo() : of([] as SalidaProgramada[]),
       salidas:
         this.salidasService.listar(),
 
@@ -585,9 +626,10 @@ export class AdminSalidas implements OnInit {
         this.usuariosService.listar()
     }).subscribe({
       next: resultado => {
+        if (carga !== this.cargaActual) return;
 
         this.salidas.set(
-          resultado.salidas
+          [...resultado.salidas, ...(this.demo.activo() && demoAlCargar ? resultado.demo : [])]
         );
 
         this.tours.set(
@@ -611,6 +653,7 @@ export class AdminSalidas implements OnInit {
       },
 
       error: error => {
+        if (carga !== this.cargaActual) return;
 
         this.cargando.set(false);
 
@@ -737,6 +780,7 @@ export class AdminSalidas implements OnInit {
 
     const datos:
       SalidaSolicitud = {
+      esDemo: this.formularioDemo(),
 
       motivoReprogramacion:
         this.salidaSeleccionada()
@@ -852,6 +896,8 @@ export class AdminSalidas implements OnInit {
           );
 
           this.cerrarModal();
+          this.cargarDatos();
+          if (creada.esDemo && this.demo.activo()) this.cambiarVista('DEMO');
 
           this.toast.success(
             'Salida programada correctamente.'
@@ -1394,12 +1440,10 @@ export class AdminSalidas implements OnInit {
     }
 
 
-    if (
-      this.formulario.fecha <
-        this.fechaMinima ||
-      this.formulario.fecha >
-        this.fechaMaxima
-    ) {
+    if (!this.formularioDemo() && (
+      this.formulario.fecha < this.fechaMinima ||
+      this.formulario.fecha > this.fechaMaxima
+    )) {
       return (
         `La fecha debe estar entre ` +
         `${this.fechaMinima} y ` +
@@ -1425,10 +1469,9 @@ export class AdminSalidas implements OnInit {
             .horaSalida;
 
 
-    if (
-      hora < '06:00:00' ||
-      hora > '19:00:00'
-    ) {
+    if (!this.formularioDemo() && (
+      hora < '06:00:00' || hora > '19:00:00'
+    )) {
       return (
         'La hora de inicio debe estar entre ' +
         '06:00 y 19:00 (America/Lima).'

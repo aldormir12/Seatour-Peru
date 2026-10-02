@@ -11,13 +11,42 @@ import java.util.List;
 
 public interface SalidaProgramadaRepository extends JpaRepository<SalidaProgramada, Long> {
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
-    List<SalidaProgramada> findByEstadoOrderByInicioRealDescIdDesc(EstadoSalida estado);
+    @Query("""
+            select s from SalidaProgramada s
+            where s.operador.id = :operadorId and (s.esDemo = false or :incluirDemo = true)
+            order by s.fecha, s.horaSalida, s.id
+            """)
+    List<SalidaProgramada> listarPropiasVisibles(@Param("operadorId") Long operadorId,
+            @Param("incluirDemo") boolean incluirDemo);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
+    @Query("""
+            select s from SalidaProgramada s
+            where s.estado = com.seatour.seatour.model.EstadoSalida.EN_CURSO
+              and (s.esDemo = false or :incluirDemo = true)
+            order by s.inicioReal desc, s.id desc
+            """)
+    List<SalidaProgramada> listarParaLive(@Param("incluirDemo") boolean incluirDemo);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
+    @Query("select s from SalidaProgramada s where s.esDemo = true order by s.id desc")
+    List<SalidaProgramada> listarDemo();
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
+    @Query("select s from SalidaProgramada s where s.id = :id")
+    java.util.Optional<SalidaProgramada> buscarIncluyendoDemo(@Param("id") Long id);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
+    @Query("select s from SalidaProgramada s where s.esDemo = false and s.estado = :estado order by s.inicioReal desc, s.id desc")
+    List<SalidaProgramada> findByEstadoOrderByInicioRealDescIdDesc(@Param("estado") EstadoSalida estado);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour"})
-    List<SalidaProgramada> findByFechaBetweenOrderByFechaAscHoraSalidaAsc(LocalDate desde, LocalDate hasta);
+    @Query("select s from SalidaProgramada s where s.esDemo = false and s.fecha between :desde and :hasta order by s.fecha, s.horaSalida")
+    List<SalidaProgramada> findByFechaBetweenOrderByFechaAscHoraSalidaAsc(
+            @Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
     @Query("""
             select count(s) from SalidaProgramada s
-            where s.operador.id = :operadorId
+            where s.esDemo = false and s.operador.id = :operadorId
               and s.estado <> com.seatour.seatour.model.EstadoSalida.CANCELADA
               and (s.fecha > :fecha or (s.fecha = :fecha and s.horaSalida > :hora))
             """)
@@ -25,16 +54,24 @@ public interface SalidaProgramadaRepository extends JpaRepository<SalidaPrograma
             @Param("fecha") LocalDate fecha, @Param("hora") java.time.LocalTime hora);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
-    List<SalidaProgramada> findByOperador_IdOrderByFechaAscHoraSalidaAsc(Long operadorId);
+    @Query("select s from SalidaProgramada s where s.esDemo = false and s.operador.id = :operadorId order by s.fecha, s.horaSalida")
+    List<SalidaProgramada> findByOperador_IdOrderByFechaAscHoraSalidaAsc(@Param("operadorId") Long operadorId);
 
     @Query("""
             select s.id from SalidaProgramada s
-            where s.estado = com.seatour.seatour.model.EstadoSalida.PROGRAMADA
+            where s.esDemo = false and s.estado = com.seatour.seatour.model.EstadoSalida.PROGRAMADA
               and (s.fecha < :fecha or (s.fecha = :fecha and s.horaSalida <= :hora))
             order by s.fecha, s.horaSalida, s.id
             """)
     List<Long> buscarPendientesDeInicio(@Param("fecha") LocalDate fecha,
             @Param("hora") java.time.LocalTime hora);
+
+    @Query("""
+            select s.id from SalidaProgramada s
+            where s.esDemo = false and s.estado = com.seatour.seatour.model.EstadoSalida.EN_CURSO
+            order by s.fecha, s.horaSalida, s.id
+            """)
+    List<Long> buscarEnCursoParaCierre();
 
     boolean existsByTour_Id(Long tourId);
     boolean existsByEmbarcacion_Id(Long embarcacionId);
@@ -43,7 +80,7 @@ public interface SalidaProgramadaRepository extends JpaRepository<SalidaPrograma
     // conserva su suma; asignar embarcaciones se serializa con el bloqueo de la embarcacion.
     @Query("""
             select count(s) from SalidaProgramada s
-            where s.embarcacion.id = :embarcacionId
+            where s.esDemo = false and s.embarcacion.id = :embarcacionId
               and (s.fecha > :fecha or (s.fecha = :fecha and s.horaSalida > :hora)
                    or s.estado in (com.seatour.seatour.model.EstadoSalida.PROGRAMADA,
                                    com.seatour.seatour.model.EstadoSalida.EN_CURSO))
@@ -60,11 +97,13 @@ public interface SalidaProgramadaRepository extends JpaRepository<SalidaPrograma
 
     @Override
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
+    @Query("select s from SalidaProgramada s where s.esDemo = false")
     List<SalidaProgramada> findAll();
 
     @Override
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
-    java.util.Optional<SalidaProgramada> findById(Long id);
+    @Query("select s from SalidaProgramada s where s.esDemo = false and s.id = :id")
+    java.util.Optional<SalidaProgramada> findById(@Param("id") Long id);
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from SalidaProgramada s left join fetch s.operador where s.id = :id")
@@ -74,7 +113,7 @@ public interface SalidaProgramadaRepository extends JpaRepository<SalidaPrograma
     @Query("""
             SELECT s
             FROM SalidaProgramada s
-            WHERE s.tour.id = :tourId
+            WHERE s.esDemo = false AND s.tour.id = :tourId
               AND s.estado = :estado
               AND s.cuposDisponibles > 0
               AND s.tour.activo = true
@@ -90,8 +129,10 @@ public interface SalidaProgramadaRepository extends JpaRepository<SalidaPrograma
             @Param("hora") java.time.LocalTime hora);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour", "embarcacion", "operador"})
-    List<SalidaProgramada> findByTourIdOrderByFechaAscHoraSalidaAsc(Long tourId);
+    @Query("select s from SalidaProgramada s where s.esDemo = false and s.tour.id = :tourId order by s.fecha, s.horaSalida")
+    List<SalidaProgramada> findByTourIdOrderByFechaAscHoraSalidaAsc(@Param("tourId") Long tourId);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour"})
-    List<SalidaProgramada> findByEmbarcacionIdOrderByFechaAscHoraSalidaAsc(Long embarcacionId);
+    @Query("select s from SalidaProgramada s where s.esDemo = false and s.embarcacion.id = :embarcacionId order by s.fecha, s.horaSalida")
+    List<SalidaProgramada> findByEmbarcacionIdOrderByFechaAscHoraSalidaAsc(@Param("embarcacionId") Long embarcacionId);
 }

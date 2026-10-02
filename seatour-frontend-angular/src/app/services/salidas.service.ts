@@ -13,6 +13,7 @@ export type EstadoSalida =
   | 'CANCELADA';
 
 export interface SalidaProgramada {
+  esDemo: boolean;
   tieneReservas: boolean;
   cambioOperativoConsumido: boolean;
   pasajerosReservados: number;
@@ -45,6 +46,7 @@ export interface SalidaProgramada {
 }
 
 export interface SalidaSolicitud {
+  esDemo?: boolean;
   motivoReprogramacion?: string;
   fecha: string;
   horaSalida: string;
@@ -87,6 +89,10 @@ export class SalidasService {
 
   obtenerReservasSalidaPropia(id: number): Observable<Reserva[]> {
     return this.http.get<Reserva[]>(`${this.apiUrl}/mis-salidas/${id}/reservas`);
+  }
+
+  listarDemo(): Observable<SalidaProgramada[]> {
+    return this.http.get<SalidaProgramada[]>(`${this.apiUrl}/demo`);
   }
 
   listar(): Observable<SalidaProgramada[]> {

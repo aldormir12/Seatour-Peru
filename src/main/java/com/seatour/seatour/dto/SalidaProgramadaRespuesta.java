@@ -6,6 +6,10 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class SalidaProgramadaRespuesta {
+    private boolean esDemo = false;
+    public boolean isEsDemo() { return esDemo; }
+    public void setEsDemo(boolean valor) { esDemo = valor; }
+
     private boolean tieneReservas;
     private boolean cambioOperativoConsumido;
     public boolean isCambioOperativoConsumido() { return cambioOperativoConsumido; }

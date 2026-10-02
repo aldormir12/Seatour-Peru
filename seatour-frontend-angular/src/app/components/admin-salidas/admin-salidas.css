@@ -6,7 +6,6 @@
   container-type: inline-size;
 }
 
-.salidas-filtros > *,
 input,
 select {
   min-width: 0;
@@ -14,6 +13,7 @@ select {
 }
 
 .salidas-filtros select {
+  min-width: 150px;
   width: 100%;
   text-overflow: ellipsis;
 }
@@ -41,17 +41,12 @@ select {
 }
 
 @container (min-width: 640px) {
-  .salidas-filtros,
   .salidas-tarjetas {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @container (min-width: 1080px) {
-  .salidas-filtros {
-    grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
-  }
-
   .salidas-tabla {
     display: block;
   }

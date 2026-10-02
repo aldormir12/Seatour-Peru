@@ -15,6 +15,11 @@ import java.time.LocalTime;
         @Index(name = "idx_salida_estado", columnList = "estado")
 })
 public class SalidaProgramada {
+    @Column(name = "es_demo", nullable = false, columnDefinition = "boolean default false")
+    private boolean esDemo = false;
+    public boolean isEsDemo() { return esDemo; }
+    public void setEsDemo(boolean valor) { esDemo = valor; }
+
     private Boolean cambioOperativoConsumido = false;
 
     public boolean isCambioOperativoConsumido() {

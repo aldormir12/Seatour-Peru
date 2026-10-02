@@ -57,6 +57,38 @@ export class MejorOpcionHoyComponent {
     return zona ? (nombres[zona] ?? zona) : 'Sin zona';
   }
 
+  private fechaHoy(): string {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const valor = (tipo: string) => partes.find(p => p.type === tipo)?.value;
+    return `${valor('year')}-${valor('month')}-${valor('day')}`;
+  }
+
+  titulo(opcion: MejorOpcionRespuesta): string {
+    const fechaSalida = opcion.fechaSalida ?? opcion.mejorVentanaHoraria?.inicio.slice(0, 10) ?? opcion.fecha;
+    return fechaSalida === this.fechaHoy() ? 'Tu mejor opción hoy' : 'Tu próxima mejor opción';
+  }
+
+  fechaHora(inicio: string): string {
+    const fecha = inicio.slice(0, 10);
+    const hoy = this.fechaHoy();
+    const manana = new Date(`${hoy}T12:00:00-05:00`);
+    manana.setUTCDate(manana.getUTCDate() + 1);
+    const fechaManana = manana.toISOString().slice(0, 10);
+    const etiqueta = fecha === hoy ? 'Hoy' : fecha === fechaManana ? 'Mañana'
+      : new Intl.DateTimeFormat('es-PE', {
+          day: '2-digit', month: 'short', timeZone: 'America/Lima'
+        }).format(new Date(`${fecha}T12:00:00-05:00`)).replace('.', '');
+    return `${etiqueta} · ${this.horaAmPm(inicio)}`;
+  }
+
+  horaAmPm(valor: string): string {
+    const [horas, minutos] = this.hora(valor).split(':').map(Number);
+    if (!Number.isFinite(horas) || !Number.isFinite(minutos)) return '--:--';
+    return `${horas % 12 || 12}:${String(minutos).padStart(2, '0')} ${horas < 12 ? 'a. m.' : 'p. m.'}`;
+  }
+
   hora(valor: string | null | undefined): string {
     if (!valor) return '--:--';
 

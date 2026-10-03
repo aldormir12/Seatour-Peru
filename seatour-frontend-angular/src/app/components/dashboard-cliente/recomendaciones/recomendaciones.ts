@@ -1,3 +1,4 @@
+import { ResenasTour } from '../../resenas/resenas-tour';
 import { UbicacionTour } from '../../ubicacion-tour/ubicacion-tour';
 import {
   Component,
@@ -79,6 +80,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 
 interface TourDestacadoConSalida {
+  promedioEstrellas?: number | null;
+  cantidadResenas?: number;
   zonaMaritima?: import('../../../services/tours').ZonaMaritimaTour | null;
   id: number;
   nombre: string;
@@ -146,7 +149,7 @@ function validarLuhn(
   selector: 'app-recomendaciones',
   standalone: true,
 
-  imports: [UbicacionTour,
+  imports: [ResenasTour, UbicacionTour,
     MejorOpcionHoyComponent,
     RouterLink,
     PronosticoMarino,

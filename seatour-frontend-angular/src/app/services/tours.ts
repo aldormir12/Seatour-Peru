@@ -8,6 +8,8 @@ import { CategoriaTour, CategoriasService } from './categorias.service';
 export type ZonaMaritimaTour = 'MANCORA' | 'LOS_ORGANOS' | 'CABO_BLANCO' | 'TALARA';
 
 export interface Tour {
+  promedioEstrellas?: number | null;
+  cantidadResenas?: number;
   zonaMaritima: ZonaMaritimaTour | null;
   id: number;
   nombre: string;

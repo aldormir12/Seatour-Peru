@@ -5,6 +5,7 @@ import com.seatour.seatour.model.Tour;
 import com.seatour.seatour.repository.CategoriaTourRepository;
 import com.seatour.seatour.repository.SalidaProgramadaRepository;
 import com.seatour.seatour.repository.TourRepository;
+import com.seatour.seatour.repository.ResenaRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.math.RoundingMode;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Validated
@@ -23,21 +27,23 @@ public class TourService {
     private final CategoriaTourRepository categorias;
     private final SalidaProgramadaRepository salidas;
     private final AdicionalesBaseService adicionalesBase;
+    private final ResenaRepository resenas;
 
     public TourService(TourRepository tours, CategoriaTourRepository categorias,
-            SalidaProgramadaRepository salidas, AdicionalesBaseService adicionalesBase) {
+            SalidaProgramadaRepository salidas, AdicionalesBaseService adicionalesBase, ResenaRepository resenas) {
         this.tours = tours;
         this.categorias = categorias;
         this.salidas = salidas;
         this.adicionalesBase = adicionalesBase;
+        this.resenas = resenas;
     }
 
     public List<TourRespuesta> listarActivos() {
-        return tours.findByActivoTrueOrderByNombreAsc().stream().map(TourRespuesta::desde).toList();
+        return respuestas(tours.findByActivoTrueOrderByNombreAsc());
     }
 
     public List<TourRespuesta> listarTodos() {
-        return tours.findAllByOrderByNombreAsc().stream().map(TourRespuesta::desde).toList();
+        return respuestas(tours.findAllByOrderByNombreAsc());
     }
 
     @Transactional
@@ -61,14 +67,14 @@ public class TourService {
         }
         aplicar(tour, datos.nombre(), datos.descripcion(), datos.duracionMinutos(),
                 datos.precioBase(), datos.activo(), datos.categoriaId());
-        return TourRespuesta.desde(tours.saveAndFlush(tour));
+        return respuestas(List.of(tours.saveAndFlush(tour))).get(0);
     }
 
     @Transactional
     public TourRespuesta cambiarEstado(Long id, @Valid TourEstado datos) {
         Tour tour = buscar(id);
         tour.setActivo(datos.activo());
-        return TourRespuesta.desde(tours.saveAndFlush(tour));
+        return respuestas(List.of(tours.saveAndFlush(tour))).get(0);
     }
 
     @Transactional
@@ -80,6 +86,19 @@ public class TourService {
         }
         tours.delete(tour);
         tours.flush();
+    }
+
+    private List<TourRespuesta> respuestas(List<Tour> lista) {
+        if (lista.isEmpty()) return List.of();
+        // Una consulta agrupada para todo el listado, sin cargar las reseñas individuales.
+        var resumenes = resenas.resumirPorTours(lista.stream().map(Tour::getId).toList()).stream()
+                .collect(Collectors.toMap(ResenaRepository.ResumenTour::getTourId, Function.identity()));
+        return lista.stream().map(tour -> {
+            var resumen = resumenes.get(tour.getId());
+            return resumen == null ? TourRespuesta.desde(tour) : TourRespuesta.desde(tour,
+                    BigDecimal.valueOf(resumen.getPromedio()).setScale(2, RoundingMode.HALF_UP),
+                    resumen.getCantidad());
+        }).toList();
     }
 
     private Tour buscar(Long id) {

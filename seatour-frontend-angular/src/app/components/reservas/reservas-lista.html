@@ -87,6 +87,18 @@
 
         <button
           type="button"
+          (click)="cambiarFiltro('COMPLETADA')"
+          class="rounded-xl px-4 py-2 text-xs font-semibold transition"
+          [class.bg-white]="filtro() === 'COMPLETADA'"
+          [class.text-[#102d41]]="filtro() === 'COMPLETADA'"
+          [class.text-white/75]="filtro() !== 'COMPLETADA'"
+          [class.hover:bg-white/10]="filtro() !== 'COMPLETADA'"
+        >
+          Completadas
+        </button>
+
+        <button
+          type="button"
           (click)="cambiarFiltro('PENDIENTE')"
           class="rounded-xl px-4 py-2 text-xs font-semibold transition"
           [class.bg-white]="filtro() === 'PENDIENTE'"
@@ -242,7 +254,7 @@
                   [class.bg-red-400/15]="r.estado === 'CANCELADA'"
                   [class.text-red-200]="r.estado === 'CANCELADA'"
                 >
-                  {{ etiquetaEstado(r.estado) }}
+                  {{ etiquetaEstado(r.estado, r.estadoSalida) }}
                 </span>
               </div>
 
@@ -378,7 +390,11 @@
                   </svg>
                 </button>
               </div>
-            </article>
+            
+@if (auth.usuario()?.rol === 'CLIENTE' && r.estadoSalida === 'COMPLETADA') {
+ <div class="px-4 pb-4"><app-calificar-reserva [reserva]="r" /></div>
+}
+</article>
           } @empty {
             <div
               class="w-full rounded-[24px] border border-white/15 bg-black/20 px-7 py-9 text-center backdrop-blur-xl"
@@ -508,7 +524,7 @@
                   [class.bg-red-50]="r.estado === 'CANCELADA'"
                   [class.text-red-800]="r.estado === 'CANCELADA'"
                 >
-                  {{ etiquetaEstado(r.estado) }}
+                  {{ etiquetaEstado(r.estado, r.estadoSalida) }}
                 </span>
               </div>
             </section>

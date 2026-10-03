@@ -1,3 +1,4 @@
+import { ResenasTour } from '../resenas/resenas-tour';
 import { UbicacionTour } from '../ubicacion-tour/ubicacion-tour';
 import {
   Component,
@@ -22,7 +23,7 @@ import {
 
 @Component({
   selector: 'app-tours-cliente',
-  imports: [UbicacionTour,
+  imports: [ResenasTour, UbicacionTour,
     CurrencyPipe,
     RecomendacionesComponent
   ],

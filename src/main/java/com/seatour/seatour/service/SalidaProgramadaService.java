@@ -19,15 +19,17 @@ public class SalidaProgramadaService {
     private final ReservaRepository reservas;
     private final UsuarioRepository usuarios;
     private final ModoDemoService modoDemo;
+    private final NotificacionService notificaciones;
 
     public SalidaProgramadaService(SalidaProgramadaRepository salidas, TourRepository tours,
-            EmbarcacionRepository embarcaciones, ReservaRepository reservas, UsuarioRepository usuarios, ModoDemoService modoDemo) {
+            EmbarcacionRepository embarcaciones, ReservaRepository reservas, UsuarioRepository usuarios, ModoDemoService modoDemo, NotificacionService notificaciones) {
         this.salidas = salidas;
         this.tours = tours;
         this.embarcaciones = embarcaciones;
         this.reservas = reservas;
         this.usuarios = usuarios;
         this.modoDemo = modoDemo;
+        this.notificaciones = notificaciones;
     }
 
     public List<SalidaProgramada> listarTodas() { return salidas.findAll(); }
@@ -182,7 +184,17 @@ public class SalidaProgramadaService {
         existente.setTour(datos.getTour());
         existente.setEmbarcacion(datos.getEmbarcacion());
         existente.setOperador(datos.getOperador());
-        return salidas.saveAndFlush(existente);
+        var guardada = salidas.saveAndFlush(existente);
+        if (cambiaHorario && !guardada.isEsDemo()) {
+            String evento = "SALIDA_REPROGRAMADA:" + id + ":" + java.util.UUID.randomUUID();
+            reservas.findBySalidaIdOrderByIdAsc(id).stream()
+                    .filter(reserva -> reserva.getEstado() != EstadoReserva.CANCELADA)
+                    .map(reserva -> reserva.getCliente().getId()).distinct().sorted()
+                    .forEach(usuarioId -> notificaciones.generar(usuarioId, evento,
+                            "SALIDA_REPROGRAMADA", "Salida reprogramada",
+                            "Tu salida ha sido reprogramada. Revisa los nuevos datos de tu reserva."));
+        }
+        return guardada;
     }
 
     @Transactional
@@ -304,6 +316,7 @@ public class SalidaProgramadaService {
                     .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Embarcación no encontrada")));
         }
         validarOcupacion(salida);
+        var canceladas = new java.util.ArrayList<Reserva>();
         if (destino == EstadoSalida.CANCELADA) {
             // Toda operación de reservas bloquea primero la salida: no hay doble restitución.
             long reintegrar = 0;
@@ -312,6 +325,7 @@ public class SalidaProgramadaService {
                     if (reserva.getPasajeros() <= 0) throw error(HttpStatus.CONFLICT, "Una reserva tiene una cantidad inválida de pasajeros");
                     reintegrar += reserva.getPasajeros();
                     reserva.cancelar();
+                    canceladas.add(reserva);
                 }
             }
             salida.setCuposDisponibles(Math.toIntExact(salida.getCuposDisponibles() + reintegrar));
@@ -323,7 +337,28 @@ public class SalidaProgramadaService {
         if (origen == EstadoSalida.EN_CURSO && destino == EstadoSalida.COMPLETADA)
             salida.setFinReal(LocalDateTime.now(ZONA));
         salida.setEstado(destino);
-        return salidas.saveAndFlush(salida);
+        var guardada = salidas.saveAndFlush(salida);
+        if (!guardada.isEsDemo()) {
+            // Orden único de destinatarios para evitar bloqueos cruzados entre salidas.
+            if (destino == EstadoSalida.CANCELADA) {
+                canceladas.sort(java.util.Comparator.comparing(reserva -> reserva.getCliente().getId()));
+                for (var reserva : canceladas) {
+                    Long usuarioId = reserva.getCliente().getId();
+                    notificaciones.generar(usuarioId, "RESERVA_CANCELADA:" + reserva.getId(),
+                            "RESERVA_CANCELADA", "Reserva cancelada", "Tu reserva ha sido cancelada.");
+                    notificaciones.generar(usuarioId, "SALIDA_CANCELADA:" + id,
+                            "SALIDA_CANCELADA", "Salida cancelada", "Tu salida ha sido cancelada.");
+                }
+            } else if (destino == EstadoSalida.COMPLETADA) {
+                reservas.findBySalidaIdOrderByIdAsc(id).stream()
+                        .filter(reserva -> reserva.getEstado() == EstadoReserva.CONFIRMADA)
+                        .map(reserva -> reserva.getCliente().getId()).distinct().sorted()
+                        .forEach(usuarioId -> notificaciones.generar(usuarioId, "SALIDA_COMPLETADA:" + id,
+                                "SALIDA_COMPLETADA", "Califica tu experiencia",
+                                "Tu salida ha finalizado. Te invitamos a calificar tu experiencia."));
+            }
+        }
+        return guardada;
     }
 
     private void validarCambioOperativo(SalidaProgramada salida) {

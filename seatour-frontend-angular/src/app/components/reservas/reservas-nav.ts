@@ -1,4 +1,7 @@
-import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, HostListener, inject, OnDestroy, signal, viewChild } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { catchError, EMPTY, filter, forkJoin, Subscription, switchMap } from 'rxjs';
+import { NotificacionesService, Notificacion } from '../../services/notificaciones.service';
 import { PerfilCliente } from '../perfil-cliente/perfil-cliente';
 import {
   Router,
@@ -24,7 +27,8 @@ interface NavLink {
   imports: [
     RouterLink,
     RouterLinkActive,
-    PerfilCliente
+    PerfilCliente,
+    DatePipe
   ],
 
   template: `
@@ -106,32 +110,73 @@ interface NavLink {
           as usuario
         ) {
 
-          <!-- NOTIFICACIONES -->
-          <button
-            class="notification-btn"
-            type="button"
-            aria-label="Notificaciones"
-          >
-
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 4a4 4 0 0 0-4 4v2.1c0 .7-.2 1.3-.6 1.9L6 14.2V16h12v-1.8L16.6 12c-.4-.6-.6-1.2-.6-1.9V8a4 4 0 0 0-4-4Z"
-              />
-
-              <path
-                d="M10 18a2 2 0 0 0 4 0"
-              />
-            </svg>
-
-            <span
-              class="notification-dot"
-            ></span>
-
-          </button>
-
+          @if (usuario.rol === 'CLIENTE') {
+            <div class="notifications-anchor" #notificacionesZona>
+              <button class="notification-btn" type="button" #campanita (click)="alternarNotificaciones()"
+                [disabled]="guardandoLectura()"
+                [attr.aria-label]="'Notificaciones, ' + noLeidas() + ' no leídas'"
+                [attr.aria-expanded]="notificacionesAbiertas()" aria-controls="panel-notificaciones">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 4a4 4 0 0 0-4 4v2.1c0 .7-.2 1.3-.6 1.9L6 14.2V16h12v-1.8L16.6 12c-.4-.6-.6-1.2-.6-1.9V8a4 4 0 0 0-4-4Z" />
+                  <path d="M10 18a2 2 0 0 0 4 0" />
+                </svg>
+                @if (noLeidas() > 0) { <span class="notification-badge" aria-hidden="true">{{ noLeidas() }}</span> }
+              </button>
+              @if (notificacionesAbiertas()) {
+                <section id="panel-notificaciones" class="notifications-panel" aria-labelledby="notificaciones-titulo"
+                  [attr.aria-busy]="cargandoNotificaciones() || guardandoLectura()">
+                  <header class="notifications-header">
+                    <div><span class="notifications-eyebrow">SEATOUR</span><h2 id="notificaciones-titulo">Notificaciones</h2></div>
+                    <button type="button" class="notifications-close" (click)="cerrarNotificaciones()" aria-label="Cerrar notificaciones">×</button>
+                  </header>
+                  <div class="notifications-toolbar">
+                    <span>{{ noLeidas() }} sin leer</span>
+                    <button type="button" (click)="marcarTodasNotificaciones()"
+                      [disabled]="noLeidas() === 0 || cargandoNotificaciones() || guardandoLectura()">Marcar todas como leídas</button>
+                  </div>
+                  @if (errorNotificaciones()) {
+                    <div class="notifications-error" role="alert">{{ errorNotificaciones() }}
+                      <button type="button" (click)="refrescarNotificaciones(paginaNotificaciones())"
+                        [disabled]="cargandoNotificaciones() || guardandoLectura()">Reintentar</button>
+                    </div>
+                  }
+                  <div class="notifications-list" aria-live="polite">
+                    @if (cargandoNotificaciones()) {
+                      <p class="notifications-state" role="status">Cargando notificaciones…</p>
+                    } @else if (notificacionesLista().length === 0 && !errorNotificaciones()) {
+                      <div class="notifications-state"><strong>Todo al día</strong><p>Aún no tienes notificaciones.</p></div>
+                    } @else {
+                      @for (aviso of notificacionesLista(); track aviso.id) {
+                        <article class="notification-item" [class.notification-unread]="!aviso.leida">
+                          <span class="notification-status-dot" [class.is-unread]="!aviso.leida" aria-hidden="true"></span>
+                          <div class="notification-copy">
+                            <h3>{{ aviso.titulo }}</h3><p>{{ aviso.mensaje }}</p>
+                            <div class="notification-meta">
+                              <time [attr.datetime]="aviso.creadaEn">{{ aviso.creadaEn | date:'dd/MM/yyyy, HH:mm':'-0500' }}</time>
+                              <span>{{ aviso.leida ? 'Leída' : 'No leída' }}</span>
+                            </div>
+                            @if (!aviso.leida) {
+                              <button type="button" class="notification-read" (click)="marcarNotificacion(aviso)"
+                                [disabled]="guardandoLectura() || cargandoNotificaciones()">Marcar como leída</button>
+                            }
+                          </div>
+                        </article>
+                      }
+                    }
+                  </div>
+                  @if (totalPaginasNotificaciones() > 1) {
+                    <footer class="notifications-pagination">
+                      <button type="button" (click)="refrescarNotificaciones(paginaNotificaciones() - 1)"
+                        [disabled]="paginaNotificaciones() === 0 || cargandoNotificaciones() || guardandoLectura()">Anterior</button>
+                      <span>{{ paginaNotificaciones() + 1 }} / {{ totalPaginasNotificaciones() }}</span>
+                      <button type="button" (click)="refrescarNotificaciones(paginaNotificaciones() + 1)"
+                        [disabled]="paginaNotificaciones() + 1 >= totalPaginasNotificaciones() || cargandoNotificaciones() || guardandoLectura()">Siguiente</button>
+                    </footer>
+                  }
+                </section>
+              }
+            </div>
+          }
 
           <div class="user-actions">
 
@@ -840,6 +885,35 @@ styles: [`
 
     /* ====================================================== */
     /* NOTIFICACIONES */
+    .notifications-anchor { position: relative; }
+    .notification-badge { position: absolute; top: -5px; right: -7px; min-width: 20px; padding: 3px 5px; border-radius: 999px; background: #159fe1; color: white; font-size: 10px; line-height: 14px; font-weight: 800; border: 2px solid #1f2b3b; }
+    .notifications-panel { position: absolute; top: calc(100% + 14px); right: 0; z-index: 100; width: min(390px, calc(100vw - 36px)); overflow: hidden; border: 1px solid #dce7ee; border-radius: 20px; background: white; color: #1f2b3b; box-shadow: 0 20px 60px rgba(15, 35, 53, .22); text-align: left; }
+    .notifications-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 12px; }
+    .notifications-eyebrow { color: #159fe1; font-size: 10px; font-weight: 800; letter-spacing: 2px; }
+    .notifications-header h2 { margin: 4px 0 0; font-size: 21px; font-weight: 800; }
+    .notifications-close { border: 0; background: #eef5f9; color: #526577; border-radius: 50%; width: 32px; height: 32px; font-size: 24px; cursor: pointer; }
+    .notifications-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 0 20px 14px; border-bottom: 1px solid #edf2f6; font-size: 11px; color: #526577; }
+    .notifications-toolbar button, .notification-read, .notifications-pagination button, .notifications-error button { border: 0; background: transparent; color: #087fb7; font-size: 11px; font-weight: 700; cursor: pointer; padding: 5px 0; }
+    .notifications-panel button:disabled { opacity: .45; cursor: default; }
+    .notifications-panel button:focus-visible, .notification-btn:focus-visible { outline: 2px solid #159fe1; outline-offset: 3px; }
+    .notifications-list { max-height: min(440px, 55vh); overflow-y: auto; overscroll-behavior: contain; }
+    .notification-item { display: flex; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #edf2f6; }
+    .notification-unread { background: #f0f8fd; }
+    .notification-status-dot { flex: 0 0 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: #d4e0e8; }
+    .notification-status-dot.is-unread { background: #159fe1; }
+    .notification-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .notification-copy h3 { margin: 0; font-size: 13px; line-height: 1.5; font-weight: 750; }
+    .notification-copy p { margin: 5px 0 9px; color: #526577; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
+    .notification-meta { display: flex; flex-wrap: wrap; gap: 10px; color: #738695; font-size: 10px; }
+    .notification-read { margin-top: 8px; }
+    .notifications-state { padding: 32px 20px; text-align: center; color: #738695; font-size: 13px; }
+    .notifications-state strong { display: block; color: #1f2b3b; font-size: 16px; }
+    .notifications-state p { margin: 8px 0 0; }
+    .notifications-error { padding: 12px 20px; color: #9b3b3b; background: #fff4f4; font-size: 12px; line-height: 1.6; }
+    .notifications-error button { display: block; }
+    .notifications-pagination { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; font-size: 11px; color: #526577; border-top: 1px solid #edf2f6; }
+    @media (max-width: 520px) { .notifications-panel { position: fixed; top: 152px; left: 18px; right: 18px; width: auto; max-height: calc(100dvh - 170px); overflow-y: auto; } }
+
     /* ====================================================== */
 
     .notification-btn {
@@ -903,30 +977,7 @@ styles: [`
     }
 
 
-    .notification-dot {
-      position: absolute;
 
-      top: 10px;
-      right: 11px;
-
-      width: 7px;
-      height: 7px;
-
-      border-radius:
-        999px;
-
-      background:
-        #ffffff;
-
-      box-shadow:
-        0 0 0 3px
-        rgba(
-          255,
-          255,
-          255,
-          0.12
-        );
-    }
 
 
     /* ====================================================== */
@@ -1270,7 +1321,139 @@ styles: [`
 
   `]
 })
-export class ReservasNav {
+export class ReservasNav implements OnDestroy {
+  private readonly notificacionesApi = inject(NotificacionesService);
+  readonly notificacionesAbiertas = signal(false);
+  readonly noLeidas = signal(0);
+  readonly notificacionesLista = signal<Notificacion[]>([]);
+  readonly cargandoNotificaciones = signal(false);
+  readonly guardandoLectura = signal(false);
+  readonly errorNotificaciones = signal('');
+  readonly paginaNotificaciones = signal(0);
+  readonly totalPaginasNotificaciones = signal(0);
+  private readonly notificacionesZona = viewChild<ElementRef<HTMLElement>>('notificacionesZona');
+  private readonly campanita = viewChild<ElementRef<HTMLButtonElement>>('campanita');
+  private peticiones = new Subscription();
+  private refresco?: Subscription;
+
+  constructor() {
+    effect(onCleanup => {
+      const usuario = this.auth.usuario();
+      this.peticiones.unsubscribe();
+      this.peticiones = new Subscription();
+      this.notificacionesAbiertas.set(false);
+      this.noLeidas.set(0);
+      this.notificacionesLista.set([]);
+      this.errorNotificaciones.set('');
+      this.cargandoNotificaciones.set(false);
+      this.guardandoLectura.set(false);
+      this.paginaNotificaciones.set(0);
+      this.totalPaginasNotificaciones.set(0);
+      if (usuario?.rol === 'CLIENTE') {
+        this.refresco = this.notificacionesApi.contarNoLeidas().subscribe({
+          next: respuesta => this.noLeidas.set(respuesta.noLeidas),
+          error: () => this.errorNotificaciones.set('No se pudo consultar el contador de notificaciones.')
+        });
+        this.peticiones.add(this.refresco);
+        this.peticiones.add(this.notificacionesApi.refrescosContador.pipe(
+          filter(usuarioId => usuarioId === usuario.id),
+          switchMap(() => this.notificacionesApi.contarNoLeidas().pipe(
+            catchError(() => {
+              this.errorNotificaciones.set('No se pudo consultar el contador de notificaciones.');
+              return EMPTY;
+            })
+          ))
+        ).subscribe(respuesta => this.noLeidas.set(respuesta.noLeidas)));
+
+      }
+      onCleanup(() => this.peticiones.unsubscribe());
+    });
+  }
+
+  alternarNotificaciones(): void {
+    if (this.auth.usuario()?.rol !== 'CLIENTE') return;
+    if (this.notificacionesAbiertas()) this.cerrarNotificaciones();
+    else {
+      this.notificacionesAbiertas.set(true);
+      this.refrescarNotificaciones();
+    }
+  }
+
+  cerrarNotificaciones(): void { this.notificacionesAbiertas.set(false); }
+
+  @HostListener('document:click', ['$event'])
+  cerrarFuera(event: MouseEvent): void {
+    if (this.notificacionesAbiertas() && event.target instanceof Node &&
+        !this.notificacionesZona()?.nativeElement.contains(event.target)) this.cerrarNotificaciones();
+  }
+
+  @HostListener('document:keydown.escape')
+  cerrarConEscape(): void {
+    if (!this.notificacionesAbiertas()) return;
+    this.cerrarNotificaciones();
+    this.campanita()?.nativeElement.focus();
+  }
+
+  refrescarNotificaciones(pagina = 0): void {
+    if (this.auth.usuario()?.rol !== 'CLIENTE' || this.guardandoLectura()) return;
+    this.refresco?.unsubscribe();
+    this.cargandoNotificaciones.set(true);
+    this.errorNotificaciones.set('');
+    this.refresco = forkJoin({
+      listado: this.notificacionesApi.listar(pagina),
+      contador: this.notificacionesApi.contarNoLeidas()
+    }).subscribe({
+      next: ({ listado, contador }) => {
+        this.notificacionesLista.set(listado.notificaciones);
+        this.paginaNotificaciones.set(listado.pagina);
+        this.totalPaginasNotificaciones.set(listado.totalPaginas);
+        this.noLeidas.set(contador.noLeidas);
+        this.cargandoNotificaciones.set(false);
+      },
+      error: () => {
+        this.cargandoNotificaciones.set(false);
+        this.errorNotificaciones.set('No se pudieron cargar las notificaciones. Inténtalo nuevamente.');
+      }
+    });
+    this.peticiones.add(this.refresco);
+  }
+
+  marcarNotificacion(aviso: Notificacion): void {
+    if (aviso.leida || this.guardandoLectura() || this.cargandoNotificaciones() || this.auth.usuario()?.rol !== 'CLIENTE') return;
+    this.guardandoLectura.set(true);
+    this.errorNotificaciones.set('');
+    this.peticiones.add(this.notificacionesApi.marcarLeida(aviso.id).pipe(
+      switchMap(actualizada => {
+        this.notificacionesLista.update(lista => lista.map(item => item.id === actualizada.id ? actualizada : item));
+        return this.notificacionesApi.contarNoLeidas();
+      })
+    ).subscribe({
+      next: contador => { this.noLeidas.set(contador.noLeidas); this.guardandoLectura.set(false); },
+      error: () => {
+        this.guardandoLectura.set(false);
+        this.errorNotificaciones.set('No se pudo actualizar la lectura o el contador. Refresca las notificaciones.');
+      }
+    }));
+  }
+
+  marcarTodasNotificaciones(): void {
+    if (this.guardandoLectura() || this.cargandoNotificaciones() || this.noLeidas() === 0 || this.auth.usuario()?.rol !== 'CLIENTE') return;
+    this.guardandoLectura.set(true);
+    this.errorNotificaciones.set('');
+    this.peticiones.add(this.notificacionesApi.marcarTodasLeidas().subscribe({
+      next: () => {
+        this.guardandoLectura.set(false);
+        this.refrescarNotificaciones(this.paginaNotificaciones());
+      },
+      error: () => {
+        this.guardandoLectura.set(false);
+        this.errorNotificaciones.set('No se pudieron marcar las notificaciones como leídas. Inténtalo nuevamente.');
+      }
+    }));
+  }
+
+  ngOnDestroy(): void { this.peticiones.unsubscribe(); }
+
   readonly perfilAbierto = signal(false);
   private readonly panelPerfil = viewChild<ElementRef<HTMLDialogElement>>('panelPerfil');
 

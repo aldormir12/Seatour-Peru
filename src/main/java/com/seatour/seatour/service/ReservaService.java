@@ -20,12 +20,16 @@ public class ReservaService {
     private final EmbarcacionRepository embarcaciones;
     private final TarifasPasajerosService tarifas;
     private final AdicionalService adicionales;
+    private final NotificacionService notificaciones;
+    private final ResenaRepository resenas;
     private static final ZoneId ZONA = ZoneId.of("America/Lima");
 
     public ReservaService(ReservaRepository reservas, SalidaProgramadaRepository salidas, UsuarioRepository usuarios,
-            TourRepository tours, EmbarcacionRepository embarcaciones, TarifasPasajerosService tarifas, AdicionalService adicionales) {
+            TourRepository tours, EmbarcacionRepository embarcaciones, TarifasPasajerosService tarifas, AdicionalService adicionales, NotificacionService notificaciones, ResenaRepository resenas) {
         this.reservas = reservas; this.salidas = salidas; this.usuarios = usuarios;
         this.tours = tours; this.embarcaciones = embarcaciones; this.tarifas = tarifas; this.adicionales = adicionales;
+        this.notificaciones = notificaciones;
+        this.resenas = resenas;
     }
 
     @Transactional
@@ -60,6 +64,8 @@ public class ReservaService {
             throw error(HttpStatus.CONFLICT, "El precio cambio. Revisa el nuevo resumen antes de reservar");
         salida.setCuposDisponibles(salida.getCuposDisponibles() - datos.totalPasajeros());
         var reserva = reservas.saveAndFlush(nueva);
+        notificarReserva(reserva, "RESERVA_CREADA", "Reserva realizada",
+                "Reserva realizada con éxito. Revisa tu correo para ver los detalles de tu reserva.");
         return respuesta(reserva, actor);
     }
 
@@ -114,6 +120,8 @@ public class ReservaService {
             throw error(HttpStatus.CONFLICT, "No se puede confirmar una reserva con tour o embarcación inactivos");
         validarOcupacion(salida);
         reserva.confirmar();
+        notificarReserva(reserva, "RESERVA_CONFIRMADA", "Reserva confirmada",
+                "Tu reserva ha sido confirmada.");
     }
 
     @Transactional
@@ -128,7 +136,14 @@ public class ReservaService {
         validarOcupacion(salida);
         salida.setCuposDisponibles(Math.addExact(salida.getCuposDisponibles(), reserva.getPasajeros()));
         reserva.cancelar();
+        notificarReserva(reserva, "RESERVA_CANCELADA", "Reserva cancelada",
+                "Tu reserva ha sido cancelada.");
         return respuesta(reserva, actor);
+    }
+
+    private void notificarReserva(Reserva reserva, String tipo, String titulo, String mensaje) {
+        notificaciones.generar(reserva.getCliente().getId(), tipo + ":" + reserva.getId(),
+                tipo, titulo, mensaje);
     }
 
     private Reserva bloquearReserva(Long id) {
@@ -186,6 +201,7 @@ public class ReservaService {
     private ResponseStatusException error(HttpStatus estado, String mensaje) { return new ResponseStatusException(estado, mensaje); }
     private ReservaRespuesta respuesta(Reserva r, LoginRespuesta a) {
         var s = r.getSalida();
+        var resena = resenas.findByReserva_Id(r.getId()).map(ResenaRespuesta::desde).orElse(null);
         return new ReservaRespuesta(r.getId(), r.getCliente().getId(),
                 r.getCliente().getNombre() + " " + r.getCliente().getApellido(), s.getId(), s.getTour().getNombre(),
                 s.getFecha(), s.getHoraSalida(), s.getEmbarcacion().getNombre(), r.getPasajeros(),
@@ -195,6 +211,9 @@ public class ReservaService {
                         && Boolean.TRUE.equals(s.getTour().getActivo())
                         && Boolean.TRUE.equals(s.getEmbarcacion().getActivo()), cancelable(r),
                 r.getNinos(), r.getAdultos(), r.getAdultosMayores(), r.getPasajeros(), r.getSubtotalAdicionales(),
-                r.getAdicionales().stream().map(ReservaAdicionalRespuesta::desde).toList());
+                r.getAdicionales().stream().map(ReservaAdicionalRespuesta::desde).toList(),
+                s.getTour().getId(), s.getEstado(), "CLIENTE".equals(a.rol())
+                        && r.getCliente().getId().equals(a.id()) && r.getEstado() == EstadoReserva.CONFIRMADA
+                        && s.getEstado() == EstadoSalida.COMPLETADA && resena == null, resena);
     }
 }

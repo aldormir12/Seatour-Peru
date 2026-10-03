@@ -1,3 +1,4 @@
+import { CalificacionesPendientes } from '../resenas/calificaciones-pendientes';
 import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -44,7 +45,7 @@ interface CondicionActual {
 @Component({
   selector: 'app-dashboard-cliente',
   standalone: true,
-  imports: [RouterLink, RecomendacionesComponent, LiveResumen],
+  imports: [CalificacionesPendientes, RouterLink, RecomendacionesComponent, LiveResumen],
   templateUrl: './dashboard-cliente.html',
   styleUrl: './dashboard-cliente.css'
 })

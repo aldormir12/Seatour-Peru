@@ -1,3 +1,4 @@
+import { CalificarReserva } from '../resenas/calificar-reserva';
 import {
   Component,
   ElementRef,
@@ -30,7 +31,7 @@ import { ClienteShell } from '../../layouts/cliente-shell/cliente-shell';
   selector: 'app-reservas-lista',
   standalone: true,
 
-  imports: [
+  imports: [CalificarReserva, 
     CurrencyPipe,
     DatePipe,
     RouterLink
@@ -49,7 +50,7 @@ export class ReservasListaComponent {
   readonly error = signal('');
 
   readonly filtro = signal<
-    '' | 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA'
+    '' | 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA' | 'COMPLETADA'
   >('');
 
   /*
@@ -91,6 +92,12 @@ export class ReservasListaComponent {
 
     if (!estado) {
       return this.reservas();
+    }
+
+    if (estado === 'COMPLETADA') {
+      return this.reservas().filter(
+        r => r.estado === 'CONFIRMADA' && r.estadoSalida === 'COMPLETADA'
+      );
     }
 
     return this.reservas()
@@ -157,7 +164,8 @@ export class ReservasListaComponent {
       '' |
       'PENDIENTE' |
       'CONFIRMADA' |
-      'CANCELADA'
+      'CANCELADA' |
+      'COMPLETADA'
   ): void {
     this.filtro.set(estado);
     this.reiniciarCarrusel = true;
@@ -454,8 +462,12 @@ export class ReservasListaComponent {
   // =========================================================
 
   etiquetaEstado(
-    estado: Reserva['estado']
+    estado: Reserva['estado'],
+    estadoSalida?: Reserva['estadoSalida']
   ): string {
+    if (estado === 'CONFIRMADA' && estadoSalida === 'COMPLETADA') {
+      return 'Completada';
+    }
     switch (estado) {
       case 'CONFIRMADA':
         return 'Confirmada';

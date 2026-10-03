@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { tap } from 'rxjs';
 import { API_URL } from './auth.service';
+import { NotificacionesService } from './notificaciones.service';
 
 export interface Salida {
   id: number; fecha: string; horaSalida: string; cuposDisponibles: number;
@@ -27,6 +28,9 @@ export interface ReservaAdicional {
   cantidad: number; precioUnitario: number; subtotal: number;
 }
 export interface Reserva {
+  tourId?: number; estadoSalida?: 'PROGRAMADA' | 'EN_CURSO' | 'COMPLETADA' | 'CANCELADA';
+  puedeCalificar?: boolean;
+  resena?: import('./resenas.service').Resena | null;
   subtotalAdicionales?: number; adicionales?: ReservaAdicional[];
   ninos: number | null; adultos: number | null; adultosMayores: number | null; totalPasajeros: number;
   id: number; clienteId: number; clienteNombre: string; salidaId: number; tourNombre: string;
@@ -50,6 +54,7 @@ export function errorReserva(error: HttpErrorResponse): string {
 
 @Injectable({ providedIn: 'root' })
 export class ReservasService {
+  private readonly notificaciones = inject(NotificacionesService);
   private readonly http = inject(HttpClient);
   private readonly cuposSignal = signal<Partial<Record<number, number>>>({});
   readonly cupos = this.cuposSignal.asReadonly();
@@ -64,7 +69,12 @@ export class ReservasService {
   tarifas() { return this.http.get<TarifaPasajero[]>(`${API_URL}/reservas/tarifas`); }
   adicionalesPorTour(tourId: number) { return this.http.get<Adicional[]>(`${API_URL}/tours/${tourId}/adicionales`); }
   crear(salidaId: number, cantidades: CantidadesPasajeros, precioEsperado: number, adicionalesIds: number[] = []) {
-    return this.http.post<Reserva>(`${API_URL}/reservas`, { salidaId, ...cantidades, precioEsperado, adicionalesIds }).pipe(tap(r => this.actualizar(r)));
+    return this.http.post<Reserva>(`${API_URL}/reservas`, { salidaId, ...cantidades, precioEsperado, adicionalesIds }).pipe(
+      tap(r => {
+        this.actualizar(r);
+        this.notificaciones.solicitarRefrescoContador(r.clienteId);
+      })
+    );
   }
   listar(gestion = false) { return this.http.get<Reserva[]>(`${API_URL}/reservas${gestion ? '' : '/mis-reservas'}`); }
   consultar(id: number) { return this.http.get<Reserva>(`${API_URL}/reservas/${id}`).pipe(tap(r => this.actualizar(r))); }

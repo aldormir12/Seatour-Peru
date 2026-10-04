@@ -77,6 +77,11 @@ export class ReservasService {
     );
   }
   listar(gestion = false) { return this.http.get<Reserva[]>(`${API_URL}/reservas${gestion ? '' : '/mis-reservas'}`); }
+  registrarPlan(reservas: Reserva[]) {
+    reservas.forEach(r => this.actualizar(r));
+    const clienteId = reservas[0]?.clienteId;
+    if (clienteId) this.notificaciones.solicitarRefrescoContador(clienteId);
+  }
   consultar(id: number) { return this.http.get<Reserva>(`${API_URL}/reservas/${id}`).pipe(tap(r => this.actualizar(r))); }
   confirmar(id: number) { return this.http.post<Reserva>(`${API_URL}/reservas/${id}/confirmar`, {}).pipe(tap(r => this.actualizar(r))); }
   cancelar(id: number) { return this.http.post<Reserva>(`${API_URL}/reservas/${id}/cancelar`, {}).pipe(tap(r => this.actualizar(r))); }

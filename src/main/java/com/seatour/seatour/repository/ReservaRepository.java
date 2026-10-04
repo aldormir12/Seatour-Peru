@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.*;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
+    List<Reserva> findByClienteIdAndPlanOperacionIdOrderByIdAsc(Long clienteId, String planOperacionId);
     @EntityGraph(attributePaths = {"salida", "salida.tour"})
     List<Reserva> findByCreadaEnGreaterThanEqualAndCreadaEnLessThan(java.time.Instant desde, java.time.Instant hasta);
 

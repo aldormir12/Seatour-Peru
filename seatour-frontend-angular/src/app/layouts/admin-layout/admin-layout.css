@@ -1,3 +1,71 @@
 :host {
   display: block;
 }
+
+.demo-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.demo-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  border: 1px solid var(--color-slate-600, #475569);
+  border-radius: 999px;
+  background: var(--color-slate-800, #1e293b);
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.demo-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-slate-100, #f1f5f9);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+  transition: transform 180ms ease;
+}
+
+.demo-switch[aria-checked='true'] .demo-switch-track {
+  border-color: var(--color-sky-400, #38bdf8);
+  background: var(--color-sky-500, #0ea5e9);
+  box-shadow: 0 0 8px rgb(56 189 248 / 16%);
+}
+
+.demo-switch[aria-checked='true'] .demo-switch-thumb {
+  transform: translateX(18px);
+}
+
+.demo-switch:hover:not(:disabled) .demo-switch-track {
+  border-color: var(--color-sky-400, #38bdf8);
+}
+
+.demo-switch:focus-visible {
+  outline: 2px solid var(--color-sky-400, #38bdf8);
+  outline-offset: 2px;
+}
+
+.demo-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-switch-track,
+  .demo-switch-thumb {
+    transition: none;
+  }
+}

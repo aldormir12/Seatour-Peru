@@ -7,7 +7,7 @@ import { Component, inject, signal } from '@angular/core';
   selector: 'app-inicio',
   imports: [RouterLink],
   templateUrl: './inicio.html',
-  styleUrl: '../../app.css'
+  styleUrl: './home.css'
 })
 export class Inicio {
   readonly inicioPorRol = inicioPorRol;

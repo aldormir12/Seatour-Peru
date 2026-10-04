@@ -1,9 +1,10 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import {
   Component,
   computed,
   inject,
   DestroyRef,
+  HostListener,
   OnDestroy,
   OnInit,
   signal
@@ -25,7 +26,7 @@ import { ToastService } from '../../services/toast.service';
 import { ConfirmacionService } from '../../services/confirmacion.service';
 import { ConfirmacionModal } from '../confirmacion-modal/confirmacion-modal';
 import { ToastContainer } from '../toast-container/toast-container';
-import { of, switchMap } from 'rxjs';
+import { finalize, forkJoin, of, switchMap } from 'rxjs';
 import { OperadorLive } from '../operador-live/operador-live';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -48,23 +49,22 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
   private verificando = false;
   private revisionSalida = 0;
 
-  private verificarDemo(): void {
+  private readonly documento = inject(DOCUMENT);
+  private ultimaSincronizacion = 0;
+
+  private sincronizarSalida(forzar = false): void {
     const salida = this.salida();
-    if (!salida?.esDemo || this.verificando || this.procesando()) return;
-    const revision = this.revisionSalida;
-    this.verificando = true;
-    this.salidasService.obtenerSalidaPropia(salida.id)
-      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: actualizada => {
-          this.verificando = false;
-          if (revision === this.revisionSalida && this.salida()?.id === actualizada.id)
-            this.salida.set(actualizada);
-        },
-        error: error => {
-          this.verificando = false;
-          if (error?.status === 404 || error?.status === 403) this.ocultarDemo();
-        }
-      });
+    if (!salida || this.documento.hidden || this.verificando || this.cargando() || this.procesando()) return;
+    if (!forzar && !salida.esDemo) {
+      if (salida.estado !== 'PROGRAMADA' && salida.estado !== 'EN_CURSO') return;
+      if (Date.now() - this.ultimaSincronizacion < 20_000) return;
+    }
+    this.cargar(salida.id, true);
+  }
+
+  @HostListener('document:visibilitychange')
+  alCambiarVisibilidad(): void {
+    if (!this.documento.hidden) this.sincronizarSalida(true);
   }
 
   private ocultarDemo(): void {
@@ -147,7 +147,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.reloj = setInterval(() => this.ahora.set(Date.now()), 1000);
-    this.sincronizacion = setInterval(() => this.verificarDemo(), 5_000);
+    this.sincronizacion = setInterval(() => this.sincronizarSalida(), 5_000);
 
     const id =
       Number(
@@ -176,73 +176,46 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
   }
 
 
-  cargar(
-    id: number
-  ): void {
+  cargar(id: number, silencioso = false): void {
+    if (this.verificando || this.cargando()) return;
+    const revision = ++this.revisionSalida;
+    this.ultimaSincronizacion = Date.now();
+    if (silencioso) this.verificando = true;
+    else this.cargando.set(true);
 
-    this.cargando.set(true);
-
-
-    this.salidasService
-      .obtenerSalidaPropia(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-
-        next: salida => {
-
-          this.salida.set(
-            salida
-          );
-
-
-          this.salidasService
-            .obtenerReservasSalidaPropia(
-              id
-            )
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-
-              next: reservas => {
-
-                this.reservas.set(
-                  reservas
-                );
-
-                this.cargando.set(
-                  false
-                );
-              },
-
-              error: error => {
-
-                this.cargando.set(
-                  false
-                );
-
-                this.toast.error(
-                  this.obtenerMensajeError(
-                    error,
-                    'No se pudieron cargar las reservas de esta salida.'
-                  )
-                );
-              }
-
-            });
-        },
-
-        error: error => {
-
-          this.cargando.set(false);
-
-          this.toast.error(
-            this.obtenerMensajeError(
-              error,
-              'No se pudo cargar la salida.'
-            )
-          );
+    forkJoin({
+      salida: this.salidasService.obtenerSalidaPropia(id),
+      reservas: silencioso && this.salida()?.esDemo
+        ? of<Reserva[]>([])
+        : this.salidasService.obtenerReservasSalidaPropia(id)
+    }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => {
+        if (silencioso) this.verificando = false;
+        else this.cargando.set(false);
+      })
+    ).subscribe({
+      next: ({ salida, reservas }) => {
+        if (revision !== this.revisionSalida) return;
+        // Filtrar en la entrada: tabla, contadores y c?lculos comparten solo reservas activas.
+        this.reservas.set(reservas.filter(reserva => reserva.estado !== 'CANCELADA'));
+        this.salida.set(salida);
+      },
+      error: error => {
+        if (revision !== this.revisionSalida) return;
+        if (silencioso && (error?.status === 404 || error?.status === 403)) {
+          if (this.salida()?.esDemo) this.ocultarDemo();
+          else {
+            this.salida.set(null);
+            this.reservas.set([]);
+            this.volver();
+          }
+          return;
         }
-
-      });
+        if (!silencioso) this.toast.error(this.obtenerMensajeError(error,
+          'No se pudieron cargar la salida y sus reservas.'));
+      }
+    });
   }
 
 
@@ -404,6 +377,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
             mensajeExito
           );
           this.mensajeExito.set(mensajeExito);
+          this.sincronizarSalida(true);
         },
 
         error: error => {
@@ -422,6 +396,7 @@ export class OperadorSalidaDetalle implements OnInit, OnDestroy {
               'No se pudo cambiar el estado de la salida.'
             )
           );
+          this.sincronizarSalida(true);
         }
 
       });

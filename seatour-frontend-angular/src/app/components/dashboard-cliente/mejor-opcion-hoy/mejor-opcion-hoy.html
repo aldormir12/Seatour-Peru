@@ -475,6 +475,22 @@
                   {{ opcion.insight }}
                 </p>
               </div>
+              <button
+                type="button"
+                (click)="reservar()"
+                [disabled]="validandoDisponibilidad() || !disponibleParaReserva()"
+                [attr.aria-busy]="validandoDisponibilidad()"
+                class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#087dab] px-4 py-3 text-xs font-semibold text-white transition hover:bg-[#06668d] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                @if (validandoDisponibilidad()) {
+                  <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true"></span>
+                }
+                Reservar esta experiencia
+              </button>
+              @if (mensajeReserva()) {
+                <p class="mb-0 mt-2 text-xs leading-5 text-[#607894]" role="status">{{ mensajeReserva() }}</p>
+                <button type="button" (click)="validarDisponibilidad()" [disabled]="validandoDisponibilidad()" class="mt-2 text-xs font-semibold text-[#087dab] disabled:opacity-50">Actualizar disponibilidad</button>
+              }
             </div>
           </div>
         </div>

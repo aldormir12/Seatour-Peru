@@ -28,7 +28,7 @@
   <!-- ================================================== -->
 
   <section
-    class="relative z-[2] flex min-h-screen flex-col px-7 pb-8 pt-[118px] lg:px-[max(4vw,28px)]"
+    [class.cliente-seccion]="!!clienteShell" class="relative z-[2] flex min-h-screen flex-col px-7 pb-8 pt-[118px] lg:px-[max(4vw,28px)]"
   >
     <!-- ================================================== -->
     <!-- CABECERA DE LA PÁGINA -->
@@ -447,7 +447,7 @@
       <button
         type="button"
         (click)="cerrarDetalle()"
-        aria-label="Cerrar detalle"
+        aria-label="Cerrar detalle" [class.cliente-overlay]="!!clienteShell"
         class="absolute inset-0 h-full w-full bg-black/45 backdrop-blur-[3px] transition-opacity duration-300 ease-out"
         [class.opacity-100]="detalleAbierto()"
         [class.opacity-0]="!detalleAbierto()"
@@ -455,10 +455,10 @@
 
       <!-- PANEL -->
       <aside
-        aria-label="Detalle de reserva"
+        aria-label="Detalle de reserva" [class.cliente-panel-estado]="!!clienteShell" [class.cliente-panel-cerrado]="!!clienteShell && !detalleAbierto()"
         class="absolute right-0 top-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden border-l border-slate-200 bg-white text-[#102d41] shadow-[-30px_0_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-transform duration-300"
         [class.translate-x-0]="detalleAbierto()"
-        [class.translate-x-full]="!detalleAbierto()"
+        [class.translate-x-full]="!clienteShell && !detalleAbierto()"
       >
         <!-- HEADER -->
         <header class="relative border-b border-slate-200 px-6 pb-5 pt-6">

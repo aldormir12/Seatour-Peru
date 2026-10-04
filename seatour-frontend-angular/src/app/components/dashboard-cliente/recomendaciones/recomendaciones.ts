@@ -1,3 +1,6 @@
+import { cantidadPasajero, cambiarComposicionPasajeros } from '../../../services/composicion-pasajeros';
+import { validarLuhn } from './pago-validadores';
+import { ReservaPlanComponent } from './reserva-plan';
 import { ResenasTour } from '../../resenas/resenas-tour';
 import { UbicacionTour } from '../../ubicacion-tour/ubicacion-tour';
 import {
@@ -24,13 +27,11 @@ import {
 
 import { RouterLink } from '@angular/router';
 import { PronosticoMarino } from '../pronostico-marino/pronostico-marino';
-import { MejorOpcionHoyComponent } from '../mejor-opcion-hoy/mejor-opcion-hoy';
+import { MejorOpcionHoyComponent, ReservaMejorOpcion } from '../mejor-opcion-hoy/mejor-opcion-hoy';
 
 import {
-  AbstractControl,
   FormControl,
   ReactiveFormsModule,
-  ValidationErrors,
   Validators
 } from '@angular/forms';
 
@@ -41,10 +42,15 @@ import {
 import {
   Subscription,
   catchError,
+  concatMap,
+  dematerialize,
+  finalize,
   forkJoin,
   map,
+  materialize,
   of,
-  switchMap
+  switchMap,
+  timer
 } from 'rxjs';
 
 import {
@@ -104,52 +110,11 @@ interface TourDestacadoConSalida {
 }
 
 
-function validarLuhn(
-  control: AbstractControl
-): ValidationErrors | null {
-
-  const numero =
-    String(control.value ?? '')
-      .replace(/\s/g, '');
-
-  if (!/^\d{13,19}$/.test(numero)) {
-    return { tarjeta: true };
-  }
-
-  let suma = 0;
-  let duplicar = false;
-
-  for (
-    let i = numero.length - 1;
-    i >= 0;
-    i--
-  ) {
-
-    let digito = Number(numero[i]);
-
-    if (duplicar) {
-      digito *= 2;
-
-      if (digito > 9) {
-        digito -= 9;
-      }
-    }
-
-    suma += digito;
-    duplicar = !duplicar;
-  }
-
-  return suma % 10 === 0
-    ? null
-    : { luhn: true };
-}
-
-
 @Component({
   selector: 'app-recomendaciones',
   standalone: true,
 
-  imports: [ResenasTour, UbicacionTour,
+  imports: [ReservaPlanComponent, ResenasTour, UbicacionTour,
     MejorOpcionHoyComponent,
     RouterLink,
     PronosticoMarino,
@@ -480,68 +445,17 @@ private consultaPlanDia?: Subscription;
     });
 
 
-  cantidad(
-    tipo: TipoPasajero
-  ): number {
-
-    const cantidades =
-      this.cantidades();
-
-    return tipo === 'NINO'
-      ? cantidades.ninos
-      : tipo === 'ADULTO'
-        ? cantidades.adultos
-        : cantidades.adultosMayores;
+  cantidad(tipo: TipoPasajero): number {
+    return cantidadPasajero(this.cantidades(), tipo);
   }
 
-
-  cambiarCantidad(
-    tipo: TipoPasajero,
-    cambio: number
-  ): void {
-
-    if (
-      this.creandoReserva() ||
-      this.reservaPendiente()
-    ) {
-      return;
-    }
-
-    const cantidad =
-      this.cantidad(tipo) + cambio;
-
-    const total =
-      this.pasajeros.value + cambio;
-
-    if (
-      cantidad < 0 ||
-      total < 0 ||
-      total >
-        (
-          this.salidaSeleccionada()
-            ?.cuposDisponibles ?? 0
-        )
-    ) {
-      return;
-    }
-
-    const clave =
-      tipo === 'NINO'
-        ? 'ninos'
-        : tipo === 'ADULTO'
-          ? 'adultos'
-          : 'adultosMayores';
-
-    this.cantidades.update(
-      cantidades => ({
-        ...cantidades,
-        [clave]: cantidad
-      })
-    );
-
-    this.pasajeros.setValue(
-      total
-    );
+  cambiarCantidad(tipo: TipoPasajero, cambio: number): void {
+    if (this.creandoReserva() || this.reservaPendiente()) return;
+    const composicion = cambiarComposicionPasajeros(this.cantidades(), tipo, cambio,
+      this.pasajeros.value, this.salidaSeleccionada()?.cuposDisponibles ?? 0);
+    if (!composicion) return;
+    this.cantidades.set(composicion);
+    this.pasajeros.setValue(this.pasajeros.value + cambio);
   }
 
 
@@ -1119,8 +1033,19 @@ ringOffset(score: number): number {
     this.cerrarFichaEmbarcacion();
   }
 
+  reservarMejorOpcion({ tour, salida }: ReservaMejorOpcion): void {
+    if (this.procesandoPago() || this.creandoReserva()) return;
+    // Reutilizar el checkout individual con la salida exacta recién consultada.
+    this.abrirDetalle({ ...tour, proximaSalida: salida, salidas: [salida], errorSalida: false });
+    this.seleccionarSalida(salida);
+  }
+
 
   cerrarDetalle(): void {
+
+    if (this.procesandoPago()) {
+      return;
+    }
 
     this.modalAbierto.set(
       false
@@ -1395,6 +1320,10 @@ ringOffset(score: number): number {
 
   pagar(): void {
 
+    if (this.procesandoPago()) {
+      return;
+    }
+
     const reserva =
       this.reservaPendiente();
 
@@ -1411,6 +1340,8 @@ ringOffset(score: number): number {
     this.procesandoPago.set(
       true
     );
+
+    const inicioPago = Date.now();
 
     this.errorCheckout.set(
       ''
@@ -1468,9 +1399,15 @@ ringOffset(score: number): number {
 
     peticion
       .pipe(
+        materialize(),
+        // Mantener el orden respuesta -> finalización durante la espera mínima.
+        concatMap(notificacion => timer(Math.max(0, 3000 - (Date.now() - inicioPago)))
+          .pipe(map(() => notificacion))),
+        dematerialize(),
         takeUntilDestroyed(
           this.destroyRef
-        )
+        ),
+        finalize(() => this.procesandoPago.set(false))
       )
       .subscribe({
 

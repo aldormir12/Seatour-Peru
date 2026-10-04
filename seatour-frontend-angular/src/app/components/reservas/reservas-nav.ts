@@ -123,7 +123,7 @@ interface NavLink {
                 @if (noLeidas() > 0) { <span class="notification-badge" aria-hidden="true">{{ noLeidas() }}</span> }
               </button>
               @if (notificacionesAbiertas()) {
-                <section id="panel-notificaciones" class="notifications-panel" aria-labelledby="notificaciones-titulo"
+                <section id="panel-notificaciones" class="notifications-panel" animate.enter="cliente-popover-entrando" animate.leave="cliente-popover-saliendo" aria-labelledby="notificaciones-titulo"
                   [attr.aria-busy]="cargandoNotificaciones() || guardandoLectura()">
                   <header class="notifications-header">
                     <div><span class="notifications-eyebrow">SEATOUR</span><h2 id="notificaciones-titulo">Notificaciones</h2></div>

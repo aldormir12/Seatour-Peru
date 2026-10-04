@@ -29,6 +29,16 @@ public class AdicionalService {
         return AdicionalRespuesta.desde(adicionales.saveAndFlush(a));
     }
     @Transactional(propagation = Propagation.MANDATORY)
+    public void bloquearSeleccionPlan(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return;
+        if (ids.size() > 50 || ids.stream().anyMatch(id -> id == null || id <= 0) || new HashSet<>(ids).size() != ids.size())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seleccion de adicionales invalida");
+        // Antes del bloqueo del cliente: mismo orden adicional -> usuario que la reserva individual.
+        ids.stream().sorted().forEach(id -> adicionales.bloquear(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Adicional no disponible")));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public List<ReservaAdicional> seleccionar(Long tourId, int pasajeros, List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         if (ids.size() > 50 || ids.stream().anyMatch(id -> id == null || id <= 0) || new HashSet<>(ids).size() != ids.size())

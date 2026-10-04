@@ -12,6 +12,10 @@ import java.time.Instant;
 public class Reserva {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    // Identifica únicamente las reservas de un checkout del Plan del día y sus reintentos.
+    @Column(name = "plan_operacion_id", length = 36)
+    private String planOperacionId;
+    public void asociarPlan(java.util.UUID operacionId) { this.planOperacionId = operacionId.toString(); }
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cliente_id", nullable = false, updatable = false)
     private Usuario cliente;

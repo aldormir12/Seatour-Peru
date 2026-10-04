@@ -18,7 +18,7 @@
 
       <div class="feature-list">
         @for (feature of features; track feature.titulo) {
-          <a class="feature" [routerLink]="feature.ruta">
+          <a class="feature cliente-card-interactiva" [routerLink]="feature.ruta">
             <span class="feature-icon" aria-hidden="true">
               @switch (feature.icono) {
                 @case ('tours') {
@@ -80,7 +80,7 @@
 
               @if (menuZonaAbierto) {
                 <div
-                  class="zona-menu"
+                  class="zona-menu" animate.enter="cliente-popover-entrando" animate.leave="cliente-popover-saliendo"
                   id="ocean-zona-menu"
                   role="group"
                   aria-label="Zonas maritimas"

@@ -140,7 +140,7 @@ export class ReservasListaComponent {
     this.error.set('');
 
     this.api
-      .listar(false)
+      .listar(this.auth.usuario()?.rol === 'OPERADOR')
       .subscribe({
         next: reservas => {
           this.reservas.set(reservas);

@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@400;500&display=swap');
 @import 'maplibre-gl/dist/maplibre-gl.css';
+@import './cliente-microinteracciones.css';
 
 html,
 body {
@@ -20,19 +21,3 @@ app-root {
 }
 
 @import 'tailwindcss';
-
-/* Entrada compartida por Dashboard, Mis reservas y el contenido de Tours. */
-app-cliente-shell > router-outlet + *,
-.cliente-contenido-entrada {
-  animation: cliente-route-enter 180ms ease-out;
-}
-
-@keyframes cliente-route-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  app-cliente-shell > router-outlet + *,
-  .cliente-contenido-entrada { animation: none; }
-}

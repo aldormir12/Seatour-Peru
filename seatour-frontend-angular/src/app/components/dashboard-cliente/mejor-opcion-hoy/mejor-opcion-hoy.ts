@@ -1,7 +1,13 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, effect, inject, input, PLATFORM_ID, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
+import { finalize, forkJoin, Subscription } from 'rxjs';
 import { IntelligenceService, MejorOpcionRespuesta } from '../../../services/intelligence.service';
-import { Tours } from '../../../services/tours';
+import { Tour, Tours } from '../../../services/tours';
+import { SalidaProgramada, SalidasService } from '../../../services/salidas.service';
+
+export interface ReservaMejorOpcion { tour: Tour; salida: SalidaProgramada; }
 
 @Component({
   selector: 'app-mejor-opcion-hoy',
@@ -11,12 +17,19 @@ import { Tours } from '../../../services/tours';
 export class MejorOpcionHoyComponent {
   readonly toursService = inject(Tours);
   readonly fecha = input.required<string>();
+  readonly reservarExperiencia = output<ReservaMejorOpcion>();
+  readonly validandoDisponibilidad = signal(false);
+  readonly disponibleParaReserva = signal(false);
+  readonly mensajeReserva = signal('');
 
   readonly respuesta = signal<MejorOpcionRespuesta | null>(null);
   readonly cargando = signal(false);
   readonly error = signal('');
 
   private readonly intelligence = inject(IntelligenceService);
+  private readonly salidas = inject(SalidasService);
+  private readonly destroy = inject(DestroyRef);
+  private consultaDisponibilidad?: Subscription;
   private readonly navegador = isPlatformBrowser(inject(PLATFORM_ID));
 
   constructor() {
@@ -26,6 +39,8 @@ export class MejorOpcionHoyComponent {
       this.respuesta.set(null);
       this.error.set('');
       this.cargando.set(false);
+      this.disponibleParaReserva.set(false);
+      this.mensajeReserva.set('');
 
       if (!this.navegador || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return;
 
@@ -35,6 +50,7 @@ export class MejorOpcionHoyComponent {
         next: respuesta => {
           this.respuesta.set(respuesta);
           this.cargando.set(false);
+          if (respuesta.mejorTourSalida) this.validarDisponibilidad(false);
         },
         error: () => {
           this.error.set('No se pudo cargar tu mejor opción para esta fecha.');
@@ -42,7 +58,47 @@ export class MejorOpcionHoyComponent {
         }
       });
 
-      onCleanup(() => consulta.unsubscribe());
+      onCleanup(() => {
+        consulta.unsubscribe();
+        this.consultaDisponibilidad?.unsubscribe();
+      });
+    });
+  }
+
+  reservar(): void {
+    if (this.validandoDisponibilidad() || !this.disponibleParaReserva()) return;
+    this.validarDisponibilidad(true);
+  }
+
+  validarDisponibilidad(abrirReserva = false): void {
+    const recomendada = this.respuesta()?.mejorTourSalida;
+    if (!recomendada) return;
+    this.consultaDisponibilidad?.unsubscribe();
+    this.validandoDisponibilidad.set(true);
+    this.disponibleParaReserva.set(false);
+    this.mensajeReserva.set('');
+    this.consultaDisponibilidad = forkJoin({
+      salida: this.salidas.obtenerPorId(recomendada.salidaId),
+      tours: this.toursService.listarActivos()
+    }).pipe(
+      takeUntilDestroyed(this.destroy),
+      finalize(() => this.validandoDisponibilidad.set(false))
+    ).subscribe({
+      next: ({ salida, tours }) => {
+        const tour = tours.find(t => t.id === recomendada.tourId && t.activo);
+        if (!tour || salida.tourId !== recomendada.tourId || salida.esDemo
+            || !salida.reservable || salida.cuposDisponibles <= 0) {
+          this.mensajeReserva.set('La salida recomendada ya no está disponible para reservar.');
+          return;
+        }
+        this.disponibleParaReserva.set(true);
+        if (abrirReserva) this.reservarExperiencia.emit({ tour, salida });
+      },
+      error: (error: HttpErrorResponse) => {
+        this.mensajeReserva.set(error.status === 404 || error.status === 409
+          ? 'La salida recomendada ya no está disponible para reservar.'
+          : 'No pudimos verificar la disponibilidad. Vuelve a consultarla para reservar.');
+      }
     });
   }
 

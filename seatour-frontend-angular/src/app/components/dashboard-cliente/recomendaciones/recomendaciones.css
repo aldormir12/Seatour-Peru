@@ -1,3 +1,85 @@
 :host {
   display: contents;
 }
+
+.pago-procesando-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(240, 249, 252, 0.84);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: wait;
+  animation: pago-aparecer 240ms ease-out;
+}
+
+.pago-procesando-mensaje {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.pago-procesando-spinner {
+  width: 64px;
+  height: 64px;
+  border: 4px solid #cce8f0;
+  border-top-color: #087dab;
+  border-right-color: #20b7c9;
+  border-radius: 50%;
+  animation: pago-girar 1s linear infinite;
+}
+
+.pago-procesando-titulo {
+  margin: 24px 0 0;
+  color: #102d41;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.pago-procesando-descripcion {
+  margin: 8px 0 0;
+  color: #607887;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@keyframes pago-aparecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pago-girar {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pago-procesando-overlay,
+  .pago-procesando-spinner {
+    animation: none;
+  }
+}
+
+:host ::ng-deep .recomendacion-resenas .review-card-summary {
+  gap: 5px;
+  margin: 3px 0 0;
+  font-size: 10px;
+  line-height: 14px;
+  color: #23566b;
+}
+
+:host ::ng-deep .recomendacion-resenas .review-card-summary span {
+  font-weight: 600;
+}
+
+:host ::ng-deep .recomendacion-resenas .review-card-summary button {
+  color: #087dab;
+  font-weight: 500;
+}
+
+:host ::ng-deep .recomendacion-resenas .review-card-summary button:hover {
+  text-decoration: underline;
+}

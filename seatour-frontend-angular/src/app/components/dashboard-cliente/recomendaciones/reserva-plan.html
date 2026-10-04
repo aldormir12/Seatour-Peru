@@ -1,0 +1,167 @@
+<button type="button" class="plan-boton plan-abrir" (click)="abrir()" [disabled]="!items().length">Reservar plan</button>
+
+<dialog #checkout class="plan-checkout" aria-labelledby="plan-checkout-titulo" (cancel)="$event.preventDefault(); cerrar()">
+  <div class="plan-contenido" [attr.inert]="procesando() ? '' : null">
+    <header class="plan-cabecera">
+      <div>
+        <p class="plan-etiqueta">SeaTour Intelligence</p>
+        <h2 id="plan-checkout-titulo">Reservar plan</h2>
+      </div>
+      <button type="button" class="plan-cerrar" aria-label="Cerrar reserva del plan" (click)="cerrar()" [disabled]="procesando() || incierto()">×</button>
+    </header>
+
+    <div class="plan-cuerpo">
+      @if (resultado()?.estadoPago === 'APROBADO') {
+        <div role="status" class="plan-confirmacion">
+          <h3>Tu plan está confirmado</h3>
+          <p>Cada experiencia tiene su propia reserva para {{ resultado()!.reservas[0].pasajeros }} pasajeros.</p>
+          <p class="plan-ayuda">Adultos: {{ resultado()!.reservas[0].adultos }} · Niños: {{ resultado()!.reservas[0].ninos }} · Adultos mayores: {{ resultado()!.reservas[0].adultosMayores }}</p>
+          @for (reserva of resultado()!.reservas; track reserva.id) {
+            <div class="plan-experiencia">
+              <strong>{{ reserva.tourNombre }}</strong>
+              <span>Reserva #{{ reserva.id }} · {{ reserva.horaSalida.slice(0, 5) }}</span>
+              <span>{{ reserva.precioTotal | currency: 'PEN' : 'S/ ' : '1.2-2' }}</span>
+            </div>
+          }
+          @if (adicionalesConfirmados().length) {
+            <h3 class="plan-subtitulo">Adicionales del plan</h3>
+            @for (adicional of adicionalesConfirmados(); track adicional.adicionalId) {
+              <div class="plan-fila plan-adicional-resumen"><span>{{ adicional.nombre }} · {{ adicional.cantidad }} {{ adicional.tipoCobro === 'POR_PERSONA' ? 'pasajeros en total' : adicional.tipoCobro === 'POR_RESERVA' ? 'reservas' : 'unidades' }}</span><strong>{{ adicional.subtotal | currency: 'PEN' : 'S/ ' : '1.2-2' }}</strong></div>
+            }
+          }
+          <p class="plan-total">Total pagado <strong>{{ resultado()!.total | currency: 'PEN' : 'S/ ' : '1.2-2' }}</strong></p>
+        </div>
+      } @else {
+        <div [attr.inert]="incierto() ? '' : null">
+          <section aria-labelledby="plan-pasajeros-titulo">
+            <h3 id="plan-pasajeros-titulo" class="plan-subtitulo">Pasajeros para todo el plan</h3>
+            @if (cargandoTarifas()) { <p class="plan-ayuda" role="status">Cargando tarifas...</p> }
+            @if (errorTarifas()) {
+              <p class="plan-error" role="alert">{{ errorTarifas() }}</p>
+              <button type="button" class="plan-quitar" (click)="cargarTarifas()">Reintentar</button>
+            }
+            @for (tarifa of tarifasPasajeros(); track tarifa.tipo) {
+              <div class="plan-pasajero">
+                <div>
+                  <strong>{{ tarifa.tipo === 'NINO' ? 'Niños' : tarifa.tipo === 'ADULTO_MAYOR' ? 'Adultos mayores' : 'Adultos' }}</strong>
+                  <p class="plan-ayuda">{{ tarifa.edadMinima }}{{ tarifa.edadMaxima === null ? '+' : '–' + tarifa.edadMaxima }} años · {{ tarifa.porcentajeDescuento ? tarifa.porcentajeDescuento + '% dscto.' : 'tarifa regular' }}</p>
+                </div>
+                <div class="plan-pasajero-controles">
+                  <button type="button" (click)="cambiarCantidad(tarifa.tipo, -1)" [disabled]="cantidad(tarifa.tipo) === 0" [attr.aria-label]="'Reducir ' + tarifa.nombre">−</button>
+                  <span aria-live="polite">{{ cantidad(tarifa.tipo) }}</span>
+                  <button type="button" (click)="cambiarCantidad(tarifa.tipo, 1)" [disabled]="pasajeros.value >= limitePasajeros()" [attr.aria-label]="'Aumentar ' + tarifa.nombre">+</button>
+                </div>
+              </div>
+            }
+            <p class="plan-ayuda">Total: {{ pasajeros.value }} personas. La misma composición y sus tarifas se aplican a todas las experiencias.</p>
+            @if (pasajeros.invalid) { <p class="plan-error">Selecciona al menos un pasajero y como máximo 100 personas en total.</p> }
+          </section>
+
+          <h3 class="plan-subtitulo">Experiencias del plan</h3>
+          @for (item of seleccionados(); track item.salidaId) {
+            <div class="plan-experiencia">
+              <div class="plan-fila">
+                <strong>{{ item.tourNombre }}</strong>
+                <button type="button" class="plan-quitar" (click)="quitar(item.salidaId)" [attr.aria-label]="'Eliminar ' + item.tourNombre + ' del plan'">Eliminar</button>
+              </div>
+              <span>{{ item.horaInicio.slice(11, 16) }}–{{ item.horaFin.slice(11, 16) }}</span>
+              @for (detalle of resumen()?.items ?? []; track detalle.salidaId) {
+                @if (detalle.salidaId === item.salidaId) {
+                  <div class="plan-fila">
+                    <span>{{ detalle.cuposDisponibles }} cupos disponibles</span>
+                    <strong>{{ detalle.subtotal | currency: 'PEN' : 'S/ ' : '1.2-2' }}</strong>
+                  </div>
+                  @if (detalle.problema) {
+                    <p class="plan-error" role="alert">{{ detalle.tourNombre }}: {{ detalle.problema }}. Quedan {{ detalle.cuposDisponibles }} cupos. Reduce pasajeros o elimina esta experiencia.</p>
+                  }
+                }
+              }
+            </div>
+          }
+          @if (!seleccionados().length) { <p class="plan-error">El plan debe contener al menos una experiencia. Cierra y vuelve a abrir para recuperar la selección original.</p> }
+          @if (consultando()) { <p class="plan-ayuda" role="status">Validando disponibilidad y total...</p> }
+          <button type="button" class="plan-quitar" (click)="actualizarResumen()" [disabled]="consultando() || pasajeros.invalid || !seleccionados().length">Actualizar disponibilidad</button>
+          <section aria-labelledby="plan-adicionales-titulo">
+            <h3 id="plan-adicionales-titulo" class="plan-subtitulo">Adicionales opcionales</h3>
+            <p class="plan-ayuda">Elige una sola vez para todas las experiencias. Se aplica el mismo cobro de la reserva individual: por persona, por reserva o una unidad por reserva.</p>
+            @if (cargandoAdicionales()) { <p class="plan-ayuda" role="status">Cargando adicionales...</p> }
+            @else if (errorAdicionales()) {
+              <p class="plan-error" role="alert">{{ errorAdicionales() }}</p>
+              <button type="button" class="plan-quitar" (click)="cargarAdicionales()">Reintentar</button>
+            } @else {
+              @for (adicional of adicionalesDisponibles(); track adicional.id) {
+                <label class="plan-adicional" [class.plan-adicional-seleccionado]="adicionalesSeleccionados().includes(adicional.id)">
+                  <input type="checkbox" [checked]="adicionalesSeleccionados().includes(adicional.id)" (change)="seleccionarAdicional(adicional.id)" />
+                  <span>
+                    <strong>{{ adicional.nombre }}</strong>
+                    <span class="plan-ayuda">{{ adicional.descripcion }}</span>
+                    <span class="plan-adicional-precio">{{ (detalleAdicional(adicional.id)?.precioUnitario ?? adicional.precio) | currency: 'PEN' : 'S/ ' : '1.2-2' }} {{ adicional.tipoCobro === 'POR_PERSONA' ? 'por persona' : adicional.tipoCobro === 'POR_RESERVA' ? 'por reserva' : 'por unidad (1 unidad)' }}</span>
+                    @if (detalleAdicional(adicional.id); as elegido) {
+                      <span class="plan-ayuda">{{ elegido.cantidad }} {{ elegido.tipoCobro === 'POR_PERSONA' ? 'pasajeros en total' : elegido.tipoCobro === 'POR_RESERVA' ? 'reservas' : 'unidades' }} · {{ elegido.subtotal | currency: 'PEN' : 'S/ ' : '1.2-2' }} para el plan</span>
+                    }
+                  </span>
+                </label>
+              } @empty { <p class="plan-ayuda">No hay adicionales disponibles.</p> }
+            }
+          </section>
+          @if (resumen(); as detalle) {
+            @if (detalle.adicionales.length) {
+              <div class="plan-fila plan-adicional-resumen"><span>Subtotal de adicionales</span><strong>{{ detalle.subtotalAdicionales | currency: 'PEN' : 'S/ ' : '1.2-2' }}</strong></div>
+            }
+            <p class="plan-total">Total para {{ pasajeros.value }} pasajeros <strong>{{ detalle.total | currency: 'PEN' : 'S/ ' : '1.2-2' }}</strong></p>
+          }
+
+          <h3 class="plan-subtitulo">Método de pago</h3>
+          <div class="plan-metodos">
+            <button type="button" [class.seleccionado]="metodo() === 'TARJETA'" [attr.aria-pressed]="metodo() === 'TARJETA'" (click)="metodo.set('TARJETA')"><img src="/images/pagos/tarjeta.png" alt="" />Tarjeta</button>
+            <button type="button" [class.seleccionado]="metodo() === 'YAPE'" [attr.aria-pressed]="metodo() === 'YAPE'" (click)="metodo.set('YAPE')"><img src="/images/pagos/yape.png" alt="" />Yape</button>
+          </div>
+          @if (metodo() === 'TARJETA') {
+            <div class="plan-formulario" [formGroup]="tarjeta">
+              <h3 class="plan-metodo-titulo"><img src="/images/pagos/tarjeta.png" alt="" />Pago con tarjeta</h3>
+              <label for="plan-numero">Número de tarjeta</label>
+              <input id="plan-numero" formControlName="numero" type="text" inputmode="numeric" maxlength="23" autocomplete="cc-number" />
+              <label for="plan-titular">Titular</label>
+              <input id="plan-titular" formControlName="titular" type="text" maxlength="150" autocomplete="cc-name" />
+              <div class="plan-datos-tarjeta">
+                <div><label for="plan-mes">Mes</label><input id="plan-mes" formControlName="mes" type="text" inputmode="numeric" maxlength="2" autocomplete="cc-exp-month" /></div>
+                <div><label for="plan-anio">Año</label><input id="plan-anio" formControlName="anio" type="text" inputmode="numeric" maxlength="4" autocomplete="cc-exp-year" /></div>
+                <div><label for="plan-cvv">CVV</label><input id="plan-cvv" formControlName="cvv" type="password" inputmode="numeric" maxlength="4" autocomplete="cc-csc" /></div>
+              </div>
+              @if (tarjeta.touched && (tarjeta.invalid || tarjetaVencida())) { <p class="plan-error">Revisa el número, titular, vencimiento y CVV de tu tarjeta.</p> }
+            </div>
+          } @else {
+            <div class="plan-formulario" [formGroup]="yape">
+              <h3 class="plan-metodo-titulo"><img src="/images/pagos/yape.png" alt="" />Pago con Yape</h3>
+              <p class="plan-ayuda">Ingresa el celular y el código de aprobación para simular la operación.</p>
+              <label for="plan-celular">Celular Yape</label>
+              <input id="plan-celular" formControlName="celular" type="text" inputmode="numeric" maxlength="9" />
+              <label for="plan-codigo">Código de aprobación</label>
+              <input id="plan-codigo" formControlName="codigoAprobacion" type="text" inputmode="numeric" maxlength="6" />
+              @if (yape.touched && yape.invalid) { <p class="plan-error">Ingresa un celular peruano válido y un código de seis dígitos.</p> }
+            </div>
+          }
+        </div>
+        @if (error()) { <p class="plan-error plan-alerta" role="alert">{{ error() }}</p> }
+      }
+    </div>
+
+    <footer class="plan-pie">
+      @if (resultado()?.estadoPago === 'APROBADO') {
+        <button type="button" class="plan-boton" (click)="cerrar()">Listo</button>
+      } @else {
+        <button type="button" class="plan-boton" (click)="pagar()" [disabled]="!puedePagar()" [attr.aria-busy]="procesando()">
+          {{ incierto() ? 'Reintentar la misma operación' : 'Pagar plan' }}
+          @if (!incierto() && resumen()) { {{ resumen()!.total | currency: 'PEN' : 'S/ ' : '1.2-2' }} }
+        </button>
+      }
+    </footer>
+  </div>
+  @if (procesando()) {
+    <div class="plan-procesando" role="status" aria-live="polite" aria-atomic="true">
+      <span class="plan-spinner" aria-hidden="true"></span>
+      <strong>Procesando tu pago...</strong>
+      <p>Estamos validando la operación</p>
+    </div>
+  }
+</dialog>

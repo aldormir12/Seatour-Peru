@@ -160,17 +160,25 @@
     </nav>
 
     <div class="px-4 pb-4">
-      <button type="button" (click)="cambiarModoDemo()"
+      <button type="button" role="switch" (click)="cambiarModoDemo()"
         [disabled]="!demo.disponible() || demo.cambiando()"
-        [attr.aria-pressed]="demo.activo()"
-        class="w-full rounded-lg border border-amber-400 px-3 py-2 text-sm font-semibold text-amber-200 disabled:opacity-50">
-        {{ demo.cambiando() ? 'Actualizando…' : demo.activo() ? 'Modo Demo · Desactivar' : 'Modo Demo' }}
+        [attr.aria-checked]="demo.activo()"
+        [attr.aria-busy]="demo.cambiando()"
+        aria-label="Modo Demo"
+        class="demo-switch">
+        <span class="text-sm font-semibold text-slate-300">Modo Demo</span>
+        <span class="demo-switch-track" aria-hidden="true">
+          <span class="demo-switch-thumb"></span>
+        </span>
       </button>
+      @if (demo.cambiando()) {
+        <p role="status" class="mt-2 text-xs text-slate-400">Actualizando…</p>
+      }
       @if (demo.activo()) {
-        <p role="status" class="mt-2 rounded-lg bg-amber-300 px-3 py-2 text-center text-xs font-bold text-slate-950">MODO DEMO ACTIVO</p>
+        <p role="status" class="mt-2 rounded-lg bg-sky-600/25 px-3 py-2 text-center text-xs font-bold text-sky-300">MODO DEMO ACTIVO</p>
       }
       @if (!demo.disponible()) {
-        <p role="status" class="mt-2 text-xs text-amber-200">No se pudo consultar Modo Demo.</p>
+        <p role="status" class="mt-2 text-xs text-slate-400">No se pudo consultar Modo Demo.</p>
       }
     </div>
 

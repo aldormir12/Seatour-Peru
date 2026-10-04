@@ -36,22 +36,11 @@ public class ReservaService {
     public ReservaRespuesta crear(ReservaCreacion datos, LoginRespuesta actor) {
         if (!"CLIENTE".equals(actor.rol())) throw error(HttpStatus.FORBIDDEN, "Solo un cliente puede reservar");
         if (datos == null || datos.salidaId() == null || datos.salidaId() <= 0
-                || datos.ninos() == null || datos.adultos() == null || datos.adultosMayores() == null
-                || datos.ninos() < 0 || datos.ninos() > 100 || datos.adultos() < 0 || datos.adultos() > 100
-                || datos.adultosMayores() < 0 || datos.adultosMayores() > 100
-                || datos.totalPasajeros() < 1 || datos.totalPasajeros() > 100)
+                || !datos.composicion().esValida())
             throw error(HttpStatus.BAD_REQUEST, "Indica cantidades enteras no negativas y al menos un pasajero");
         // Toda escritura de cupos (incluida la gestion de salidas) usa el mismo bloqueo.
         SalidaProgramada salida = bloquearSalida(datos.salidaId());
-        HorizonteOperativo.validar(salida.getFecha());
-        salida.setTour(tours.bloquearPorId(salida.getTour().getId())
-                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Tour no encontrado")));
-        salida.setEmbarcacion(embarcaciones.bloquearPorId(salida.getEmbarcacion().getId())
-                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Embarcación no encontrada")));
-        if (!abierta(salida) || !Boolean.TRUE.equals(salida.getTour().getActivo())
-                || !Boolean.TRUE.equals(salida.getEmbarcacion().getActivo()))
-            throw error(HttpStatus.CONFLICT, "La salida ya no admite reservas");
-        validarOcupacion(salida);
+        validarSalidaReservable(salida);
         if (datos.totalPasajeros() > salida.getCuposDisponibles())
             throw error(HttpStatus.CONFLICT, "No hay suficientes cupos disponibles");
         var cliente = usuarios.findById(actor.id()).orElseThrow(() -> error(HttpStatus.UNAUTHORIZED, "Sesion invalida"));
@@ -67,6 +56,98 @@ public class ReservaService {
         notificarReserva(reserva, "RESERVA_CREADA", "Reserva realizada",
                 "Reserva realizada con éxito. Revisa tu correo para ver los detalles de tu reserva.");
         return respuesta(reserva, actor);
+    }
+
+    private void validarSalidaReservable(SalidaProgramada salida) {
+        HorizonteOperativo.validar(salida.getFecha());
+        salida.setTour(tours.bloquearPorId(salida.getTour().getId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Tour no encontrado")));
+        salida.setEmbarcacion(embarcaciones.bloquearPorId(salida.getEmbarcacion().getId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Embarcación no encontrada")));
+        if (!abierta(salida) || !Boolean.TRUE.equals(salida.getTour().getActivo())
+                || !Boolean.TRUE.equals(salida.getEmbarcacion().getActivo()))
+            throw error(HttpStatus.CONFLICT, "La salida ya no admite reservas");
+        validarOcupacion(salida);
+    }
+
+    @Transactional
+    public PlanReservaResumen resumenPlan(PlanReservaSeleccion seleccion, LoginRespuesta actor) {
+        return resumenPlanBloqueado(bloquearPlan(seleccion, actor), seleccion.composicion(), seleccion.adicionalesIds());
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    List<SalidaProgramada> bloquearPlan(PlanReservaSeleccion seleccion, LoginRespuesta actor) {
+        if (!"CLIENTE".equals(actor.rol())) throw error(HttpStatus.FORBIDDEN, "Solo un cliente puede reservar");
+        if (seleccion == null || seleccion.composicion() == null || !seleccion.composicion().esValida()
+                || seleccion.items() == null || seleccion.items().isEmpty()
+                || seleccion.items().size() > 20 || seleccion.items().stream().anyMatch(i -> i == null || i.salidaId() == null || i.salidaId() <= 0))
+            throw error(HttpStatus.BAD_REQUEST, "Indica las experiencias y una cantidad válida de pasajeros");
+        var ids = seleccion.items().stream().map(PlanReservaSeleccion.Item::salidaId).distinct().sorted().toList();
+        if (ids.size() != seleccion.items().size()) throw error(HttpStatus.BAD_REQUEST, "El plan contiene salidas repetidas");
+        var lista = ids.stream().map(this::bloquearSalida).toList();
+        // Adquirir todos los bloqueos antes de crear evita inversión de orden entre planes.
+        lista.stream().map(s -> s.getTour().getId()).distinct().sorted().forEach(id -> tours.bloquearPorId(id).orElseThrow());
+        lista.stream().map(s -> s.getEmbarcacion().getId()).distinct().sorted().forEach(id -> embarcaciones.bloquearPorId(id).orElseThrow());
+        var primera = lista.get(0);
+        if (lista.stream().anyMatch(s -> !s.getFecha().equals(primera.getFecha())
+                || s.getTour().getZonaMaritima() != primera.getTour().getZonaMaritima()))
+            throw error(HttpStatus.BAD_REQUEST, "Todas las experiencias deben pertenecer al mismo día y zona");
+        var cronologico = lista.stream().sorted(java.util.Comparator.comparing(SalidaProgramada::getHoraSalida)).toList();
+        for (int i = 1; i < cronologico.size(); i++) {
+            var anterior = cronologico.get(i - 1);
+            var fin = LocalDateTime.of(anterior.getFecha(), anterior.getHoraSalida()).plusMinutes(anterior.getTour().getDuracionMinutos());
+            if (fin.isAfter(LocalDateTime.of(cronologico.get(i).getFecha(), cronologico.get(i).getHoraSalida())))
+                throw error(HttpStatus.CONFLICT, "Las experiencias del plan se superponen");
+        }
+        adicionales.bloquearSeleccionPlan(seleccion.adicionalesIds());
+        return lista;
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    PlanReservaResumen resumenPlanBloqueado(List<SalidaProgramada> lista, ComposicionPasajeros composicion, List<Long> adicionalesIds) {
+        int pasajeros = composicion.totalPasajeros();
+        var items = new java.util.ArrayList<PlanReservaResumen.Item>();
+        var extras = new java.util.LinkedHashMap<Long, ReservaAdicionalRespuesta>();
+        for (var salida : lista) {
+            String problema = null;
+            java.math.BigDecimal subtotal = java.math.BigDecimal.ZERO;
+            try {
+                validarSalidaReservable(salida);
+                var precio = salida.getTour().getPrecioBase();
+                if (precio == null || precio.signum() <= 0) throw error(HttpStatus.CONFLICT, "El tour no tiene un precio válido");
+                subtotal = tarifas.total(precio, composicion.ninos(), composicion.adultos(), composicion.adultosMayores());
+                if (pasajeros > salida.getCuposDisponibles()) problema = "Cupos insuficientes";
+            } catch (ResponseStatusException e) {
+                problema = e.getReason();
+            }
+            // Usar el cálculo y las validaciones individuales, una vez por reserva del plan.
+            for (var adicional : adicionales.seleccionar(salida.getTour().getId(), pasajeros, adicionalesIds)) {
+                var detalle = ReservaAdicionalRespuesta.desde(adicional);
+                extras.merge(detalle.adicionalId(), detalle, (a, b) -> new ReservaAdicionalRespuesta(
+                        a.adicionalId(), a.nombre(), a.descripcion(), a.tipoCobro(), a.cantidad() + b.cantidad(),
+                        a.precioUnitario(), a.subtotal().add(b.subtotal())));
+            }
+            items.add(new PlanReservaResumen.Item(salida.getId(), salida.getTour().getNombre(),
+                    salida.getCuposDisponibles() == null ? 0 : salida.getCuposDisponibles(), subtotal, problema));
+        }
+        var subtotalExtras = extras.values().stream().map(ReservaAdicionalRespuesta::subtotal)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        return new PlanReservaResumen(List.copyOf(items), items.stream().map(PlanReservaResumen.Item::subtotal)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add).add(subtotalExtras),
+                items.stream().allMatch(i -> i.problema() == null), List.copyOf(extras.values()), subtotalExtras);
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    List<ReservaRespuesta> reservasDelPlan(java.util.UUID operacionId, LoginRespuesta actor) {
+        // El usuario se bloquea después de salidas/tours/embarcaciones, igual que al notificar reservas.
+        usuarios.bloquearPorId(actor.id()).orElseThrow(() -> error(HttpStatus.UNAUTHORIZED, "Sesión inválida"));
+        return reservas.findByClienteIdAndPlanOperacionIdOrderByIdAsc(actor.id(), operacionId.toString())
+                .stream().map(r -> respuesta(r, actor)).toList();
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    void asociarPlan(Long reservaId, java.util.UUID operacionId) {
+        reservas.findById(reservaId).orElseThrow(this::noEncontrada).asociarPlan(operacionId);
     }
 
     public List<ReservaRespuesta> listar(LoginRespuesta actor, boolean soloMias) {

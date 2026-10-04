@@ -1,114 +1,266 @@
-<header class="navbar">
-  <a class="brand" href="#">
-    <span class="brand-icon">≈</span>
+<div class="landing-page">
+  <!-- VIDEO DE FONDO -->
+  <video
+    class="hero-video"
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="auto"
+    (canplay)="ensureVideoPlays($event)"
+    (ended)="restartVideo($event)"
+  >
+    <source src="/videos/hero-seatour.mp4" type="video/mp4" />
+  </video>
 
-    <span class="brand-text">
-      <strong>SeaTour</strong>
-      <small>PERÚ</small>
-    </span>
-  </a>
+  <!-- CAPAS VISUALES -->
+  <div class="hero-overlay"></div>
+  <div class="hero-vignette"></div>
 
-  <nav>
-    <a href="#">Inicio</a>
-    <a href="#tours">Tours</a>
-    <a href="#destinos">Destinos</a>
-    <a href="#embarcaciones">Embarcaciones</a>
-    <a href="#experiencias">Experiencias</a>
-  </nav>
+  <!-- =========================
+       NAVBAR
+       ========================= -->
+  <header class="landing-navbar">
+    <!-- MARCA -->
+    <a routerLink="/" class="landing-brand">
+      <div class="brand-symbol">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 15c2.5-2 5-2 7.5 0s5 2 7.5 0 3-2 3-2"></path>
+          <path d="M3 10c2.5-2 5-2 7.5 0s5 2 7.5 0 3-2 3-2"></path>
+        </svg>
+      </div>
 
-  <div class="nav-actions">
-    @if (!auth.tieneRol('OPERADOR', 'ADMIN')) { <a class="session-action" routerLink="/app/tours">Reservar</a> }
-    @if (auth.tieneRol('CLIENTE')) { <a class="session-action" routerLink="/app/mis-reservas">Mis reservas</a> }
-    @if (auth.tieneRol('OPERADOR', 'ADMIN')) { <a class="session-action" [routerLink]="reservasPorRol(auth.usuario()?.rol)">Gestionar reservas</a> }
-    @if (auth.usuario(); as usuario) {
-      <a class="session-action" [routerLink]="inicioPorRol(usuario.rol)">Mi panel</a>
-      <span class="session-name">{{ usuario.nombre }}</span>
-      <button class="session-action" type="button" (click)="auth.logout()">Cerrar sesión</button>
-    } @else {
-      <a class="session-action" routerLink="/login">Iniciar sesión</a>
-      <a class="session-action" routerLink="/registro">Registrarse</a>
-    }
-    <button class="search-btn" aria-label="Buscar">⌕</button>
-    <a class="nav-cta" href="#tours">
-      Explorar tours
-      <span>→</span>
+      <div class="brand-copy">
+        <strong>SeaTour</strong>
+        <span>PERÚ</span>
+      </div>
     </a>
-  </div>
-</header>
 
-<main>
-  <section class="hero">
-    <video
-      class="hero-video"
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="auto"
-      (canplay)="ensureVideoPlays($event)"
-      (ended)="restartVideo($event)"
-    >
-      <source src="/videos/hero-seatour.mp4" type="video/mp4" />
-    </video>
+    <!-- ACCIONES -->
+    <div class="navbar-actions">
+      <a routerLink="/login" class="navbar-login"> Iniciar sesión </a>
 
-    <div class="hero-gradient"></div>
-    <div class="hero-vignette"></div>
+      <a routerLink="/registro" class="navbar-register">
+        Regístrate
 
-    <aside class="scroll-side">
-      <span>SCROLL</span>
-      <div class="scroll-line"></div>
-      <div class="scroll-dot"></div>
-    </aside>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M5 12h14"></path>
+          <path d="m13 6 6 6-6 6"></path>
+        </svg>
+      </a>
+    </div>
+  </header>
 
-    <div class="hero-content">
-      <div class="section-kicker">
-        <span>NORTE PERUANO</span>
+  <!-- =========================
+       HERO
+       ========================= -->
+  <main class="hero-layout">
+    <!-- CONTENIDO PRINCIPAL -->
+    <section class="hero-content">
+      <!-- KICKER -->
+      <div class="hero-kicker">
+        <span>Naturaleza que inspira</span>
         <div></div>
       </div>
 
-      <h1>
+      <!-- TÍTULO -->
+      <h1 class="hero-title">
         Explora el norte
         <br />
-        del Perú <span>desde</span>
+
+        del Perú
+        <span>desde</span>
+
         <br />
+
         <span>el mar.</span>
       </h1>
 
+      <!-- DESCRIPCIÓN -->
       <p class="hero-description">
         Tours marítimos, naturaleza única y experiencias inolvidables en un destino extraordinario.
       </p>
 
+      <!-- ACCIONES -->
       <div class="hero-actions">
-        <a class="primary-btn" href="#tours">
+        <a routerLink="/login" class="primary-action">
           Descubre experiencias
-          <span>→</span>
+
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M5 12h14"></path>
+            <path d="m13 6 6 6-6 6"></path>
+          </svg>
         </a>
 
-        <button class="video-btn">
-          <span class="play-circle">▶</span>
+        <a href="/videos/hero-seatour.mp4" target="_blank" rel="noopener" class="video-action">
+          <span class="video-play">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7Z"></path>
+            </svg>
+          </span>
+
           <span>Ver video</span>
-        </button>
+        </a>
+      </div>
+
+      <!-- SOCIAL PROOF -->
+      <div class="hero-proof">
+        <div class="proof-group">
+          <div class="proof-avatars">
+            <span class="avatar avatar-one"></span>
+            <span class="avatar avatar-two"></span>
+            <span class="avatar avatar-three"></span>
+          </div>
+
+          <div class="proof-copy">
+            <strong>Experiencias reales</strong>
+            <span>Descubre el mar del norte peruano</span>
+          </div>
+        </div>
+
+        <div class="proof-divider"></div>
+
+        <div class="rating-group">
+          <div class="rating-stars">
+            <span>★</span>
+            <span>★</span>
+            <span>★</span>
+            <span>★</span>
+            <span>★</span>
+          </div>
+
+          <span class="rating-caption"> Recuerdos inolvidables </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================
+         UBICACIÓN
+         ========================= -->
+    <div class="hero-location-wrap">
+      <div class="hero-location">
+        <div class="location-glow"></div>
+
+        <div class="hero-location-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path>
+            <circle cx="12" cy="10" r="2.5"></circle>
+          </svg>
+        </div>
+
+        <div class="hero-location-copy">
+          <strong>Máncora, Piura</strong>
+          <span>Costa norte del Perú</span>
+        </div>
       </div>
     </div>
 
-    <div class="ocean-message">
-      <span>EL OCÉANO</span>
-      <span>TAMBIÉN CUENTA</span>
+    <!-- =========================
+         MINI CARDS
+         ========================= -->
+    <div class="hero-mini-cards">
+      <!-- TOURS -->
+      <div class="hero-glass-card">
+        <div class="card-glow"></div>
 
-      <div class="message-row">
-        <span>HISTORIAS</span>
-        <div></div>
+        <div class="hero-glass-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 17h16"></path>
+            <path d="M6 17l2-6h8l2 6"></path>
+            <path d="M10 11V7h4v4"></path>
+            <path d="M3 20h18"></path>
+          </svg>
+        </div>
+
+        <div class="hero-glass-copy">
+          <strong>Tours</strong>
+          <span>marítimos</span>
+        </div>
+      </div>
+
+      <!-- NATURALEZA -->
+      <div class="hero-glass-card">
+        <div class="card-glow"></div>
+
+        <div class="hero-glass-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M20 4c-7 0-12 3-14 9"></path>
+            <path d="M6 13c3 0 6 1 8 4"></path>
+            <path d="M20 4c0 7-3 12-9 14"></path>
+          </svg>
+        </div>
+
+        <div class="hero-glass-copy">
+          <strong>Naturaleza</strong>
+          <span>única</span>
+        </div>
+      </div>
+
+      <!-- EXPERIENCIAS -->
+      <div class="hero-glass-card">
+        <div class="card-glow"></div>
+
+        <div class="hero-glass-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="8"></circle>
+            <path d="m14 8-2 4-4 2 2-4 4-2Z"></path>
+          </svg>
+        </div>
+
+        <div class="hero-glass-copy">
+          <strong>Experiencias</strong>
+          <span>auténticas</span>
+        </div>
       </div>
     </div>
-
-    <div class="location">
-      <span>⌁</span>
-      <span>Máncora, Piura</span>
-    </div>
-
-    <div class="explore-down">
-      <span>⌄</span>
-      <small>Desliza para explorar</small>
-    </div>
-  </section>
-</main>
+  </main>
+</div>

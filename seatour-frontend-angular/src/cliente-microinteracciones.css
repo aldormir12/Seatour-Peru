@@ -1,0 +1,115 @@
+/* Todos los patrones están limitados al layout autenticado de CLIENTE. */
+.cliente-microinteracciones {
+  --cliente-ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+.cliente-microinteracciones :is(.cliente-contenido-entrada, .cliente-seccion) {
+  animation: cliente-seccion-entrada 220ms var(--cliente-ease);
+}
+
+.cliente-microinteracciones button:not(.inset-0):not(.maplibregl-ctrl button),
+.cliente-microinteracciones a.cliente-boton {
+  transition-property: transform, opacity, box-shadow, background-color, color, border-color !important;
+  transition-duration: 120ms !important;
+  transition-timing-function: var(--cliente-ease) !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cliente-microinteracciones button:not(:disabled):not(.inset-0):hover,
+  .cliente-microinteracciones a.cliente-boton:hover { transform: translateY(-1px); }
+  .cliente-microinteracciones .cliente-card-interactiva:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgb(8 45 65 / .12);
+  }
+}
+.cliente-microinteracciones button:not(:disabled):not(.inset-0):active,
+.cliente-microinteracciones a.cliente-boton:active { transform: scale(.98); }
+.cliente-microinteracciones .cliente-card-interactiva {
+  transition: transform 180ms var(--cliente-ease), box-shadow 180ms var(--cliente-ease) !important;
+}
+/* Una card con un botón interno no convierte toda la superficie en una acción. */
+.cliente-microinteracciones article[class*='hover:-translate'] { translate: none !important; }
+.cliente-microinteracciones article:not(.cliente-card-interactiva):hover { transform: none !important; translate: none !important; }
+.cliente-microinteracciones button[class*='hover:-translate']:hover { translate: none !important; }
+.cliente-microinteracciones .group:hover img { transform: none !important; scale: none !important; }
+
+.cliente-microinteracciones .cliente-modal-entrando { animation: cliente-fade-entrada 240ms var(--cliente-ease); }
+.cliente-microinteracciones .cliente-modal-saliendo {
+  pointer-events: none;
+  animation: cliente-fade-salida 200ms ease-in;
+}
+.cliente-microinteracciones .cliente-panel { --cliente-slide-x: 0px; --cliente-slide-y: 8px; }
+.cliente-microinteracciones .cliente-panel-derecha { --cliente-slide-x: 10px; --cliente-slide-y: 0px; }
+.cliente-microinteracciones .cliente-modal-entrando .cliente-panel { animation: cliente-panel-entrada 240ms var(--cliente-ease); }
+.cliente-microinteracciones .cliente-modal-saliendo .cliente-panel { animation: cliente-panel-salida 200ms ease-in; }
+.cliente-microinteracciones .cliente-panel { transition-property: transform, opacity !important; }
+.cliente-microinteracciones .cliente-panel-estado { transition: transform 240ms var(--cliente-ease), opacity 240ms var(--cliente-ease) !important; }
+@starting-style {
+  .cliente-microinteracciones .cliente-panel-estado:not(.cliente-panel-cerrado) {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+.cliente-microinteracciones .cliente-panel-cerrado {
+  opacity: 0;
+  transform: translateX(10px) !important;
+  transition-duration: 200ms !important;
+  pointer-events: none;
+}
+.cliente-microinteracciones .cliente-overlay {
+  transform: none !important;
+  scale: none !important;
+  translate: none !important;
+  transition: opacity 200ms var(--cliente-ease) !important;
+}
+
+.cliente-microinteracciones .cliente-popover-entrando { animation: cliente-popover-entrada 170ms var(--cliente-ease); }
+.cliente-microinteracciones .cliente-popover-saliendo { pointer-events: none; animation: cliente-popover-salida 170ms ease-in; }
+
+/* Diálogos nativos: el navegador conserva la capa durante la transición de salida. */
+.cliente-microinteracciones dialog:is(.plan-checkout, .review-dialog, .profile-dialog) {
+  --cliente-slide-x: 0px;
+  --cliente-slide-y: 8px;
+  opacity: 0;
+  transform: translate(var(--cliente-slide-x), var(--cliente-slide-y));
+  transition: opacity 200ms ease-in, transform 200ms ease-in, display 200ms allow-discrete, overlay 200ms allow-discrete !important;
+}
+.cliente-microinteracciones dialog:is(.plan-checkout, .profile-dialog) { --cliente-slide-x: 10px; --cliente-slide-y: 0px; }
+.cliente-microinteracciones dialog:is(.plan-checkout, .review-dialog, .profile-dialog)[open] {
+  opacity: 1;
+  transform: none;
+  transition-duration: 240ms !important;
+  transition-timing-function: var(--cliente-ease) !important;
+}
+.cliente-microinteracciones dialog::backdrop {
+  opacity: 0;
+  transition: opacity 200ms ease-in, display 200ms allow-discrete, overlay 200ms allow-discrete;
+}
+.cliente-microinteracciones dialog[open]::backdrop { opacity: 1; transition-duration: 240ms; }
+@starting-style {
+  .cliente-microinteracciones dialog:is(.plan-checkout, .review-dialog, .profile-dialog)[open] {
+    opacity: 0;
+    transform: translate(var(--cliente-slide-x), var(--cliente-slide-y));
+  }
+  .cliente-microinteracciones dialog[open]::backdrop { opacity: 0; }
+}
+
+/* Eliminar adornos continuos; los indicadores de carga existentes conservan su función. */
+.cliente-microinteracciones .animate-ping { animation: none !important; }
+@keyframes cliente-seccion-entrada { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes cliente-fade-entrada { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cliente-fade-salida { from { opacity: 1; } to { opacity: 0; } }
+@keyframes cliente-panel-entrada { from { opacity: 0; transform: translate(var(--cliente-slide-x), var(--cliente-slide-y)); } to { opacity: 1; transform: none; } }
+@keyframes cliente-panel-salida { from { opacity: 1; transform: none; } to { opacity: 0; transform: translate(var(--cliente-slide-x), var(--cliente-slide-y)); } }
+@keyframes cliente-popover-entrada { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes cliente-popover-salida { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(.98); } }
+@media (prefers-reduced-motion: reduce) {
+  .cliente-microinteracciones *, .cliente-microinteracciones *::before, .cliente-microinteracciones *::after,
+  .cliente-microinteracciones dialog::backdrop {
+    animation: none !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+  .cliente-microinteracciones button:not(.inset-0):is(:hover, :active),
+  .cliente-microinteracciones :is(.cliente-card-interactiva, .cliente-boton):is(:hover, :active),
+  .cliente-microinteracciones .cliente-panel-cerrado { transform: none !important; }
+}

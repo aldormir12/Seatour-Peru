@@ -1,6 +1,6 @@
 @if (!soloDetalle) {
   <section
-    class="relative z-[4] mt-[-200px] ml-[max(28px,calc((100%-1200px)/2))] w-[calc(100%-max(28px,calc((100%-1200px)/2))-28px)] py-10 pb-16 text-[#102d41] max-[1000px]:mx-auto max-[1000px]:w-[calc(100%-56px)] max-[600px]:w-[calc(100%-36px)] max-[600px]:py-8 max-[600px]:pb-12"
+    class="cliente-seccion relative z-[4] mt-[-200px] ml-[max(28px,calc((100%-1200px)/2))] w-[calc(100%-max(28px,calc((100%-1200px)/2))-28px)] py-10 pb-16 text-[#102d41] max-[1000px]:mx-auto max-[1000px]:w-[calc(100%-56px)] max-[600px]:w-[calc(100%-36px)] max-[600px]:py-8 max-[600px]:pb-12"
     aria-labelledby="titulo-intelligence"
     [attr.aria-busy]="cargandoIntelligence() || cargandoTours()"
   >
@@ -149,7 +149,7 @@
           @for (recomendacion of recomendacionesIntelligence(); track recomendacion.tourId) {
             @if (tourPorId(recomendacion.tourId); as tour) {
               <article
-                class="group flex h-full flex-col overflow-hidden rounded-[18px] border border-[#dfe9ef] bg-white shadow-[0_8px_28px_rgba(16,45,65,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_38px_rgba(16,45,65,0.10)]"
+                class="group flex h-full flex-col overflow-hidden rounded-[18px] border border-[#dfe9ef] bg-white shadow-[0_8px_28px_rgba(16,45,65,0.04)] transition-all duration-300 "
               >
                 <!-- IMAGEN -->
 
@@ -173,11 +173,6 @@
                       class="pointer-events-none absolute inset-0 rounded-t-[18px] bg-gradient-to-t from-black/35 via-transparent to-black/5"
                     ></div>
                   </div>
-
-                  <app-resenas-tour
-                    class="absolute bottom-12 left-3 z-10 rounded-md bg-white/95 px-2 py-1 shadow-sm"
-                    [tour]="tour"
-                  />
 
                   <!-- MEJOR HORA -->
 
@@ -271,6 +266,8 @@
                   >
                     {{ tour.nombre }}
                   </h3>
+
+                  <app-resenas-tour class="recomendacion-resenas" [tour]="tour" />
 
                   <app-ubicacion-tour
                     [zonaMaritima]="tour.zonaMaritima"
@@ -690,6 +687,7 @@
                     </span>
                   </div>
                 }
+                <app-reserva-plan [items]="plan.items" />
               </div>
             } @else {
               <div class="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
@@ -722,7 +720,7 @@
       </div>
     }
     <div class="mt-7 grid w-full grid-cols-1 items-start gap-5 xl:grid-cols-2">
-      <app-mejor-opcion-hoy class="min-w-0" [fecha]="fechaPlanDia()" />
+      <app-mejor-opcion-hoy class="min-w-0" [fecha]="fechaPlanDia()" (reservarExperiencia)="reservarMejorOpcion($event)" />
 
       <app-pronostico-marino
         class="min-w-0"
@@ -739,7 +737,7 @@
 
 @if (modalAbierto() && tourSeleccionado(); as tour) {
   <div
-    class="fixed inset-0 z-[100] flex transition-all duration-300"
+    class="fixed inset-0 z-[100] flex" animate.enter="cliente-modal-entrando" animate.leave="cliente-modal-saliendo"
     [class]="modoReserva() ? 'justify-end' : 'items-center justify-center p-4'"
   >
     <!-- OVERLAY -->
@@ -752,7 +750,7 @@
 
     <!-- CONTENEDOR -->
     <div
-      class="relative z-10 w-full overflow-hidden bg-white shadow-[0_30px_90px_rgba(0,0,0,0.20)] transition-[max-width,height,border-radius,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+      class="cliente-panel relative z-10 w-full overflow-hidden bg-white shadow-[0_30px_90px_rgba(0,0,0,0.20)]" [class.cliente-panel-derecha]="modoReserva()"
       [class]="modoReserva() ? 'max-w-[430px] h-full rounded-none' : 'max-w-[660px] rounded-[26px]'"
     >
       <!-- ================================================== -->
@@ -979,7 +977,7 @@
 
       @else {
         @if (salidaSeleccionada(); as salida) {
-          <div class="flex h-full flex-col">
+          <div class="flex h-full flex-col" [attr.inert]="procesandoPago() ? '' : null">
             <!-- HEADER -->
             <header class="border-b border-slate-100 px-5 py-4">
               <div class="flex items-center gap-3">
@@ -1331,26 +1329,28 @@
                     <button
                       type="button"
                       (click)="seleccionarMetodo('TARJETA')"
-                      class="rounded-2xl border px-4 py-3 text-sm font-semibold transition"
+                      class="flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition"
                       [class.border-[#087dab]]="metodoPago() === 'TARJETA'"
                       [class.bg-sky-50]="metodoPago() === 'TARJETA'"
                       [class.text-[#087dab]]="metodoPago() === 'TARJETA'"
                       [class.border-slate-200]="metodoPago() !== 'TARJETA'"
                       [class.text-slate-600]="metodoPago() !== 'TARJETA'"
                     >
+                      <img src="/images/pagos/tarjeta.png" alt="" class="h-6 w-9 shrink-0 object-contain" />
                       Tarjeta
                     </button>
 
                     <button
                       type="button"
                       (click)="seleccionarMetodo('YAPE')"
-                      class="rounded-2xl border px-4 py-3 text-sm font-semibold transition"
+                      class="flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition"
                       [class.border-[#087dab]]="metodoPago() === 'YAPE'"
                       [class.bg-sky-50]="metodoPago() === 'YAPE'"
                       [class.text-[#087dab]]="metodoPago() === 'YAPE'"
                       [class.border-slate-200]="metodoPago() !== 'YAPE'"
                       [class.text-slate-600]="metodoPago() !== 'YAPE'"
                     >
+                      <img src="/images/pagos/yape.png" alt="" class="h-6 w-6 shrink-0 object-contain" />
                       Yape
                     </button>
                   </div>
@@ -1358,7 +1358,12 @@
 
                 <!-- TARJETA -->
                 @if (metodoPago() === 'TARJETA') {
-                  <div class="mt-7 space-y-4">
+                  <div class="mt-5 space-y-4">
+                    <div class="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                      <img src="/images/pagos/tarjeta.png" alt="" class="h-8 w-12 shrink-0 object-contain" />
+                      <p class="m-0 text-sm font-semibold text-[#102d41]">Pago con tarjeta</p>
+                    </div>
+
                     <div>
                       <label for="numero-tarjeta" class="text-xs font-medium text-slate-600">
                         Número de tarjeta
@@ -1450,9 +1455,12 @@
 
                 <!-- YAPE -->
                 @else {
-                  <div class="mt-7 space-y-4">
-                    <div class="rounded-2xl bg-slate-50 p-4">
-                      <p class="text-sm font-semibold text-[#102d41]">Pago con Yape</p>
+                  <div class="mt-5 space-y-4">
+                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <img src="/images/pagos/yape.png" alt="" class="h-8 w-8 shrink-0 object-contain" />
+                        <p class="m-0 text-sm font-semibold text-[#102d41]">Pago con Yape</p>
+                      </div>
 
                       <p class="mt-1 text-xs leading-5 text-slate-500">
                         Ingresa el celular y el código de aprobación para simular la operación.
@@ -1529,9 +1537,11 @@
                   type="button"
                   (click)="pagar()"
                   [disabled]="!puedePagar()"
-                  class="flex w-full items-center justify-center rounded-2xl bg-[#087dab] px-5 py-4 text-sm font-semibold text-white transition hover:bg-[#06668d] disabled:cursor-not-allowed disabled:opacity-50"
+                  [attr.aria-busy]="procesandoPago()"
+                  class="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#087dab] px-5 py-4 text-sm font-semibold text-white transition hover:bg-[#06668d] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   @if (procesandoPago()) {
+                    <span class="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true"></span>
                     Procesando pago...
                   } @else {
                     Pagar
@@ -1641,6 +1651,16 @@
       <!-- ================================================== -->
       <!-- FICHA EMBARCACIÓN -->
       <!-- ================================================== -->
+
+      @if (modoReserva() && procesandoPago()) {
+        <div class="pago-procesando-overlay" role="status" aria-live="polite" aria-atomic="true" aria-busy="true">
+          <div class="pago-procesando-mensaje">
+            <span class="pago-procesando-spinner" aria-hidden="true"></span>
+            <p class="pago-procesando-titulo">Procesando tu pago...</p>
+            <p class="pago-procesando-descripcion">Estamos validando la operación</p>
+          </div>
+        </div>
+      }
 
       @if (fichaEmbarcacionAbierta()) {
         <div class="absolute inset-0 z-30 flex items-center justify-center p-5">

@@ -7,4 +7,5 @@ public record ReservaCreacion(@NotNull @Positive Long salidaId,
         @Positive java.math.BigDecimal precioEsperado,
         @Size(max = 50) java.util.List<@NotNull @Positive Long> adicionalesIds) {
     public int totalPasajeros() { return ninos + adultos + adultosMayores; }
+    public ComposicionPasajeros composicion() { return new ComposicionPasajeros(ninos, adultos, adultosMayores); }
 }

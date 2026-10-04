@@ -12,10 +12,12 @@ export class PublicLayout {}
 
 @Component({
   selector: 'app-private-layout',
+  host: { '[class.cliente-microinteracciones]': 'esCliente' },
   imports: [RouterOutlet, ReservasNav],
   template: '<app-reservas-nav /><router-outlet />'
 })
 export class PrivateLayout {
+  get esCliente(): boolean { return this.auth.usuario()?.rol === 'CLIENTE'; }
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 

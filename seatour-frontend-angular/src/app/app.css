@@ -698,11 +698,6 @@
     padding: 0 1.1rem;
   }
 
-  .search-btn,
-  .nav-cta {
-    display: none;
-  }
-
   .hero-video {
     object-position: 60% center;
   }

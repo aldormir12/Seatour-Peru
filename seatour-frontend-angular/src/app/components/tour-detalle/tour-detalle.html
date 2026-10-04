@@ -1,6 +1,6 @@
 <main>
-  <div class="contenido">
-    <a class="volver" routerLink="/app/tours">Volver al catálogo</a>
+  <div class="contenido cliente-contenido-entrada">
+    <a class="volver cliente-boton" routerLink="/app/tours">Volver al catálogo</a>
     @if (cargando()) {
       <section class="estado" role="status" aria-busy="true"><h1>Cargando tour</h1><p>Estamos consultando los detalles de esta experiencia.</p></section>
     } @else if (error()) {

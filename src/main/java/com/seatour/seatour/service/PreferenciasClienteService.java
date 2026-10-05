@@ -42,12 +42,12 @@ public class PreferenciasClienteService {
         favoritas.forEach(categoria -> inexistentes.remove(categoria.getId()));
         if (!inexistentes.isEmpty())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "categoriasFavoritas: no existen las categorías " + inexistentes);
+                    "Algunos intereses seleccionados ya no están disponibles. Actualiza tus preferencias");
         usuario.getCategoriasFavoritas().clear();
         usuario.getCategoriasFavoritas().addAll(favoritas);
         usuario.setPresupuestoMaximo(datos.presupuestoMaximo());
         if (new LinkedHashSet<>(datos.horarioPreferido()).size() != datos.horarioPreferido().size())
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "horarioPreferido: selecciona horarios distintos");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona horarios distintos para tus experiencias");
         usuario.setHorarioPreferido(datos.horarioPreferido());
         usuario.setDuracionPreferidaMinutos(datos.duracionPreferidaMinutos());
         usuario.setNivelActividad(limpiar(datos.nivelActividad()));
@@ -61,7 +61,7 @@ public class PreferenciasClienteService {
 
     private Usuario cliente(LoginRespuesta actor, boolean bloquear) {
         if (actor == null || !"CLIENTE".equals(actor.rol()))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo CLIENTE puede gestionar sus preferencias");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tu cuenta no tiene permisos para gestionar preferencias de viaje");
         Usuario usuario = (bloquear ? usuarios.bloquearPorId(actor.id()) : usuarios.findById(actor.id()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
         if (!usuario.isActivo() || !"CLIENTE".equals(usuario.getRol().getNombre()))

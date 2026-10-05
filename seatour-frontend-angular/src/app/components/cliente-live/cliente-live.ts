@@ -1,4 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
+import { mensajeConflictoLive } from '../../services/live-error';
 
 import {
   Component,
@@ -1031,9 +1032,7 @@ export class ClienteLive implements OnInit, OnDestroy {
 
 
         case 409:
-          return (
-            'La salida ya no está en curso. Actualiza la lista.'
-          );
+          return mensajeConflictoLive(error);
 
 
         case 503:

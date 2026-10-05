@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, of, switchMap, tap, throwError, timeout } from 'rxjs';
 
 export type RolUsuario = 'CLIENTE' | 'OPERADOR' | 'ADMIN';
@@ -48,7 +48,12 @@ export class AuthService {
       tap(usuario => {
         if (this.obtenerToken() === token) this.guardarSesion({ ...usuario, token });
       }),
-      catchError(() => { this.logout(); return of(null); })
+      catchError(error => {
+        if (error instanceof HttpErrorResponse && error.status === 401 && this.obtenerToken() === token) {
+          this.logout();
+        }
+        return of(null);
+      })
     );
   }
 

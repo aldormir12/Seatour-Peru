@@ -327,6 +327,8 @@
                   formControlName="password"
                   placeholder="Contraseña"
                   autocomplete="new-password"
+                  aria-describedby="password-ayuda password-error"
+                  [attr.aria-invalid]="formulario.controls.password.touched && formulario.controls.password.invalid"
                   class="h-12 w-full rounded-2xl border border-slate-200 bg-white/90 pl-12 pr-11 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10"
                 />
 
@@ -376,8 +378,19 @@
                 </button>
               </div>
 
+              <p id="password-ayuda" class="mt-2 text-xs text-slate-500">
+                Usa al menos 8 caracteres, una letra y un número.
+              </p>
               @if (formulario.controls.password.touched && formulario.controls.password.invalid) {
-                <p class="mt-2 text-xs font-medium text-rose-500">Usa entre 6 y 1024 caracteres.</p>
+                <p id="password-error" class="mt-2 text-xs font-medium text-rose-500" role="alert">
+                  @if (formulario.controls.password.hasError('required')) {
+                    Ingresa una contraseña.
+                  } @else if (formulario.controls.password.hasError('maxlength')) {
+                    La contraseña no puede superar los 1024 caracteres.
+                  } @else {
+                    La contraseña debe tener al menos 8 caracteres, una letra y un número.
+                  }
+                </p>
               }
             </div>
 

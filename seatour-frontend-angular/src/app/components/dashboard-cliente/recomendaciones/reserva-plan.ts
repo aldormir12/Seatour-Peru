@@ -242,7 +242,7 @@ export class ReservaPlanComponent {
         // Si se perdió la respuesta, conservar la misma operación evita duplicar reservas al reintentar.
         this.incierto.set(e.status === 0 || e.status === 408 || e.status >= 500);
         this.error.set(this.incierto()
-          ? 'No pudimos confirmar el resultado. Reintenta la misma operación para consultarlo sin duplicar reservas.'
+          ? 'No pudimos confirmar la respuesta del pago. Revisa tus reservas antes de intentarlo nuevamente.'
           : e.error?.detail || 'No se pudo reservar el plan. Revisa los datos e inténtalo nuevamente.');
         if (!this.incierto()) this.actualizarResumen();
       }

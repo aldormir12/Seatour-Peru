@@ -1,0 +1,144 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+  color: #123449;
+  background: #f2f7fa;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.access-page {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: clamp(2rem, 6vw, 5rem) 1rem;
+  background:
+    radial-gradient(ellipse at 15% 20%, #dff3f2 0, transparent 55%),
+    radial-gradient(ellipse at 90% 90%, #e0edf8 0, transparent 55%);
+}
+
+.access-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 520px;
+  padding: clamp(1.75rem, 5vw, 3rem);
+  text-align: center;
+  background: #fff;
+  border: 1px solid #dce9ef;
+  border-radius: 28px;
+  box-shadow: 0 20px 65px -24px #12344930;
+  animation: access-enter 550ms ease-out both;
+}
+
+.access-brand {
+  color: #507080;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+.access-icon {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  margin: 1.75rem auto;
+  border: 1px solid #cfe8e8;
+  border-radius: 26px;
+  color: #087f8c;
+  background: linear-gradient(145deg, #edf9f8, #e3f1f7);
+}
+
+.access-icon svg {
+  width: 48px;
+  height: 48px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 5vw, 2.15rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.access-description {
+  margin: 1rem 0 1.75rem;
+  color: #526b7a;
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.panel-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  box-sizing: border-box;
+  min-height: 48px;
+  max-width: 100%;
+  padding: 0.85rem 1.4rem;
+  border-radius: 12px;
+  color: #fff;
+  background: #086c98;
+  box-shadow: 0 6px 16px #086c9820;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+
+.panel-link svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .panel-link:hover {
+    transform: translateY(-2px);
+    background: #075577;
+    box-shadow: 0 10px 22px #086c9830;
+  }
+}
+
+.panel-link:focus-visible {
+  outline: 3px solid #087f8c;
+  outline-offset: 4px;
+}
+
+.panel-link:active {
+  transform: translateY(0);
+}
+
+.access-note {
+  margin: 1.5rem 0 0;
+  color: #627a87;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+@keyframes access-enter {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+  .access-card { border-radius: 22px; }
+  .panel-link { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .access-card { animation: none; }
+  .panel-link { transition: none; }
+  .panel-link:hover { transform: none; }
+}

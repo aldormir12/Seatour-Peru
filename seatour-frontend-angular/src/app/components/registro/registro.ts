@@ -24,7 +24,8 @@ export class RegistroComponent {
     nombre: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     apellido: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     correo: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
-    password: ['', [Validators.required, Validators.pattern(/\S/), Validators.minLength(6), Validators.maxLength(1024)]],
+    password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(1024),
+      Validators.pattern(/^(?=[\s\S]*\p{L})(?=[\s\S]*[0-9])[\s\S]*$/u)]],
     confirmacion: ['', Validators.required]
   }, { validators: control => control.get('password')?.value === control.get('confirmacion')?.value
       ? null : { contrasenasDistintas: true } });

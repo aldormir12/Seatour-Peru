@@ -18,7 +18,7 @@ import { Tour } from '../../services/tours';
         <p class="review-average">★ {{ promedio() === null ? '—' : (promedio() | number:'1.1-2') }} <small>({{ cantidad() }} reseñas)</small></p>
         @if (cargando()) { <p role="status">Cargando reseñas…</p> }
         @else if (error()) { <p class="review-error" role="alert">{{ error() }}</p><button type="button" class="rate-button" (click)="cargar()">Reintentar</button> }
-        @else if (resumen()?.resenas?.length) {
+        @else if (tieneResenas) {
           @for (resena of resumen()!.resenas; track resena.id) {
             <article class="review-item"><strong>★ {{ resena.puntuacion }} / 5</strong>
               <time>{{ resena.creadaEn | date:'dd/MM/yyyy, HH:mm':'-0500' }}</time>
@@ -36,6 +36,9 @@ export class ResenasTour {
   private readonly destroy = inject(DestroyRef);
   private readonly modal = viewChild<ElementRef<HTMLDialogElement>>('modal');
   readonly resumen = computed(() => this.api.resumenes()[this.tour().id]);
+  get tieneResenas(): boolean {
+    return (this.resumen()?.resenas?.length ?? 0) > 0;
+  }
   readonly promedio = computed(() => this.resumen()?.promedio ?? this.tour().promedioEstrellas ?? null);
   readonly cantidad = computed(() => this.resumen()?.cantidad ?? this.tour().cantidadResenas ?? 0);
   readonly cargando = signal(false); readonly error = signal('');

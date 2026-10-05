@@ -1451,7 +1451,9 @@ ringOffset(score: number): number {
           );
 
           this.errorCheckout.set(
-            error.error?.detail
+            error.status === 0 || error.status === 408 || error.status >= 500
+              ? 'No pudimos confirmar la respuesta del pago. Revisa tus reservas antes de intentarlo nuevamente.'
+              : error.error?.detail
               || error.error?.message
               || 'No se pudo procesar el pago. Inténtalo nuevamente.'
           );

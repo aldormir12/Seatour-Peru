@@ -3,6 +3,7 @@ import { inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import type { Room } from 'livekit-client';
 import { API_URL } from './auth.service';
+import { mensajeConflictoLive } from './live-error';
 import type { SalidaProgramada } from './salidas.service';
 
 interface LiveTokenRespuesta {
@@ -131,7 +132,7 @@ export class LiveService implements OnDestroy {
         case 401: return 'Tu sesión expiró. Vuelve a iniciar sesión.';
         case 403: return 'No tienes permiso para transmitir esta salida.';
         case 404: return 'La salida no está disponible.';
-        case 409: return 'La salida ya no está EN_CURSO. Actualiza la página.';
+        case 409: return mensajeConflictoLive(error);
         case 503: return 'SeaTour Live no está configurado en el servidor.';
         default: return 'No se pudo obtener el acceso a SeaTour Live.';
       }

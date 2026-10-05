@@ -13,9 +13,9 @@ public class ComprobanteReserva {
     private Reserva reserva;
     @Column(nullable = false, unique = true, updatable = false, length = 40) private String codigo;
     @Column(nullable = false, updatable = false) private String destinatario;
-    @Lob @Column(nullable = false, updatable = false) private String html;
-    @Lob @Column(nullable = false, updatable = false) private String texto;
-    @Lob @Column(nullable = false, updatable = false) private byte[] qr;
+    @Column(nullable = false, updatable = false, columnDefinition = "text") private String html;
+    @Column(nullable = false, updatable = false, columnDefinition = "text") private String texto;
+    @Column(nullable = false, updatable = false, columnDefinition = "bytea") private byte[] qr;
     @Column(nullable = false, updatable = false) private Instant creadoEn;
     private Instant enviadoEn;
     private Instant omitidoEn;

@@ -1,0 +1,67 @@
+name: seatour
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: seatour_db
+      POSTGRES_USER: seatour_user
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?Define SPRING_DATASOURCE_PASSWORD en .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seatour_user -d seatour_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/seatour_db
+      SPRING_DATASOURCE_USERNAME: seatour_user
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?Define SPRING_DATASOURCE_PASSWORD en .env}
+      SEATOUR_JWT_SECRET: ${SEATOUR_JWT_SECRET:?Define SEATOUR_JWT_SECRET en .env}
+      SERVER_PORT: "8080"
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      SEATOUR_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:${SEATOUR_PORT:-8088},http://127.0.0.1:${SEATOUR_PORT:-8088},https://*.trycloudflare.com
+      SEATOUR_IMAGENES_DIRECTORIO: /app/uploads/tours
+      SEATOUR_EMBARCACIONES_IMAGENES_DIRECTORIO: /app/uploads/embarcaciones
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "5", "http://localhost:8080/api/tours"]
+      interval: 10s
+      timeout: 6s
+      retries: 12
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./seatour-frontend-angular
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${SEATOUR_PORT:-8088}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  uploads_data:

@@ -8,22 +8,34 @@ echo            INICIANDO SEATOUR
 echo ==========================================
 echo.
 
-echo [1/4] Backend Spring Boot...
-start "SeaTour Backend - 8080" cmd /k "cd /d "%~dp0" && mvnw.cmd spring-boot:run"
+where docker >nul 2>&1
+if errorlevel 1 (
+    echo No se encontro Docker. Instala y abre Docker Desktop.
+    pause
+    exit /b 1
+)
 
-timeout /t 3 /nobreak >nul
+where cloudflared >nul 2>&1
+if errorlevel 1 (
+    echo No se encontro cloudflared. Instalalo y agregalo al PATH.
+    pause
+    exit /b 1
+)
 
-echo [2/4] Frontend Laptop...
-start "SeaTour Laptop - 4200" cmd /k "cd /d "%~dp0seatour-frontend-angular" && npm start"
+echo [1/3] Iniciando Docker Compose...
+docker compose up -d
+if errorlevel 1 (
+    echo No se pudo iniciar SeaTour. Revisa Docker Desktop y el mensaje anterior.
+    pause
+    exit /b 1
+)
 
-timeout /t 3 /nobreak >nul
-
-echo [3/4] Frontend Mobile...
-start "SeaTour Mobile - 4300" cmd /k "cd /d "%~dp0seatour-frontend-angular" && npm run start:tunnel -- --port 4300"
-
+echo [2/3] Esperando unos segundos...
 timeout /t 5 /nobreak >nul
+echo App local: http://localhost:8088
+start "" "http://localhost:8088"
 
-echo [4/4] Cloudflare Tunnel...
+echo [3/3] Iniciando Cloudflare...
 
 start "SEATOUR IPHONE - COPIAR LINK" powershell -NoExit -ExecutionPolicy Bypass -Command ^
 "$out = Join-Path (Get-Location) 'cloudflare-out.log'; ^
@@ -32,7 +44,7 @@ if (Test-Path $out) { Remove-Item $out -Force }; ^
 if (Test-Path $err) { Remove-Item $err -Force }; ^
 Write-Host ''; ^
 Write-Host 'Iniciando Cloudflare...' -ForegroundColor Cyan; ^
-$p = Start-Process cloudflared -ArgumentList 'tunnel','--url','http://localhost:4300' -NoNewWindow -RedirectStandardOutput $out -RedirectStandardError $err -PassThru; ^
+$p = Start-Process cloudflared -ArgumentList 'tunnel','--url','http://localhost:8088' -NoNewWindow -RedirectStandardOutput $out -RedirectStandardError $err -PassThru; ^
 Write-Host 'Esperando enlace para el iPhone...' -ForegroundColor Yellow; ^
 $url = $null; ^
 while (-not $url -and -not $p.HasExited) { ^
@@ -51,13 +63,13 @@ if ($url) { ^
     Write-Host ''; ^
     Write-Host $url -ForegroundColor Green; ^
     Write-Host ''; ^
-    Set-Clipboard -Value $url; ^
-    Write-Host 'Copiado automaticamente al portapapeles.' -ForegroundColor White; ^
+    try { Set-Clipboard -Value $url -ErrorAction Stop; Write-Host 'Copiado automaticamente al portapapeles.' -ForegroundColor White } catch { Write-Host 'No se pudo copiar. Copia el enlace de arriba.' -ForegroundColor Yellow }; ^
     Write-Host 'Abre este enlace en Safari.' -ForegroundColor White; ^
     Write-Host ''; ^
     Write-Host 'NO CIERRES ESTA VENTANA.' -ForegroundColor Red; ^
     Write-Host ''; ^
-    Wait-Process -Id $p.Id ^
+    Wait-Process -Id $p.Id -ErrorAction SilentlyContinue; ^
+    Write-Host 'El tunel se ha cerrado. Ejecuta el launcher para abrir otro enlace.' -ForegroundColor Yellow ^
 } else { ^
     Write-Host ''; ^
     Write-Host 'Cloudflare se cerro antes de generar el enlace.' -ForegroundColor Red; ^
@@ -74,8 +86,8 @@ echo ==========================================
 echo            SEATOUR INICIADO
 echo ==========================================
 echo.
-echo Laptop:
-echo http://localhost:4200
+echo App local:
+echo http://localhost:8088
 echo.
 echo Revisa la ventana:
 echo SEATOUR IPHONE - COPIAR LINK

@@ -38,6 +38,12 @@
             }
           },
           "configurations": {
+            "docker": {
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "outputHashing": "all"
+            },
             "production": {
               "server": "src/main.server.ts",
               "outputMode": "server",

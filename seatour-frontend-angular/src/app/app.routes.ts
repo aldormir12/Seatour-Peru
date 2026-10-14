@@ -96,6 +96,10 @@ const reservasAnteriores: RedirectFunction = ({
   const query =
     new URLSearchParams(queryParams).toString();
 
+  if (inject(AuthService).usuario()?.rol === 'OPERADOR') {
+    return `${base}${query ? '?' + query : ''}`;
+  }
+
   return `${base}${params['id']
     ? '/' + params['id']
     : ''
@@ -285,6 +289,9 @@ export const routes: Routes = [
         canActivateChild: [roleGuard],
         data: { roles: ['OPERADOR'] },
         children: [
+          { path: 'salidas', pathMatch: 'full', redirectTo: antigua('/app/operador/mis-salidas') },
+          { path: 'reservas', pathMatch: 'full', redirectTo: antigua('/app/operador/mis-salidas') },
+          { path: 'reservas/:id', pathMatch: 'full', redirectTo: antigua('/app/operador/mis-salidas') },
           {
             path: '',
             pathMatch: 'full',

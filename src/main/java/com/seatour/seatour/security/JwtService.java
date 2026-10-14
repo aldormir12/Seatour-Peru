@@ -45,6 +45,7 @@ public class JwtService {
     public String generarToken(UsuarioPrincipal usuario) {
         Instant ahora = Instant.now();
         var claims = JwtClaimsSet.builder()
+                .id(java.util.UUID.randomUUID().toString())
                 .issuer(issuer)
                 .subject(usuario.getUsername())
                 .issuedAt(ahora)

@@ -69,6 +69,12 @@ public class UsuarioService {
     @Transactional
     public UsuarioRespuesta crear(
             @Valid UsuarioCreacion datos) {
+        String password = datos.password();
+        if (password == null || password.length() < 8
+                || !password.matches("(?s).*\\p{L}.*") || !password.matches("(?s).*[0-9].*")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La contraseña debe tener al menos 8 caracteres, una letra y un número");
+        }
         return crearConRol(datos, "CLIENTE");
     }
 

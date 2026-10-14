@@ -8,7 +8,7 @@ import { RutasInteractivas } from '../rutas-interactivas/rutas-interactivas';
   selector: 'app-inicio',
   imports: [RutasInteractivas, RouterLink],
   templateUrl: './inicio.html',
-  styleUrl: '../../app.css'
+  styleUrl: './home.css'
 })
 export class Inicio {
   readonly inicioPorRol = inicioPorRol;

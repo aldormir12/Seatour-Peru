@@ -4,11 +4,17 @@ export function inicioPorRol(rol?: RolUsuario): string {
 }
 export function reservasPorRol(rol?: RolUsuario): string {
   if (rol === 'ADMIN') return '/app/admin';
+  if (rol === 'OPERADOR') return '/app/operador/mis-salidas';
   return rol === 'CLIENTE' ? '/app/mis-reservas' : `${inicioPorRol(rol)}/reservas`;
 }
 // Retomar solo destinos conocidos del mismo rol, incluidos enlaces antiguos.
 export function destinoTrasLogin(rol: RolUsuario, destino: string | null): string {
   if (!destino) return inicioPorRol(rol);
+  if (rol === 'OPERADOR') {
+    // Los IDs antiguos son de reservas, no de salidas: volver al listado operativo.
+    destino = destino.replace(/^\/(?:gestion\/reservas|reservas\/\d+|app\/operador\/(?:reservas(?:\/\d+)?|salidas))(?=[?#]|$)/,
+      '/app/operador/mis-salidas');
+  }
   destino = destino.replace(/^\/reservar\//, '/app/reservar/')
     .replace(/^\/salidas(?=[?#]|$)/, '/app/tours')
     .replace(/^\/mis-reservas(?=[?#]|$)/, '/app/mis-reservas')

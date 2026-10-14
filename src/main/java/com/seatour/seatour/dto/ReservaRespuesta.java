@@ -11,4 +11,7 @@ public record ReservaRespuesta(Long id, Long clienteId, String clienteNombre,
         int cuposDisponibles, boolean puedeConfirmar, boolean puedeCancelar, Integer ninos, Integer adultos, Integer adultosMayores, int totalPasajeros, BigDecimal subtotalAdicionales,
         java.util.List<ReservaAdicionalRespuesta> adicionales, Long tourId,
         com.seatour.seatour.model.EstadoSalida estadoSalida, boolean puedeCalificar,
-        ResenaRespuesta resena) {}
+        ResenaRespuesta resena, boolean puedeModificar, boolean bloqueadaPorPlazo,
+        long revision, boolean pagada,
+        java.util.List<ModificacionReservaRespuesta> historialEconomico,
+        LocalDateTime cancelacionExcepcionalHasta) {}

@@ -246,8 +246,7 @@ public class SalidaProgramadaController {
         respuesta.setReservable(!salida.isEsDemo() && salida.getEstado() == com.seatour.seatour.model.EstadoSalida.PROGRAMADA
                 && Boolean.TRUE.equals(salida.getTour().getActivo()) && salida.getCuposDisponibles() > 0
                 && Boolean.TRUE.equals(salida.getEmbarcacion().getActivo())
-                && java.time.LocalDateTime.of(salida.getFecha(), salida.getHoraSalida())
-                    .isAfter(java.time.LocalDateTime.now(java.time.ZoneId.of("America/Lima"))));
+                && com.seatour.seatour.service.VentanaReservas.abierta(salida));
         return respuesta;
     }
 }

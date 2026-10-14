@@ -180,6 +180,7 @@ export class OperadorHoy implements OnInit {
     salida: SalidaProgramada
   ): string {
 
+    if (salida.estado === 'NO_REALIZADA') return 'No realizada';
     if (
       salida.estado === 'COMPLETADA'
     ) {
@@ -207,6 +208,7 @@ export class OperadorHoy implements OnInit {
     salida: SalidaProgramada
   ): string {
 
+    if (salida.estado === 'NO_REALIZADA') return 'estado';
     if (
       salida.estado === 'COMPLETADA'
     ) {

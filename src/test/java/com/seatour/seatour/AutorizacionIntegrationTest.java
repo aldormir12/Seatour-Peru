@@ -40,7 +40,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:autorizacion-test;DB_CLOSE_DELAY=-1",
+        "spring.datasource.url=jdbc:h2:mem:autorizacion-test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
         "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 @AutoConfigureMockMvc
@@ -64,7 +64,7 @@ class AutorizacionIntegrationTest {
     private Long usuarioId;
     private static final String TOUR = """
             {"nombre":"Tour","descripcion":"Paseo","duracionMinutos":60,
-             "precioBase":50,"activo":true,"categoriaId":1,"imagenUrl":"/api/tours/imagenes/fixture.jpg"}
+             "precioBase":50,"activo":true,"categoriaId":1,"zonaMaritima":"MANCORA","imagenUrl":"/api/tours/imagenes/fixture.jpg"}
             """;
 
     // Probe de la ruta antigua; el CRUD productivo esta en /api/admin/embarcaciones.
@@ -200,19 +200,19 @@ class AutorizacionIntegrationTest {
                 .andExpect(status().is("ADMIN".equals(rol) ? 200 : 403));
         String salida = """
                 {"fecha":"%s","horaSalida":"12:00:00","cuposDisponibles":5,
-                 "estado":"PROGRAMADA","tourId":1,"embarcacionId":1}
+                 "estado":"PROGRAMADA","tourId":1,"embarcacionId":1,"operadorId":1}
                 """.formatted(LocalDate.now().plusDays(1));
         mvc.perform(post("/api/salidas").header("Authorization", auth).contentType("application/json").content(salida))
-                .andExpect(status().isCreated());
+                .andExpect(status().is("ADMIN".equals(rol) ? 201 : 403));
         mvc.perform(put("/api/salidas/1").header("Authorization", auth).contentType("application/json").content(salida))
-                .andExpect(status().isOk());
-        mvc.perform(delete("/api/salidas/1").header("Authorization", auth)).andExpect(status().isNoContent());
+                .andExpect(status().is("ADMIN".equals(rol) ? 200 : 403));
+        mvc.perform(delete("/api/salidas/1").header("Authorization", auth)).andExpect(status().is("ADMIN".equals(rol) ? 204 : 403));
         verify(categorias, times("ADMIN".equals(rol) ? 1 : 0)).crear(any());
         verify(tours, times("ADMIN".equals(rol) ? 1 : 0)).crear(any());
         verify(tours, times("ADMIN".equals(rol) ? 1 : 0)).actualizar(eq(1L), any());
-        verify(salidas).crear(any());
-        verify(salidas).actualizar(eq(1L), any());
-        verify(salidas).eliminar(1L);
+        verify(salidas, times("ADMIN".equals(rol) ? 1 : 0)).crear(any());
+        verify(salidas, times("ADMIN".equals(rol) ? 1 : 0)).actualizar(eq(1L), any());
+        verify(salidas, times("ADMIN".equals(rol) ? 1 : 0)).eliminar(1L);
     }
 
     @ParameterizedTest

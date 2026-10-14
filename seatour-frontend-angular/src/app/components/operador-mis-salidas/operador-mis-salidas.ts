@@ -277,6 +277,9 @@ export class OperadorMisSalidas implements OnInit, OnDestroy {
       case 'COMPLETADA':
         return 'Completada';
 
+      case 'NO_REALIZADA':
+        return 'No realizada';
+
       case 'CANCELADA':
         return 'Cancelada';
     }

@@ -24,7 +24,7 @@ describe('Autenticacion y sesion', () => {
     client = TestBed.inject(HttpClient);
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   });
-  afterEach(() => { http.verify(); auth.logout(); vi.useRealTimers(); });
+  afterEach(() => { http.verify(); auth.limpiarSesionLocal(); vi.useRealTimers(); });
 
   function login(token = tokenPrueba()) {
     auth.login(' ANA@example.com ', 'secreto').subscribe();
@@ -89,7 +89,7 @@ describe('Autenticacion y sesion', () => {
     vi.advanceTimersByTime(2100);
     expect(auth.usuario()).toBeNull();
     login();
-    auth.logout();
+    auth.limpiarSesionLocal();
     expect(localStorage.getItem('seatour_usuario')).toBeNull();
     expect(auth.obtenerToken()).toBeNull();
   });
@@ -117,5 +117,35 @@ describe('Autenticacion y sesion', () => {
     expect(ejecutar().toString()).toBe('/login?returnUrl=%2Fprivado');
     login();
     expect(ejecutar()).toBe(true);
+  });
+
+  it('revoca en backend antes de borrar la sesión y comparte cierres simultáneos', async () => {
+    const token = login(); const primero = auth.logout(); const segundo = auth.logout();
+    expect(primero).toBe(segundo);
+    const req = http.expectOne(API_URL + '/auth/logout');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer ' + token);
+    expect(auth.usuario()).toEqual(usuario);
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    expect(await primero).toBe(true); expect(auth.usuario()).toBeNull();
+    expect(localStorage.getItem('seatour_token')).toBeNull();
+  });
+
+  it.each([0, 503])('cierra localmente y advierte cuando no confirma revocación (%s)', async status => {
+    login(); const aviso = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const cierre = auth.logout(); const req = http.expectOne(API_URL + '/auth/logout');
+    if (status === 0) req.error(new ProgressEvent('error'));
+    else req.flush({}, { status, statusText: 'Unavailable' });
+    expect(await cierre).toBe(true); expect(auth.usuario()).toBeNull();
+    expect(localStorage.getItem('seatour_token')).toBeNull();
+    expect(aviso).toHaveBeenCalledWith(expect.stringContaining('no se pudo confirmar la revocación'));
+    aviso.mockRestore();
+  });
+
+  it('un JWT ya rechazado cierra localmente sin recursión ni advertencia', async () => {
+    login(); const aviso = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const cierre = auth.logout();
+    http.expectOne(API_URL + '/auth/logout').flush({}, { status: 401, statusText: 'Unauthorized' });
+    expect(await cierre).toBe(true); expect(auth.usuario()).toBeNull();
+    expect(aviso).not.toHaveBeenCalled(); http.expectNone(API_URL + '/auth/logout'); aviso.mockRestore();
   });
 });

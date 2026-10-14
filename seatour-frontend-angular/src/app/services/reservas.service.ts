@@ -1,12 +1,14 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { DestroyRef, PLATFORM_ID, Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { tap } from 'rxjs';
 import { API_URL } from './auth.service';
 import { NotificacionesService } from './notificaciones.service';
 
 export interface Salida {
+  esDemo?: boolean;
   id: number; fecha: string; horaSalida: string; cuposDisponibles: number;
-  estado: 'PROGRAMADA' | 'EN_CURSO' | 'COMPLETADA' | 'CANCELADA';
+  estado: 'PROGRAMADA' | 'EN_CURSO' | 'COMPLETADA' | 'CANCELADA' | 'NO_REALIZADA';
   tourId: number; tourNombre: string; embarcacionNombre: string;
   precioPorPasajero: number; reservable: boolean;
 }
@@ -27,8 +29,27 @@ export interface ReservaAdicional {
   adicionalId: number; nombre: string; descripcion: string; tipoCobro: TipoCobro;
   cantidad: number; precioUnitario: number; subtotal: number;
 }
+export interface MovimientoReserva {
+  id: number; creadaEn: string; totalAnterior: number; totalNuevo: number;
+  ajusteSimulado: number; tipo: string; detalleAnterior: string; detalleNuevo: string;
+}
+export function bloqueadaPorPlazoCliente(r: Reserva, rol?: string, ahora = Date.now()): boolean {
+  return rol === 'CLIENTE' && Date.parse(r.fecha + 'T' + r.horaSalida + '-05:00') <= ahora + 24 * 60 * 60 * 1000;
+}
+export function bloqueadaParaCancelarCliente(r: Reserva, rol?: string, ahora = Date.now()): boolean {
+  if (rol !== 'CLIENTE') return false;
+  if (r.cancelacionExcepcionalHasta) {
+    const limiteRegistrado = Date.parse(r.cancelacionExcepcionalHasta + '-05:00');
+    const cierreActual = Date.parse(r.fecha + 'T' + r.horaSalida + '-05:00') - 2 * 60 * 60 * 1000;
+    return ahora >= Math.min(limiteRegistrado, cierreActual);
+  }
+  return bloqueadaPorPlazoCliente(r, rol, ahora);
+}
 export interface Reserva {
-  tourId?: number; estadoSalida?: 'PROGRAMADA' | 'EN_CURSO' | 'COMPLETADA' | 'CANCELADA';
+  cancelacionExcepcionalHasta?: string | null;
+  puedeModificar?: boolean; bloqueadaPorPlazo?: boolean; revision?: number; pagada?: boolean;
+  historialEconomico?: MovimientoReserva[];
+  tourId?: number; estadoSalida?: 'PROGRAMADA' | 'EN_CURSO' | 'COMPLETADA' | 'CANCELADA' | 'NO_REALIZADA';
   puedeCalificar?: boolean;
   resena?: import('./resenas.service').Resena | null;
   subtotalAdicionales?: number; adicionales?: ReservaAdicional[];
@@ -54,10 +75,21 @@ export function errorReserva(error: HttpErrorResponse): string {
 
 @Injectable({ providedIn: 'root' })
 export class ReservasService {
+  readonly ahora = signal(Date.now());
+  constructor() {
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      const reloj = setInterval(() => this.ahora.set(Date.now()), 1000);
+      inject(DestroyRef).onDestroy(() => clearInterval(reloj));
+    }
+  }
   private readonly notificaciones = inject(NotificacionesService);
   private readonly http = inject(HttpClient);
   private readonly cuposSignal = signal<Partial<Record<number, number>>>({});
   readonly cupos = this.cuposSignal.asReadonly();
+  admiteNuevaReserva(salida: { fecha: string; horaSalida: string; reservable: boolean; esDemo?: boolean }): boolean {
+    return salida.reservable && !salida.esDemo && Date.parse(salida.fecha + 'T' + salida.horaSalida + '-05:00')
+      > this.ahora() + 2 * 60 * 60 * 1000;
+  }
   salidas(tourId?: number) {
     return this.http.get<Salida[]>(`${API_URL}/salidas${tourId ? `/tour/${tourId}` : ''}`).pipe(
       tap(salidas => this.cuposSignal.update(actual => ({ ...actual, ...Object.fromEntries(salidas.map(s => [s.id, s.cuposDisponibles])) })))
@@ -84,7 +116,12 @@ export class ReservasService {
   }
   consultar(id: number) { return this.http.get<Reserva>(`${API_URL}/reservas/${id}`).pipe(tap(r => this.actualizar(r))); }
   confirmar(id: number) { return this.http.post<Reserva>(`${API_URL}/reservas/${id}/confirmar`, {}).pipe(tap(r => this.actualizar(r))); }
-  cancelar(id: number) { return this.http.post<Reserva>(`${API_URL}/reservas/${id}/cancelar`, {}).pipe(tap(r => this.actualizar(r))); }
+  modificar(id: number, cantidades: CantidadesPasajeros, adicionalesIds: number[], precioEsperado: number, revisionEsperada: number) {
+    return this.http.put<Reserva>(API_URL + '/reservas/' + id, { ...cantidades, adicionalesIds, precioEsperado, revisionEsperada }).pipe(
+      tap(r => { this.actualizar(r); this.notificaciones.solicitarRefrescoContador(r.clienteId); })
+    );
+  }
+  cancelar(id: number) { return this.http.post<Reserva>(`${API_URL}/reservas/${id}/cancelar`, {}).pipe(tap(r => { this.actualizar(r); this.notificaciones.solicitarRefrescoContador(r.clienteId); })); }
   private actualizar(r: Reserva) { this.actualizarCupos(r.salidaId, r.cuposDisponibles); }
   private actualizarCupos(id: number, cupos: number) { this.cuposSignal.update(actual => ({ ...actual, [id]: cupos })); }
 }

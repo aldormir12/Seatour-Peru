@@ -22,11 +22,11 @@ public class Reserva {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "salida_id", nullable = false, updatable = false)
     private SalidaProgramada salida;
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private int pasajeros;
-    @Column(nullable = false, updatable = false, precision = 19, scale = 2)
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal precioUnitario;
-    @Column(nullable = false, updatable = false, precision = 19, scale = 2)
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal precioTotal;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private EstadoReserva estado;
@@ -35,13 +35,13 @@ public class Reserva {
     private Instant confirmadaEn;
     private Instant canceladaEn;
 
-    @Column(updatable = false) private Integer ninos;
-    @Column(updatable = false) private Integer adultos;
-    @Column(updatable = false) private Integer adultosMayores;
+    @Column private Integer ninos;
+    @Column private Integer adultos;
+    @Column private Integer adultosMayores;
     @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private java.util.List<ReservaAdicional> adicionales = new java.util.ArrayList<>();
-    @Column(precision = 19, scale = 2, updatable = false) private BigDecimal subtotalAdicionales;
+    @Column(precision = 19, scale = 2) private BigDecimal subtotalAdicionales;
     public void agregarAdicionales(java.util.List<ReservaAdicional> elegidos) {
         if (id != null || !adicionales.isEmpty()) throw new IllegalStateException("La reserva ya fue configurada");
         elegidos.forEach(a -> { a.asociar(this); adicionales.add(a); });
@@ -68,6 +68,32 @@ public class Reserva {
         this.precioTotal = precio.multiply(BigDecimal.valueOf(pasajeros));
         this.estado = EstadoReserva.PENDIENTE;
         this.creadaEn = Instant.now();
+    }
+    // Solo las reservas activas al reprogramar reciben este derecho; las anteriores quedan null.
+    @Column(name = "cancelacion_excepcional_hasta")
+    private java.time.LocalDateTime cancelacionExcepcionalHasta;
+    public java.time.LocalDateTime getCancelacionExcepcionalHasta() { return cancelacionExcepcionalHasta; }
+    public void habilitarCancelacionPorReprogramacion(java.time.LocalDateTime nuevoInicio) {
+        if (estado == EstadoReserva.PENDIENTE || estado == EstadoReserva.CONFIRMADA)
+            cancelacionExcepcionalHasta = nuevoInicio.minusHours(2);
+    }
+    // Nullable para mantener compatibilidad con las filas existentes; se interpreta como revisión cero.
+    @Column private Long revision;
+    @Column(columnDefinition = "text") private String planSeleccionOriginal;
+    public long getRevision() { return revision == null ? 0L : revision; }
+    public boolean perteneceAPlan() { return planOperacionId != null; }
+    public String getPlanSeleccionOriginal() { return planSeleccionOriginal; }
+    public void guardarSeleccionOriginalPlan(String seleccion) {
+        if (planSeleccionOriginal == null) planSeleccionOriginal = seleccion;
+    }
+    public void limpiarAdicionalesParaModificacion() { adicionales.clear(); }
+    public void modificar(int ninos, int adultos, int mayores, BigDecimal base, BigDecimal subtotal,
+            java.util.List<ReservaAdicional> elegidos) {
+        this.ninos = ninos; this.adultos = adultos; adultosMayores = mayores;
+        pasajeros = ninos + adultos + mayores; precioUnitario = base;
+        elegidos.forEach(a -> { a.asociar(this); adicionales.add(a); });
+        subtotalAdicionales = elegidos.stream().map(ReservaAdicional::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+        precioTotal = subtotal.add(subtotalAdicionales); revision = Math.addExact(getRevision(), 1L);
     }
     public void confirmar() { estado = EstadoReserva.CONFIRMADA; confirmadaEn = Instant.now(); }
     public void cancelar() { estado = EstadoReserva.CANCELADA; canceladaEn = Instant.now(); }

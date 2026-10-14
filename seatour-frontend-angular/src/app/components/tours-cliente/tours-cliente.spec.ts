@@ -11,7 +11,7 @@ import { ToursCliente } from './tours-cliente';
 
 describe('Navegación del catálogo', () => {
   afterEach(() => {
-    TestBed.inject(AuthService).logout();
+    TestBed.inject(AuthService).limpiarSesionLocal();
     TestBed.inject(HttpTestingController).verify();
   });
 
@@ -32,7 +32,7 @@ describe('Navegación del catálogo', () => {
     fixture.detectChanges();
     expect(router.url).toBe('/app/tours');
     const tour: Tour = { id: 1, nombre: 'Tour de prueba', descripcion: 'Descripción',
-      duracionMinutos: 60, precioBase: 50, activo: true, categoriaId: 1, imagenUrl: null };
+      duracionMinutos: 60, precioBase: 50, activo: true, categoriaId: 1, imagenUrl: null, zonaMaritima: null };
     http.expectOne(`${API_URL}/tours`).flush([tour]);
     http.expectOne(`${API_URL}/categorias`).flush([{ id: 1, nombre: 'Mar', activo: true }]);
     await fixture.whenStable();
@@ -52,7 +52,7 @@ describe('Navegación del catálogo', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(abrir).toHaveBeenCalledExactlyOnceWith(tour);
-    expect(componente.modalAbierto()).toBe(true);
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).not.toBeNull();
     expect(router.url).toBe('/app/tours');
     expect(navegaciones).toEqual([]);

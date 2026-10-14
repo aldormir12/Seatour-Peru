@@ -19,7 +19,7 @@ public class UsuarioDetailsService implements UserDetailsService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, noRollbackFor = UsernameNotFoundException.class)
     public UserDetails loadUserByUsername(String correo) {
         return usuarios.findByCorreo(correo.trim().toLowerCase(Locale.ROOT))
                 .map(UsuarioPrincipal::new)

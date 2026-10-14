@@ -5,6 +5,7 @@ import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
+import com.seatour.seatour.service.TokenRevocadoService;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.time.Duration;
@@ -17,10 +18,12 @@ public class JwtService {
     private final NimbusJwtDecoder decoder;
     private final long expirationSeconds;
     private final String issuer;
+    private final TokenRevocadoService revocados;
 
     public JwtService(@Value("${seatour.jwt.secret}") String secret,
                       @Value("${seatour.jwt.expiration-seconds}") long expirationSeconds,
-                      @Value("${seatour.jwt.issuer}") String issuer) {
+                      @Value("${seatour.jwt.issuer}") String issuer, TokenRevocadoService revocados) {
+        this.revocados = revocados;
         byte[] keyBytes;
         try {
             keyBytes = Base64.getDecoder().decode(secret);
@@ -45,6 +48,7 @@ public class JwtService {
     public String generarToken(UsuarioPrincipal usuario) {
         Instant ahora = Instant.now();
         var claims = JwtClaimsSet.builder()
+                .id(java.util.UUID.randomUUID().toString())
                 .issuer(issuer)
                 .subject(usuario.getUsername())
                 .issuedAt(ahora)
@@ -58,6 +62,12 @@ public class JwtService {
 
     /** Solo devuelve claims despues de verificar firma, algoritmo, emisor y fechas. */
     public Jwt validarToken(String token) {
+        Jwt jwt = validarFirmaYClaims(token);
+        if (revocados.revocado(token)) throw new BadJwtException("Token invalido");
+        return jwt;
+    }
+
+    private Jwt validarFirmaYClaims(String token) {
         Jwt jwt = decoder.decode(token);
         Object id = jwt.getClaims().get("userId");
         Object rol = jwt.getClaims().get("rol");
@@ -69,6 +79,12 @@ public class JwtService {
             throw new BadJwtException("Token invalido");
         }
         return jwt;
+    }
+
+    public void revocarToken(String token) {
+        // Idempotente aun si otro logout revocó el token después de pasar el filtro.
+        var jwt = validarFirmaYClaims(token);
+        revocados.revocar(token, jwt.getExpiresAt());
     }
 
     public String extraerCorreo(String token) {

@@ -544,6 +544,7 @@ private consultaPlanDia?: Subscription;
 
     return (
       !!this.salidaSeleccionada() &&
+      (!!this.reservaPendiente() || this.reservasService.admiteNuevaReserva(this.salidaSeleccionada()!)) &&
       !this.creandoReserva() &&
       !this.cargandoTarifas() &&
       !this.errorTarifas() &&
@@ -1070,7 +1071,7 @@ ringOffset(score: number): number {
   ): void {
 
     if (
-      !salida.reservable ||
+      !this.reservasService.admiteNuevaReserva(salida) ||
       salida.cuposDisponibles <= 0
     ) {
       return;

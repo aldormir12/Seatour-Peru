@@ -8,7 +8,7 @@ import { API_URL, AuthService } from '../../services/auth.service';
 describe('Registro', () => {
   beforeEach(() => TestBed.configureTestingModule({ imports: [RegistroComponent],
     providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }));
-  afterEach(() => { TestBed.inject(HttpTestingController).verify(); TestBed.inject(AuthService).logout(); });
+  afterEach(() => { TestBed.inject(HttpTestingController).verify(); TestBed.inject(AuthService).limpiarSesionLocal(); });
 
   it('valida campos vacios y confirmacion antes de enviar', () => {
     const fixture = TestBed.createComponent(RegistroComponent);

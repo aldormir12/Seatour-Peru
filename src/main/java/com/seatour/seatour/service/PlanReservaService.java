@@ -26,11 +26,7 @@ public class PlanReservaService {
         if (!anteriores.isEmpty()) {
             var ids = seleccion.items().stream().map(PlanReservaSeleccion.Item::salidaId).sorted().toList();
             if (!anteriores.stream().map(ReservaRespuesta::salidaId).sorted().toList().equals(ids)
-                    || anteriores.stream().anyMatch(r -> !java.util.Objects.equals(r.ninos(), seleccion.composicion().ninos())
-                        || !java.util.Objects.equals(r.adultos(), seleccion.composicion().adultos())
-                        || !java.util.Objects.equals(r.adultosMayores(), seleccion.composicion().adultosMayores())
-                        || !r.adicionales().stream().map(ReservaAdicionalRespuesta::adicionalId).sorted().toList()
-                            .equals((seleccion.adicionalesIds() == null ? List.<Long>of() : seleccion.adicionalesIds()).stream().sorted().toList())))
+                    || anteriores.stream().anyMatch(r -> !reservas.coincideSeleccionOriginalPlan(r.id(), seleccion)))
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Este identificador ya pertenece a otro plan");
             // Reintento de la misma operación: no vuelve a reservar ni a cobrar.
             return aprobada(anteriores);

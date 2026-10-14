@@ -22,14 +22,17 @@ public class ReservaService {
     private final AdicionalService adicionales;
     private final NotificacionService notificaciones;
     private final ResenaRepository resenas;
+    private final PagoRepository pagos;
+    private final ModificacionReservaRepository modificaciones;
     private static final ZoneId ZONA = ZoneId.of("America/Lima");
 
     public ReservaService(ReservaRepository reservas, SalidaProgramadaRepository salidas, UsuarioRepository usuarios,
-            TourRepository tours, EmbarcacionRepository embarcaciones, TarifasPasajerosService tarifas, AdicionalService adicionales, NotificacionService notificaciones, ResenaRepository resenas) {
+            TourRepository tours, EmbarcacionRepository embarcaciones, TarifasPasajerosService tarifas, AdicionalService adicionales, NotificacionService notificaciones, ResenaRepository resenas, PagoRepository pagos, ModificacionReservaRepository modificaciones) {
         this.reservas = reservas; this.salidas = salidas; this.usuarios = usuarios;
         this.tours = tours; this.embarcaciones = embarcaciones; this.tarifas = tarifas; this.adicionales = adicionales;
         this.notificaciones = notificaciones;
         this.resenas = resenas;
+        this.pagos = pagos; this.modificaciones = modificaciones;
     }
 
     @Transactional
@@ -40,7 +43,11 @@ public class ReservaService {
             throw error(HttpStatus.BAD_REQUEST, "Indica cantidades enteras no negativas y al menos un pasajero");
         // Toda escritura de cupos (incluida la gestion de salidas) usa el mismo bloqueo.
         SalidaProgramada salida = bloquearSalida(datos.salidaId());
+        if (reservas.existsByClienteIdAndSalidaIdAndEstadoIn(actor.id(), salida.getId(),
+                List.of(EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA)))
+            throw error(HttpStatus.CONFLICT, "Ya tienes una reserva activa para esta salida. Modifica la existente");
         validarSalidaReservable(salida);
+        VentanaReservas.validar(salida);
         if (datos.totalPasajeros() > salida.getCuposDisponibles())
             throw error(HttpStatus.CONFLICT, "No hay suficientes cupos disponibles");
         var cliente = usuarios.findById(actor.id()).orElseThrow(() -> error(HttpStatus.UNAUTHORIZED, "Sesion invalida"));
@@ -51,6 +58,7 @@ public class ReservaService {
         nueva.agregarAdicionales(adicionales.seleccionar(salida.getTour().getId(), datos.totalPasajeros(), datos.adicionalesIds()));
         if (datos.precioEsperado() != null && nueva.getPrecioTotal().compareTo(datos.precioEsperado()) != 0)
             throw error(HttpStatus.CONFLICT, "El precio cambio. Revisa el nuevo resumen antes de reservar");
+        VentanaReservas.validar(salida); // Revalidar después de esperas en bloqueos de recursos/adicionales.
         salida.setCuposDisponibles(salida.getCuposDisponibles() - datos.totalPasajeros());
         var reserva = reservas.saveAndFlush(nueva);
         notificarReserva(reserva, "RESERVA_CREADA", "Reserva realizada",
@@ -113,6 +121,7 @@ public class ReservaService {
             java.math.BigDecimal subtotal = java.math.BigDecimal.ZERO;
             try {
                 validarSalidaReservable(salida);
+                VentanaReservas.validar(salida);
                 var precio = salida.getTour().getPrecioBase();
                 if (precio == null || precio.signum() <= 0) throw error(HttpStatus.CONFLICT, "El tour no tiene un precio válido");
                 subtotal = tarifas.total(precio, composicion.ninos(), composicion.adultos(), composicion.adultosMayores());
@@ -147,7 +156,10 @@ public class ReservaService {
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     void asociarPlan(Long reservaId, java.util.UUID operacionId) {
-        reservas.findById(reservaId).orElseThrow(this::noEncontrada).asociarPlan(operacionId);
+        var reserva = reservas.findById(reservaId).orElseThrow(this::noEncontrada);
+        reserva.asociarPlan(operacionId);
+        reserva.guardarSeleccionOriginalPlan(seleccionPlan(reserva.getNinos(), reserva.getAdultos(),
+                reserva.getAdultosMayores(), reserva.getAdicionales().stream().map(ReservaAdicional::getAdicionalId).toList()));
     }
 
     public List<ReservaRespuesta> listar(LoginRespuesta actor, boolean soloMias) {
@@ -211,6 +223,7 @@ public class ReservaService {
         autorizar(reserva, actor);
         // Reintentos y cancelaciones concurrentes son idempotentes: nunca reintegran dos veces.
         if (reserva.getEstado() == EstadoReserva.CANCELADA) return respuesta(reserva, actor);
+        validarPlazoCancelacionCliente(reserva, actor);
         if (!cancelable(reserva)) throw error(HttpStatus.CONFLICT, "No se puede cancelar una reserva cuya salida ya comenzo");
         var salida = reserva.getSalida();
         if (reserva.getPasajeros() <= 0) throw error(HttpStatus.CONFLICT, "La reserva tiene una cantidad inválida de pasajeros");
@@ -220,6 +233,97 @@ public class ReservaService {
         notificarReserva(reserva, "RESERVA_CANCELADA", "Reserva cancelada",
                 "Tu reserva ha sido cancelada.");
         return respuesta(reserva, actor);
+    }
+
+    /** La salida y luego la reserva se bloquean igual que en pago/cancelación. */
+    @Transactional
+    public ReservaRespuesta modificar(Long id, ReservaModificacion datos, LoginRespuesta actor) {
+        Reserva reserva = bloquearReserva(id);
+        autorizar(reserva, actor);
+        validarPlazoCliente(reserva, actor);
+        if (reserva.getEstado() == EstadoReserva.CANCELADA || !abierta(reserva.getSalida()))
+            throw error(HttpStatus.CONFLICT, "Solo se pueden modificar reservas activas de una salida futura PROGRAMADA");
+        if (datos == null || !datos.composicion().esValida() || datos.revisionEsperada() == null)
+            throw error(HttpStatus.BAD_REQUEST, "Indica una composición válida y la revisión de la reserva");
+        if (datos.revisionEsperada() != reserva.getRevision())
+            throw error(HttpStatus.CONFLICT, "La reserva fue modificada. Actualiza el detalle antes de guardar");
+        var salida = reserva.getSalida();
+        validarSalidaReservable(salida);
+        int diferencia = datos.composicion().totalPasajeros() - reserva.getPasajeros();
+        if (diferencia > salida.getCuposDisponibles())
+            throw error(HttpStatus.CONFLICT, "No hay suficientes cupos para aumentar los pasajeros");
+        var base = salida.getTour().getPrecioBase();
+        if (base == null || base.signum() <= 0) throw error(HttpStatus.CONFLICT, "El tour no tiene un precio válido");
+        var subtotal = tarifas.total(base, datos.ninos(), datos.adultos(), datos.adultosMayores());
+        var extras = adicionales.seleccionar(salida.getTour().getId(), datos.composicion().totalPasajeros(), datos.adicionalesIds());
+        var nuevoTotal = subtotal.add(extras.stream().map(ReservaAdicional::getSubtotal)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
+        if (datos.precioEsperado() == null || nuevoTotal.compareTo(datos.precioEsperado()) != 0)
+            throw error(HttpStatus.CONFLICT, "Las tarifas cambiaron. Actualiza el resumen antes de guardar");
+        var totalAnterior = reserva.getPrecioTotal();
+        String anterior = detalleEconomico(reserva);
+        if (reserva.perteneceAPlan()) reserva.guardarSeleccionOriginalPlan(seleccionPlan(reserva.getNinos(),
+                reserva.getAdultos(), reserva.getAdultosMayores(),
+                reserva.getAdicionales().stream().map(ReservaAdicional::getAdicionalId).toList()));
+        boolean pagada = pagos.existsByReservaIdAndEstado(id, EstadoPago.APROBADO);
+        // Borrar y hacer flush antes de insertar: evita colisión del índice reserva/adicional.
+        validarPlazoCliente(reserva, actor); // Revalidar si hubo espera al bloquear tarifas o adicionales.
+        reserva.limpiarAdicionalesParaModificacion();
+        reservas.flush();
+        reserva.modificar(datos.ninos(), datos.adultos(), datos.adultosMayores(), base, subtotal, extras);
+        salida.setCuposDisponibles(Math.subtractExact(salida.getCuposDisponibles(), diferencia));
+        reservas.saveAndFlush(reserva);
+        var movimiento = modificaciones.saveAndFlush(new ModificacionReserva(reserva, actor.id(), actor.rol(),
+                totalAnterior, nuevoTotal, pagada, anterior, detalleEconomico(reserva)));
+        notificarReserva(reserva, "RESERVA_MODIFICADA:" + movimiento.getId(), "Reserva modificada",
+                "Los pasajeros y adicionales de tu reserva fueron actualizados. "
+                        + (pagada ? "El ajuste económico es simulado; no se realizó una operación bancaria." : "Revisa el nuevo importe."));
+        return respuesta(reserva, actor);
+    }
+
+    private boolean bloqueadaPorPlazo(Reserva reserva, LoginRespuesta actor) {
+        return "CLIENTE".equals(actor.rol()) && !LocalDateTime.of(reserva.getSalida().getFecha(),
+                reserva.getSalida().getHoraSalida()).isAfter(LocalDateTime.now(ZONA).plusHours(24));
+    }
+    private void validarPlazoCliente(Reserva reserva, LoginRespuesta actor) {
+        if (bloqueadaPorPlazo(reserva, actor))
+            throw error(HttpStatus.CONFLICT, "No puedes modificar cuando faltan 24 horas o menos para la salida");
+    }
+    private boolean bloqueadaParaCancelar(Reserva reserva, LoginRespuesta actor) {
+        if (!"CLIENTE".equals(actor.rol())) return false;
+        var inicio = LocalDateTime.of(reserva.getSalida().getFecha(), reserva.getSalida().getHoraSalida());
+        var ahora = LocalDateTime.now(ZONA);
+        var excepcional = reserva.getCancelacionExcepcionalHasta();
+        if (excepcional != null && !reserva.getSalida().isEsDemo()) {
+            // Nunca permitir después del cierre real, incluso si existieran datos desactualizados.
+            var cierreActual = inicio.minusHours(2);
+            var limite = excepcional.isBefore(cierreActual) ? excepcional : cierreActual;
+            return !ahora.isBefore(limite);
+        }
+        return !inicio.isAfter(ahora.plusHours(24));
+    }
+    private void validarPlazoCancelacionCliente(Reserva reserva, LoginRespuesta actor) {
+        if (bloqueadaParaCancelar(reserva, actor))
+            throw error(HttpStatus.CONFLICT, reserva.getCancelacionExcepcionalHasta() != null
+                    ? "El plazo excepcional de cancelación terminó 2 horas antes de la salida reprogramada"
+                    : "No puedes cancelar cuando faltan 24 horas o menos para la salida");
+    }
+    private String detalleEconomico(Reserva r) {
+        return "Niños=" + r.getNinos() + "; adultos=" + r.getAdultos() + "; adultos mayores=" + r.getAdultosMayores()
+                + "; pasajeros=" + r.getPasajeros() + "; tarifa base=" + r.getPrecioUnitario()
+                + "; adicionales=" + r.getAdicionales().stream().map(ReservaAdicionalRespuesta::desde).toList()
+                + "; subtotal adicionales=" + r.getSubtotalAdicionales() + "; total=" + r.getPrecioTotal() + "; moneda=PEN";
+    }
+    private String seleccionPlan(Integer ninos, Integer adultos, Integer mayores, List<Long> ids) {
+        return ninos + "|" + adultos + "|" + mayores + "|" + (ids == null ? List.<Long>of() : ids).stream().sorted().toList();
+    }
+    public boolean coincideSeleccionOriginalPlan(Long id, PlanReservaSeleccion seleccion) {
+        var r = reservas.findById(id).orElseThrow(this::noEncontrada);
+        String original = r.getPlanSeleccionOriginal();
+        if (original == null) original = seleccionPlan(r.getNinos(), r.getAdultos(), r.getAdultosMayores(),
+                r.getAdicionales().stream().map(ReservaAdicional::getAdicionalId).toList());
+        return original.equals(seleccionPlan(seleccion.composicion().ninos(), seleccion.composicion().adultos(),
+                seleccion.composicion().adultosMayores(), seleccion.adicionalesIds()));
     }
 
     private void notificarReserva(Reserva reserva, String tipo, String titulo, String mensaje) {
@@ -290,11 +394,16 @@ public class ReservaService {
                 r.getConfirmadaEn(), r.getCanceladaEn(), s.getCuposDisponibles(),
                 gestor(a) && r.getEstado() == EstadoReserva.PENDIENTE && abierta(s)
                         && Boolean.TRUE.equals(s.getTour().getActivo())
-                        && Boolean.TRUE.equals(s.getEmbarcacion().getActivo()), cancelable(r),
+                        && Boolean.TRUE.equals(s.getEmbarcacion().getActivo()), cancelable(r) && !bloqueadaParaCancelar(r, a),
                 r.getNinos(), r.getAdultos(), r.getAdultosMayores(), r.getPasajeros(), r.getSubtotalAdicionales(),
                 r.getAdicionales().stream().map(ReservaAdicionalRespuesta::desde).toList(),
                 s.getTour().getId(), s.getEstado(), "CLIENTE".equals(a.rol())
                         && r.getCliente().getId().equals(a.id()) && r.getEstado() == EstadoReserva.CONFIRMADA
-                        && s.getEstado() == EstadoSalida.COMPLETADA && resena == null, resena);
+                        && s.getEstado() == EstadoSalida.COMPLETADA && resena == null, resena,
+                abierta(s) && r.getEstado() != EstadoReserva.CANCELADA && !bloqueadaPorPlazo(r, a),
+                bloqueadaPorPlazo(r, a), r.getRevision(),
+                pagos.existsByReservaIdAndEstado(r.getId(), EstadoPago.APROBADO),
+                modificaciones.findByReservaIdOrderByIdAsc(r.getId()).stream().map(ModificacionReservaRespuesta::desde).toList(),
+                r.getCancelacionExcepcionalHasta());
     }
 }

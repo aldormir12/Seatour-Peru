@@ -42,6 +42,11 @@ public class ReservaController {
     public ReservaRespuesta confirmar(@PathVariable Long id, @AuthenticationPrincipal UsuarioPrincipal actor) {
         return reservas.confirmar(id, actor.datos());
     }
+    @PutMapping("/{id}")
+    public ReservaRespuesta modificar(@PathVariable Long id, @Valid @RequestBody ReservaModificacion datos,
+            @AuthenticationPrincipal UsuarioPrincipal actor) {
+        return reservas.modificar(id, datos, actor.datos());
+    }
     @PostMapping("/{id}/cancelar")
     public ReservaRespuesta cancelar(@PathVariable Long id, @AuthenticationPrincipal UsuarioPrincipal actor) {
         return reservas.cancelar(id, actor.datos());

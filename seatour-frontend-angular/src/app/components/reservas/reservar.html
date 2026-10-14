@@ -111,7 +111,7 @@
           </div>
         </section>
 
-        @if (s.reservable && s.cuposDisponibles > 0) {
+        @if (s.reservable && !plazoCerrado() && s.cuposDisponibles > 0) {
           <form class="mt-8" (submit)="$event.preventDefault(); continuar()">
             <!-- Pasajeros -->
             <div>
@@ -231,7 +231,7 @@
         } @else {
           <div class="mt-8 rounded-2xl bg-slate-100 p-5">
             <p class="text-sm leading-6 text-slate-600">
-              Esta salida no admite nuevas reservas. Elige otra salida del catálogo.
+              Esta salida no admite nuevas reservas. Las reservas cierran 2 horas antes del inicio. Elige otra salida del catálogo.
             </p>
           </div>
         }

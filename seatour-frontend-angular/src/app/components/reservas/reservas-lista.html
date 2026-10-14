@@ -709,7 +709,7 @@
                 </div>
 
                 <div class="mt-4 space-y-2">
-                  @for (adicional of $any(r).adicionales; track adicional.id) {
+                  @for (adicional of $any(r).adicionales; track adicional.adicionalId) {
                     <div
                       class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
                     >
@@ -733,6 +733,10 @@
                 </div>
               </section>
             }
+
+            @for (reservaId of [r.id]; track reservaId) {
+        <app-reserva-edicion [reserva]="r" (actualizada)="alModificarReserva($event)" (ocupada)="editandoReserva.set($event)" [deshabilitada]="cancelando()" />
+      }
 
             <!-- TOTAL -->
             <section class="mt-7 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
@@ -839,7 +843,7 @@
                   <button
                     type="button"
                     (click)="cancelarReserva()"
-                    [disabled]="cancelando()"
+                    [disabled]="cancelando() || editandoReserva() || !puedeCancelar(r)"
                     class="rounded-xl bg-red-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-50"
                   >
                     {{ cancelando() ? 'Cancelando...' : 'Sí, cancelar' }}
@@ -847,7 +851,7 @@
                 </div>
               </div>
             } @else {
-              @if (r.puedeCancelar && r.estado !== 'CANCELADA') {
+              @if (puedeCancelar(r) && r.estado !== 'CANCELADA' && !editandoReserva()) {
                 <button
                   type="button"
                   (click)="solicitarCancelacion()"

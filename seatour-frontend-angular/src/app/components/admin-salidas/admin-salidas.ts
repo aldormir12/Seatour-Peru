@@ -541,7 +541,7 @@ export class AdminSalidas {
                   salida.estado ===
                     'COMPLETADA' ||
                   salida.estado ===
-                    'CANCELADA'
+                    'CANCELADA' || salida.estado === 'NO_REALIZADA'
                 );
 
 
@@ -1181,6 +1181,9 @@ export class AdminSalidas {
       case 'COMPLETADA':
         return 'Completada';
 
+      case 'NO_REALIZADA':
+        return 'No realizada';
+
       case 'CANCELADA':
         return 'Cancelada';
     }
@@ -1478,6 +1481,11 @@ export class AdminSalidas {
       );
     }
 
+
+    if (!this.modoEdicion() && !this.formularioDemo() &&
+        Date.parse(this.formulario.fecha + 'T' + hora + '-05:00') < Date.now() + 24 * 60 * 60 * 1000) {
+      return 'Las salidas normales deben crearse con al menos 24 horas de anticipación (hora de Perú).';
+    }
 
     const seleccionada =
       this.salidaSeleccionada();

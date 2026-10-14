@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:auth-test;DB_CLOSE_DELAY=-1",
+        "spring.datasource.url=jdbc:h2:mem:auth-test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.open-in-view=false"
 })
@@ -50,6 +50,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthIntegrationTest {
     private static final String CLAVE = "Clave de prueba 123!";
     @Autowired MockMvc mvc;
+    @Autowired com.seatour.seatour.repository.IntentoLoginRepository intentos;
+    @Autowired com.seatour.seatour.repository.TokenRevocadoRepository revocados;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired UsuarioRepository usuarios;
     @Autowired RolRepository roles;
     @Autowired UsuarioService servicio;
@@ -73,6 +76,7 @@ class AuthIntegrationTest {
 
     @BeforeEach
     void preparar() {
+        intentos.deleteAll(); revocados.deleteAll();
         usuarios.deleteAll();
         servicio.crear(new UsuarioCreacion("Ana", "Perez", "ana@example.com", CLAVE));
     }
@@ -149,7 +153,7 @@ class AuthIntegrationTest {
         assertEquals(usuario.getId(), jwt.getClaims().get("userId"));
         assertEquals(jwtIssuer, jwt.getClaimAsString("iss"));
         assertEquals(3600, java.time.Duration.between(jwt.getIssuedAt(), jwt.getExpiresAt()).toSeconds());
-        assertEquals(java.util.Set.of("iss", "sub", "iat", "exp", "userId", "rol"), jwt.getClaims().keySet());
+        assertEquals(java.util.Set.of("jti", "iss", "sub", "iat", "exp", "userId", "rol"), jwt.getClaims().keySet());
     }
 
     @ParameterizedTest
@@ -297,5 +301,66 @@ class AuthIntegrationTest {
     @Test
     void usuariosYaNoEsConsultaPublica() throws Exception {
         mvc.perform(get("/api/usuarios")).andExpect(status().isUnauthorized());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CLIENTE", "OPERADOR", "ADMIN"})
+    void cincoFallosBloqueanSinExtenderYSeReinicianAlVencer(String rol) throws Exception {
+        var usuario = usuarios.findByCorreo("ana@example.com").orElseThrow();
+        usuario.setRol(roles.findByNombre(rol).orElseThrow()); usuarios.saveAndFlush(usuario);
+        for (int i = 1; i <= 5; i++) mvc.perform(post("/api/auth/login").contentType("application/json")
+                .content(solicitud("ANA@EXAMPLE.COM", "incorrecta"))).andExpect(status().is(i < 5 ? 401 : 429));
+        var antes = jdbc.queryForObject("select bloqueado_hasta from intentos_login", java.sql.Timestamp.class);
+        mvc.perform(post("/api/auth/login").contentType("application/json").content(solicitud("ana@example.com", CLAVE)))
+                .andExpect(status().isTooManyRequests());
+        assertEquals(antes, jdbc.queryForObject("select bloqueado_hasta from intentos_login", java.sql.Timestamp.class));
+        jdbc.update("update intentos_login set bloqueado_hasta = ?", java.sql.Timestamp.from(Instant.now().minusSeconds(1)));
+        mvc.perform(post("/api/auth/login").contentType("application/json").content(solicitud("ana@example.com", CLAVE)))
+                .andExpect(status().isOk());
+        assertEquals(0, jdbc.queryForObject("select fallos from intentos_login", Integer.class));
+    }
+
+    @Test
+    void cuentaInexistenteTambienSeBloqueaSinAfectarOtraCuenta() throws Exception {
+        for (int i = 1; i <= 5; i++) mvc.perform(post("/api/auth/login").contentType("application/json")
+                .content(solicitud("nadie@example.com", "incorrecta"))).andExpect(status().is(i < 5 ? 401 : 429));
+        mvc.perform(post("/api/auth/login").contentType("application/json").content(solicitud("ana@example.com", CLAVE)))
+                .andExpect(status().isOk());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CLIENTE", "OPERADOR", "ADMIN"})
+    void logoutRevocaSoloEseJwtYNoOtraSesion(String rol) throws Exception {
+        var usuario = usuarios.findByCorreo("ana@example.com").orElseThrow();
+        usuario.setRol(roles.findByNombre(rol).orElseThrow()); usuarios.saveAndFlush(usuario);
+        String primero = tokenLogin(); String segundo = tokenLogin(); assertNotEquals(primero, segundo);
+        mvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + primero)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + primero)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + primero)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + segundo)).andExpect(status().isOk());
+        assertEquals(1, revocados.count());
+    }
+
+    @Test
+    void intentosConcurrentesNuncaSuperanCincoFallosPersistidos() throws Exception {
+        var inicio = new java.util.concurrent.CountDownLatch(1);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(8)) {
+            var pendientes = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+            for (int i = 0; i < 8; i++) pendientes.add(executor.submit(() -> {
+                inicio.await(); return mvc.perform(post("/api/auth/login").contentType("application/json")
+                        .content(solicitud("ana@example.com", "incorrecta"))).andReturn().getResponse().getStatus();
+            }));
+            inicio.countDown(); var estados = new java.util.ArrayList<Integer>();
+            for (var p : pendientes) estados.add(p.get(30, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(4, estados.stream().filter(e -> e == 401).count());
+            assertEquals(4, estados.stream().filter(e -> e == 429).count());
+            assertEquals(5, jdbc.queryForObject("select fallos from intentos_login", Integer.class));
+        }
+    }
+
+    private String tokenLogin() throws Exception {
+        var respuesta = mvc.perform(post("/api/auth/login").contentType("application/json")
+                .content(solicitud("ana@example.com", CLAVE))).andExpect(status().isOk()).andReturn().getResponse();
+        return mapper.readTree(respuesta.getContentAsString()).get("token").asString();
     }
 }

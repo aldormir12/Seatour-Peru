@@ -10,7 +10,8 @@ export type EstadoSalida =
   | 'PROGRAMADA'
   | 'EN_CURSO'
   | 'COMPLETADA'
-  | 'CANCELADA';
+  | 'CANCELADA'
+  | 'NO_REALIZADA';
 
 export interface SalidaProgramada {
   esDemo: boolean;

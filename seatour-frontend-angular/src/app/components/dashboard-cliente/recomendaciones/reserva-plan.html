@@ -142,6 +142,9 @@
             </div>
           }
         </div>
+        @if (!incierto() && !resultado() && plazoCerrado()) {
+          <p class="plan-error plan-alerta" role="alert">Una experiencia del plan alcanzó el cierre de reservas de 2 horas. Retírala y actualiza la disponibilidad.</p>
+        }
         @if (error()) { <p class="plan-error plan-alerta" role="alert">{{ error() }}</p> }
       }
     </div>

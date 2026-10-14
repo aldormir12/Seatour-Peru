@@ -1579,12 +1579,6 @@ export class ReservasNav implements OnDestroy {
 
   async salir(): Promise<void> {
 
-    if (
-      await this.router
-        .navigateByUrl('/')
-    ) {
-
-      this.auth.logout();
-    }
+    if (await this.auth.logout()) await this.router.navigateByUrl('/');
   }
 }

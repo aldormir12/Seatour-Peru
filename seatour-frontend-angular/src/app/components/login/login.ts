@@ -83,7 +83,9 @@ export class LoginComponent {
         error: (error) => {
           this.cargando.set(false);
 
-          this.error.set(error.status === 401
+          this.error.set(error.status === 429
+            ? 'Inicio de sesión temporalmente bloqueado. Espera 15 minutos antes de volver a intentarlo.'
+            : error.status === 401
             ? 'Correo o contrase\u00f1a incorrectos'
             : 'No se pudo iniciar sesi\u00f3n. Int\u00e9ntalo nuevamente.');
         }

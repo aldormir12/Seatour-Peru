@@ -1,7 +1,7 @@
 import { DestroyRef, Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, of, switchMap, tap, throwError, timeout } from 'rxjs';
+import { HttpBackend, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, firstValueFrom, catchError, of, switchMap, tap, throwError, timeout } from 'rxjs';
 
 export type RolUsuario = 'CLIENTE' | 'OPERADOR' | 'ADMIN';
 export interface LoginSolicitud { correo: string; password: string; }
@@ -14,6 +14,9 @@ export const API_URL = '/api';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  // Evita recursión del interceptor al cerrar o expirar una sesión.
+  private readonly logoutHttp = new HttpClient(inject(HttpBackend));
+  private cierreEnCurso?: Promise<boolean>;
   private readonly esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly usuarioSignal = signal<UsuarioSesion | null>(null);
   readonly usuario = this.usuarioSignal.asReadonly();
@@ -50,14 +53,43 @@ export class AuthService {
       }),
       catchError(error => {
         if (error instanceof HttpErrorResponse && error.status === 401 && this.obtenerToken() === token) {
-          this.logout();
+          this.limpiarSesionLocal();
         }
         return of(null);
       })
     );
   }
 
-  logout(): void {
+  logout(): Promise<boolean> {
+    if (this.cierreEnCurso) return this.cierreEnCurso;
+    const token = this.esNavegador ? localStorage.getItem('seatour_token') : null;
+    if (!token) {
+      this.limpiarSesionLocal();
+      return Promise.resolve(true);
+    }
+    const cerrar = async (): Promise<boolean> => {
+      try {
+        await firstValueFrom(this.logoutHttp.post<void>(API_URL + '/auth/logout', {}, {
+          headers: { Authorization: 'Bearer ' + token }
+        }).pipe(timeout(10000)));
+      } catch (error) {
+        // Un 401 significa que el servidor ya rechaza este token (vencido/revocado/inválido).
+        if (!(error instanceof HttpErrorResponse && error.status === 401)) {
+          if (this.esNavegador && localStorage.getItem('seatour_token') === token) {
+            this.limpiarSesionLocal();
+            window.alert('Tu sesión se cerró localmente, pero no se pudo confirmar la revocación del JWT en el servidor. El token podría seguir siendo válido hasta su vencimiento.');
+          }
+        }
+      }
+      // Una respuesta antigua no debe borrar una sesión nueva.
+      if (this.esNavegador && localStorage.getItem('seatour_token') === token) this.limpiarSesionLocal();
+      return true;
+    };
+    this.cierreEnCurso = cerrar().finally(() => { this.cierreEnCurso = undefined; });
+    return this.cierreEnCurso;
+  }
+
+  limpiarSesionLocal(): void {
     clearTimeout(this.temporizador);
     if (this.esNavegador) {
       localStorage.removeItem('seatour_token');
@@ -69,7 +101,7 @@ export class AuthService {
   obtenerToken(): string | null {
     if (!this.esNavegador) return null;
     const token = localStorage.getItem('seatour_token');
-    if (!token || !this.expiracion(token)) { this.logout(); return null; }
+    if (!token || !this.expiracion(token)) { this.limpiarSesionLocal(); return null; }
     return token;
   }
 
@@ -95,14 +127,14 @@ export class AuthService {
 
   private guardarSesion(respuesta: LoginRespuesta): void {
     const expiracion = this.expiracion(respuesta.token);
-    if (!expiracion) { this.logout(); throw new Error('JWT inválido o expirado'); }
+    if (!expiracion) { this.limpiarSesionLocal(); throw new Error('JWT inválido o expirado'); }
     const { id, nombre, correo, rol } = respuesta;
     const usuario = { id, nombre, correo, rol };
     if (this.esNavegador) {
       localStorage.setItem('seatour_token', respuesta.token);
       localStorage.setItem('seatour_usuario', JSON.stringify(usuario));
       clearTimeout(this.temporizador);
-      this.temporizador = setTimeout(() => this.logout(), Math.min(expiracion - Date.now(), 2147483647));
+      this.temporizador = setTimeout(() => this.limpiarSesionLocal(), Math.min(expiracion - Date.now(), 2147483647));
     }
     this.usuarioSignal.set(usuario);
   }

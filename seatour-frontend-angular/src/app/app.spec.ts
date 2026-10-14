@@ -56,7 +56,7 @@ describe('App', () => {
     const router = TestBed.inject(Router);
     const http = TestBed.inject(HttpTestingController);
     const auth = TestBed.inject(AuthService);
-    auth.logout();
+    auth.limpiarSesionLocal();
     fixture.detectChanges();
     await router.navigateByUrl('/registro');
     fixture.detectChanges();

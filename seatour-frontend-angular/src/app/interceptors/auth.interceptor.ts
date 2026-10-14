@@ -14,7 +14,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const request = token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
   return next(request).pipe(catchError(error => {
     if (token && error instanceof HttpErrorResponse && error.status === 401 && auth.obtenerToken() === token) {
-      auth.logout();
+      auth.limpiarSesionLocal();
       void router.navigate(['/login'], { queryParams: { sesion: 'expirada' } });
     }
     return throwError(() => error);

@@ -120,8 +120,7 @@ export class AdminLayout implements OnInit, OnDestroy {
     }).format(this.ahora());
   }
 
-  salir(): void {
-    this.auth.logout();
-    void this.router.navigateByUrl('/');
+  async salir(): Promise<void> {
+    if (await this.auth.logout()) await this.router.navigateByUrl('/');
   }
 }

@@ -195,10 +195,15 @@ export class ReservaPlanComponent {
     return Number(anio) < actualAnio || (Number(anio) === actualAnio && Number(mes) < actualMes);
   }
 
+  plazoCerrado(): boolean {
+    const ahora = this.reservas.ahora();
+    return this.seleccionados().some(item => Date.parse(item.horaInicio + '-05:00') <= ahora + 2 * 60 * 60 * 1000);
+  }
+
   puedePagar(): boolean {
     if (this.procesando() || this.resultado()?.estadoPago === 'APROBADO') return false;
     if (this.incierto()) return !!this.peticionPendiente;
-    return !this.consultando() && !this.cargandoAdicionales() && !this.errorAdicionales()
+    return !this.plazoCerrado() && !this.consultando() && !this.cargandoAdicionales() && !this.errorAdicionales()
       && !this.cargandoTarifas() && !this.errorTarifas() && this.tarifasPasajeros().length > 0
       && !!this.resumen()?.disponible && this.pasajeros.valid
       && (this.metodo() === 'TARJETA' ? this.tarjeta.valid && !this.tarjetaVencida() : this.yape.valid);

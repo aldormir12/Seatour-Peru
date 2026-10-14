@@ -33,7 +33,8 @@ public class AdminInicial implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        // Incluye administradores inactivos: nunca restablecer una cuenta existente.
+        // Bootstrap únicamente: incluso un ADMIN inactivo conserva su contraseña y su estado.
+        // No leer ni validar credenciales del entorno si la cuenta administrativa ya existe.
         if (usuarios.existsByRol_Nombre("ADMIN")) {
             return;
         }
@@ -60,7 +61,7 @@ public class AdminInicial implements ApplicationRunner {
         }
         if (usuarios.existsByCorreo(correo)) {
             throw new IllegalStateException(
-                    "El correo de inicializacion ADMIN ya esta registrado; no se modificara la cuenta.");
+                    "El correo de inicializacion ADMIN ya esta registrado; no se modificara ni promovera la cuenta.");
         }
 
         Rol admin = roles.findByNombre("ADMIN")

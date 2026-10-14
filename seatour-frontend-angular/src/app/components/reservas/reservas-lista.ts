@@ -1,6 +1,11 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
+import { ReservaEdicionComponent } from './reserva-edicion';
 import { CalificarReserva } from '../resenas/calificar-reserva';
 import {
   Component,
+  DestroyRef,
+  PLATFORM_ID,
   ElementRef,
   HostListener,
   ViewChild,
@@ -12,7 +17,8 @@ import {
 
 import {
   CurrencyPipe,
-  DatePipe
+  DatePipe,
+  isPlatformBrowser
 } from '@angular/common';
 
 import { RouterLink } from '@angular/router';
@@ -22,7 +28,7 @@ import { AuthService } from '../../services/auth.service';
 import {
   Reserva,
   ReservasService,
-  errorReserva
+  errorReserva, bloqueadaParaCancelarCliente
 } from '../../services/reservas.service';
 
 import { ClienteShell } from '../../layouts/cliente-shell/cliente-shell';
@@ -31,7 +37,7 @@ import { ClienteShell } from '../../layouts/cliente-shell/cliente-shell';
   selector: 'app-reservas-lista',
   standalone: true,
 
-  imports: [CalificarReserva, 
+  imports: [CalificarReserva, ReservaEdicionComponent, 
     CurrencyPipe,
     DatePipe,
     RouterLink
@@ -43,6 +49,9 @@ export class ReservasListaComponent {
   readonly clienteShell = inject(ClienteShell, { optional: true });
 
   private readonly api = inject(ReservasService);
+  private readonly destroyRef = inject(DestroyRef);
+  private sincronizandoDetalle = false;
+  private revisionDetalle = 0;
   readonly auth = inject(AuthService);
 
   readonly reservas = signal<Reserva[]>([]);
@@ -66,6 +75,7 @@ export class ReservasListaComponent {
 
   readonly cargandoDetalle = signal(false);
   readonly cancelando = signal(false);
+  readonly editandoReserva = signal(false);
 
   readonly reservaSeleccionada =
     signal<Reserva | null>(null);
@@ -111,6 +121,10 @@ export class ReservasListaComponent {
   readonly haySiguiente = signal(false);
 
   constructor() {
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      const refresco = setInterval(() => this.sincronizarDetalle(), 15000);
+      this.destroyRef.onDestroy(() => clearInterval(refresco));
+    }
     afterEveryRender(() => {
       if (this.reiniciarCarrusel) {
         this.carrusel?.nativeElement.scrollTo({
@@ -140,7 +154,7 @@ export class ReservasListaComponent {
     this.error.set('');
 
     this.api
-      .listar(this.auth.usuario()?.rol === 'OPERADOR')
+      .listar(this.auth.tieneRol('OPERADOR', 'ADMIN'))
       .subscribe({
         next: reservas => {
           this.reservas.set(reservas);
@@ -245,6 +259,7 @@ export class ReservasListaComponent {
   abrirDetalle(
     reserva: Reserva
   ): void {
+    ++this.revisionDetalle;
     if (this.temporizadorCierre) {
       clearTimeout(
         this.temporizadorCierre
@@ -286,6 +301,25 @@ export class ReservasListaComponent {
     );
   }
 
+  private sincronizarDetalle(): void {
+    const id = this.reservaSeleccionada()?.id;
+    if (!id || !this.detalleAbierto() || this.sincronizandoDetalle || this.cargandoDetalle()
+        || this.cancelando() || this.editandoReserva() || document.hidden) return;
+    const revision = this.revisionDetalle;
+    this.sincronizandoDetalle = true;
+    this.api.consultar(id).pipe(takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.sincronizandoDetalle = false)).subscribe({
+      next: r => {
+        if (revision !== this.revisionDetalle || this.reservaSeleccionada()?.id !== id || !this.detalleAbierto() || this.cancelando()
+            || this.editandoReserva() || this.cargandoDetalle()) return;
+        this.reservaSeleccionada.set(r);
+        this.actualizarReservaLocal(r);
+        if (!this.puedeCancelar(r)) this.confirmarCancelacion.set(false);
+      },
+      error: () => { /* Un fallo de refresco no sustituye los mensajes de una operación. */ }
+    });
+  }
+
   private cargarDetalle(
     id: number
   ): void {
@@ -293,6 +327,7 @@ export class ReservasListaComponent {
       return;
     }
 
+    ++this.revisionDetalle;
     this.cargandoDetalle.set(true);
 
     this.api
@@ -326,7 +361,7 @@ export class ReservasListaComponent {
 
   cerrarDetalle(): void {
     if (
-      this.cancelando() ||
+      this.cancelando() || this.editandoReserva() ||
       !this.detalleMontado()
     ) {
       return;
@@ -370,7 +405,7 @@ export class ReservasListaComponent {
 
     if (
       !reserva ||
-      !reserva.puedeCancelar
+      !this.puedeCancelar(reserva) || this.editandoReserva()
     ) {
       return;
     }
@@ -399,12 +434,13 @@ export class ReservasListaComponent {
 
     if (
       !reserva ||
-      !reserva.puedeCancelar ||
-      this.cancelando()
+      !this.puedeCancelar(reserva) ||
+      this.cancelando() || this.editandoReserva()
     ) {
       return;
     }
 
+    ++this.revisionDetalle;
     this.cancelando.set(true);
 
     this.errorDetalle.set('');
@@ -443,6 +479,16 @@ export class ReservasListaComponent {
       });
   }
 
+  puedeCancelar(reserva: Reserva): boolean {
+    return reserva.puedeCancelar && !bloqueadaParaCancelarCliente(reserva, this.auth.usuario()?.rol, this.api.ahora?.() ?? Date.now());
+  }
+  alModificarReserva(reserva: Reserva): void {
+    ++this.revisionDetalle;
+    if (this.reservaSeleccionada()?.id !== reserva.id) return;
+    this.reservaSeleccionada.set(reserva);
+    this.actualizarReservaLocal(reserva);
+    this.confirmarCancelacion.set(false);
+  }
   private actualizarReservaLocal(
     reserva: Reserva
   ): void {
@@ -465,6 +511,7 @@ export class ReservasListaComponent {
     estado: Reserva['estado'],
     estadoSalida?: Reserva['estadoSalida']
   ): string {
+    if (estadoSalida === 'NO_REALIZADA') return estado === 'CANCELADA' ? 'Cancelada · salida no realizada' : 'Salida no realizada';
     if (estado === 'CONFIRMADA' && estadoSalida === 'COMPLETADA') {
       return 'Completada';
     }

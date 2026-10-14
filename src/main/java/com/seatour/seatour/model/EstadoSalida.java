@@ -5,5 +5,6 @@ public enum EstadoSalida {
     PROGRAMADA,
     EN_CURSO,
     COMPLETADA,
-    CANCELADA
+    CANCELADA,
+    NO_REALIZADA
 }

@@ -115,12 +115,18 @@ export class ReservarComponent {
     this.pasajeros.setValue(this.pasajeros.value + 1);
   }
 
+  plazoCerrado(): boolean {
+    const salida = this.salida();
+    return !!salida && !salida.esDemo && Date.parse(salida.fecha + 'T' + salida.horaSalida + '-05:00')
+      <= (this.api.ahora?.() ?? Date.now()) + 2 * 60 * 60 * 1000;
+  }
+
   puedeContinuar() {
     const salida = this.salida();
 
     return (
       !this.cargando() &&
-      !!salida?.reservable &&
+      !!salida && this.api.admiteNuevaReserva(salida) &&
       salida.cuposDisponibles > 0 &&
       this.pasajeros.valid
     );

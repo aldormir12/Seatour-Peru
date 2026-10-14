@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 import java.util.*;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
+    boolean existsBySalidaIdAndEstadoIn(Long salidaId, java.util.Collection<com.seatour.seatour.model.EstadoReserva> estados);
+    boolean existsByClienteIdAndSalidaIdAndEstadoIn(Long clienteId, Long salidaId, java.util.Collection<com.seatour.seatour.model.EstadoReserva> estados);
     List<Reserva> findByClienteIdAndPlanOperacionIdOrderByIdAsc(Long clienteId, String planOperacionId);
     @EntityGraph(attributePaths = {"salida", "salida.tour"})
     List<Reserva> findByCreadaEnGreaterThanEqualAndCreadaEnLessThan(java.time.Instant desde, java.time.Instant hasta);

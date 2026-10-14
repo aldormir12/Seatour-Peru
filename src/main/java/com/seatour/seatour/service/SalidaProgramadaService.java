@@ -92,7 +92,7 @@ public class SalidaProgramadaService {
 
     public List<SalidaProgramada> listarDisponiblesPorTour(Long tourId) {
         validarExistenciaTour(tourId);
-        var ahora = LocalDateTime.now(ZONA);
+        var ahora = LocalDateTime.now(ZONA).plusHours(2);
         return salidas.buscarSalidasDisponiblesPorTour(tourId, EstadoSalida.PROGRAMADA,
                 ahora.toLocalDate(), ahora.toLocalTime());
     }
@@ -111,12 +111,14 @@ public class SalidaProgramadaService {
         }
         validarDatos(salida, true, salida != null && salida.isEsDemo());
         if (salida.getId() != null) throw error(HttpStatus.BAD_REQUEST, "Una salida nueva no debe incluir ID");
+        validarAnticipacionCreacion(salida);
         validarEstadoEstructural(salida);
         cargarAsignacion(salida, true);
         salida.setEstado(EstadoSalida.PROGRAMADA);
         salida.setMotivoReprogramacion(null);
         validarSolapamientos(salida, null, salida.isEsDemo());
         asignarOperador(salida, null, salida.isEsDemo());
+        validarAnticipacionCreacion(salida);
         return salidas.saveAndFlush(salida);
     }
 
@@ -133,6 +135,7 @@ public class SalidaProgramadaService {
         boolean conReservas = reservas.existsBySalidaId(id);
         var anterior = inicio(existente);
         var nueva = inicio(datos);
+        String embarcacionAnterior = referenciaEmbarcacion(existente.getEmbarcacion());
         boolean cambiaEmbarcacion = !existente.getEmbarcacion().getId().equals(datos.getEmbarcacion().getId());
         boolean cambiaHorario = !nueva.equals(anterior);
         boolean cambiaOperador = !java.util.Objects.equals(
@@ -185,14 +188,19 @@ public class SalidaProgramadaService {
         existente.setEmbarcacion(datos.getEmbarcacion());
         existente.setOperador(datos.getOperador());
         var guardada = salidas.saveAndFlush(existente);
-        if (cambiaHorario && !guardada.isEsDemo()) {
-            String evento = "SALIDA_REPROGRAMADA:" + id + ":" + java.util.UUID.randomUUID();
-            reservas.findBySalidaIdOrderByIdAsc(id).stream()
-                    .filter(reserva -> reserva.getEstado() != EstadoReserva.CANCELADA)
-                    .map(reserva -> reserva.getCliente().getId()).distinct().sorted()
-                    .forEach(usuarioId -> notificaciones.generar(usuarioId, evento,
-                            "SALIDA_REPROGRAMADA", "Salida reprogramada",
-                            "Tu salida ha sido reprogramada. Revisa los nuevos datos de tu reserva."));
+        if (!guardada.isEsDemo() && (cambiaHorario || cambiaEmbarcacion)) {
+            var afectadas = reservas.findBySalidaIdOrderByIdAsc(id).stream().filter(this::reservaActiva).toList();
+            if (cambiaHorario) afectadas.forEach(r -> r.habilitarCancelacionPorReprogramacion(nueva));
+            String tipo = cambiaHorario ? "SALIDA_REPROGRAMADA" : "EMBARCACION_CAMBIADA";
+            String evento = tipo + ":" + id + ":" + java.util.UUID.randomUUID();
+            String mensaje = "Salida #" + id + " — " + guardada.getTour().getNombre() + ". "
+                    + "Antes: " + horarioNotificacion(anterior) + "; embarcación " + embarcacionAnterior + ". "
+                    + "Ahora: " + horarioNotificacion(nueva) + "; embarcación " + referenciaEmbarcacion(guardada.getEmbarcacion()) + ". "
+                    + "Motivo: " + motivoNotificacion(guardada.getMotivoReprogramacion()) + ". "
+                    + (cambiaHorario ? "Puedes cancelar hasta antes del " + horarioNotificacion(nueva.minusHours(2))
+                        + ". Si no cancelas, tu reserva sigue vigente automáticamente."
+                        : "El horario se mantiene; este cambio no concede un nuevo plazo excepcional de cancelación.");
+            notificarClientes(afectadas, evento, tipo, cambiaHorario ? "Salida reprogramada" : "Cambio de embarcación", mensaje);
         }
         return guardada;
     }
@@ -212,6 +220,7 @@ public class SalidaProgramadaService {
         if (salida.getEstado() != EstadoSalida.PROGRAMADA)
             throw error(HttpStatus.CONFLICT, "Solo se puede cambiar la embarcación de una salida PROGRAMADA");
         Long anterior = salida.getEmbarcacion().getId();
+        String embarcacionAnterior = referenciaEmbarcacion(salida.getEmbarcacion());
         if (anterior.equals(embarcacionId))
             throw error(HttpStatus.BAD_REQUEST, "Selecciona una embarcación diferente");
         long pasajeros = pasajerosReservados(id);
@@ -233,7 +242,17 @@ public class SalidaProgramadaService {
         salida.setEmbarcacion(propuesta.getEmbarcacion());
         salida.setCuposDisponibles(Math.toIntExact(propuesta.getEmbarcacion().getCapacidad() - pasajeros));
         salida.registrarCambioEmbarcacion(anterior, embarcacionId, motivo, LocalDateTime.now(ZONA));
-        return salidas.saveAndFlush(salida);
+        var guardada = salidas.saveAndFlush(salida);
+        if (!guardada.isEsDemo()) {
+            var afectadas = reservas.findBySalidaIdOrderByIdAsc(id).stream().filter(this::reservaActiva).toList();
+            notificarClientes(afectadas, "EMBARCACION_CAMBIADA:" + id + ":" + java.util.UUID.randomUUID(),
+                    "EMBARCACION_CAMBIADA", "Cambio de embarcación",
+                    "Salida #" + id + " — " + guardada.getTour().getNombre() + ". Antes: " + embarcacionAnterior
+                    + ". Ahora: " + referenciaEmbarcacion(guardada.getEmbarcacion()) + ". Horario sin cambios: "
+                    + horarioNotificacion(inicio(guardada)) + ". Motivo: " + motivoNotificacion(motivo)
+                    + ". Este cambio no concede un nuevo plazo excepcional de cancelación. Tu reserva continúa vigente.");
+        }
+        return guardada;
     }
 
     @Transactional
@@ -270,6 +289,13 @@ public class SalidaProgramadaService {
         var salida = salidas.bloquearPorId(id).orElse(null);
         if (salida == null || salida.isEsDemo() || salida.getEstado() != EstadoSalida.PROGRAMADA
                 || LocalDateTime.now(ZONA).isBefore(inicio(salida))) return;
+        // Bajo el bloqueo de salida compartido con crear/editar/cancelar reservas.
+        // Existencia, no suma de pasajeros: una reserva pendiente también cuenta.
+        if (!reservas.existsBySalidaIdAndEstadoIn(id, List.of(EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA))) {
+            salida.setEstado(EstadoSalida.NO_REALIZADA);
+            salidas.saveAndFlush(salida);
+            return;
+        }
         cambiarEstado(id, EstadoSalida.EN_CURSO, null, true);
     }
 
@@ -345,9 +371,13 @@ public class SalidaProgramadaService {
                 for (var reserva : canceladas) {
                     Long usuarioId = reserva.getCliente().getId();
                     notificaciones.generar(usuarioId, "RESERVA_CANCELADA:" + reserva.getId(),
-                            "RESERVA_CANCELADA", "Reserva cancelada", "Tu reserva ha sido cancelada.");
+                            "RESERVA_CANCELADA", "Reserva cancelada", "Tu reserva #" + reserva.getId()
+                                    + " fue cancelada por la cancelación de la salida #" + id
+                                    + ". Motivo: " + motivoNotificacion(motivoCancelacion) + ".");
                     notificaciones.generar(usuarioId, "SALIDA_CANCELADA:" + id,
-                            "SALIDA_CANCELADA", "Salida cancelada", "Tu salida ha sido cancelada.");
+                            "SALIDA_CANCELADA", "Salida cancelada", "Salida #" + id + " — " + guardada.getTour().getNombre()
+                                    + " del " + horarioNotificacion(inicio(guardada)) + " cancelada. Motivo: "
+                                    + motivoNotificacion(motivoCancelacion) + ".");
                 }
             } else if (destino == EstadoSalida.COMPLETADA) {
                 reservas.findBySalidaIdOrderByIdAsc(id).stream()
@@ -359,6 +389,32 @@ public class SalidaProgramadaService {
             }
         }
         return guardada;
+    }
+
+    private boolean reservaActiva(Reserva reserva) {
+        return reserva.getEstado() == EstadoReserva.PENDIENTE || reserva.getEstado() == EstadoReserva.CONFIRMADA;
+    }
+    private void notificarClientes(List<Reserva> afectadas, String evento, String tipo, String titulo, String mensaje) {
+        // Orden único de destinatarios: mantiene el orden de bloqueo del sistema de notificaciones.
+        afectadas.stream().map(r -> r.getCliente().getId()).distinct().sorted()
+                .forEach(usuarioId -> notificaciones.generar(usuarioId, evento, tipo, titulo, mensaje));
+    }
+    private String referenciaEmbarcacion(Embarcacion embarcacion) {
+        return embarcacion.getNombre() + " (#" + embarcacion.getId() + ")";
+    }
+    private String horarioNotificacion(LocalDateTime horario) {
+        return horario.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + " (Perú)";
+    }
+    private String motivoNotificacion(String motivo) {
+        if (motivo == null) return "No especificado";
+        return switch (motivo) {
+            case "CONDICIONES_MARITIMAS" -> "Condiciones marítimas";
+            case "AUTORIDAD_MARITIMA" -> "Autoridad marítima";
+            case "FALLA_TECNICA" -> "Falla técnica";
+            case "SEGURIDAD_OPERATIVA" -> "Seguridad operativa";
+            case "FUERZA_MAYOR" -> "Fuerza mayor";
+            default -> "No especificado";
+        };
     }
 
     private void validarCambioOperativo(SalidaProgramada salida) {
@@ -374,7 +430,7 @@ public class SalidaProgramadaService {
     private SalidaProgramada bloquearSinReservas(Long id) {
         var salida = bloquear(id);
         if (salida.getEstado() != EstadoSalida.PROGRAMADA)
-            throw error(HttpStatus.CONFLICT, "Solo se puede eliminar una salida PROGRAMADA; no se permite eliminar salidas EN_CURSO, COMPLETADA o CANCELADA");
+            throw error(HttpStatus.CONFLICT, "Solo se puede eliminar una salida PROGRAMADA; no se permite eliminar salidas EN_CURSO, COMPLETADA, CANCELADA o NO_REALIZADA");
         if (reservas.existsBySalidaId(id)) throw error(HttpStatus.CONFLICT,
                 "No se puede eliminar una salida que tiene o tuvo reservas, incluidas las CANCELADAS; utiliza la cancelación para conservar su historial");
         if (!inicio(salida).isAfter(LocalDateTime.now(ZONA)))
@@ -431,7 +487,7 @@ public class SalidaProgramadaService {
         var fin = finOperativo(salida);
         // Se incluyen días adyacentes: un recorrido puede cruzar medianoche.
         for (var otra : salidas.findByEmbarcacionIdOrderByFechaAscHoraSalidaAsc(salida.getEmbarcacion().getId())) {
-            if (otra.getId().equals(excluirId) || otra.getEstado() == EstadoSalida.CANCELADA) continue;
+            if (otra.getId().equals(excluirId) || (otra.getEstado() == EstadoSalida.CANCELADA || otra.getEstado() == EstadoSalida.NO_REALIZADA)) continue;
             if (inicio.isBefore(finOperativo(otra)) && inicio(otra).isBefore(fin))
                 throw error(HttpStatus.CONFLICT, "Conflicto con la salida " + otra.getId()
                         + ": la embarcación requiere 60 minutos de buffer después de cada tour."
@@ -457,7 +513,8 @@ public class SalidaProgramadaService {
         var inicio = inicio(salida);
         var fin = fin(salida);
         for (var otra : salidas.findByOperador_IdOrderByFechaAscHoraSalidaAsc(operador.getId())) {
-            if (otra.getId().equals(excluirId) || otra.getEstado() == EstadoSalida.CANCELADA) continue;
+            if (otra.getId().equals(excluirId) || otra.getEstado() == EstadoSalida.CANCELADA
+                    || otra.getEstado() == EstadoSalida.NO_REALIZADA) continue;
             if (!bypassDemo && inicio.isBefore(fin(otra)) && inicio(otra).isBefore(fin))
                 throw error(HttpStatus.CONFLICT, "El operador tiene un solapamiento con la salida "
                         + otra.getId() + "; su tour termina el " + fin(otra) + " (America/Lima)");
@@ -507,6 +564,12 @@ public class SalidaProgramadaService {
             throw error(HttpStatus.BAD_REQUEST, "El tour y la embarcación son obligatorios");
         validarId(salida.getTour().getId());
         validarId(salida.getEmbarcacion().getId());
+    }
+
+    private void validarAnticipacionCreacion(SalidaProgramada salida) {
+        // No usar validarDatos(creacion): cambiarEmbarcacion también lo invoca con true.
+        if (!salida.isEsDemo() && inicio(salida).isBefore(LocalDateTime.now(ZONA).plusHours(24)))
+            throw error(HttpStatus.BAD_REQUEST, "Las salidas normales deben crearse con al menos 24 horas de anticipación (America/Lima)");
     }
 
     private void validarEstadoEstructural(SalidaProgramada salida) {

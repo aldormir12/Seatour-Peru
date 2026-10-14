@@ -40,14 +40,14 @@ Compose espera a que PostgreSQL esté listo antes de arrancar Spring, y espera
 la respuesta de `/api/tours` antes de arrancar Nginx. La imagen de Spring omite
 compilación y ejecución de pruebas durante su empaquetado.
 
-Abre `http://localhost:8088`. Para el túnel, en otra terminal del mismo equipo:
+Abre `http://localhost:8088`. Para el túnel original, ejecuta en otra terminal del mismo equipo (cuando corresponda iniciar servicios):
 
 ```powershell
 cloudflared tunnel --url http://localhost:8088
 ```
 
 Abre el enlace HTTPS `trycloudflare.com` generado. Si cambias `SEATOUR_PORT`,
-cambia también el puerto del comando de Cloudflare.
+cambia también el puerto del comando de Cloudflare y el destino del launcher.
 
 Para consultar logs o detener los contenedores conservando datos:
 
@@ -64,14 +64,14 @@ docker compose down
 - La contraseña de PostgreSQL se aplica al inicializar el volumen por primera
   vez. Cambiar `.env` posteriormente no modifica la contraseña de una base existente.
 - El puerto 8088 evita conflictos con el backend local 8080 y los frontends
-  actuales 4200/4300. `iniciar-seatour.bat` permanece sin modificaciones: todavía
-  inicia la ejecución local y apunta Cloudflare a 4300.
+  actuales 4200/4300. `iniciar-seatour.bat` utiliza Compose y cloudflared instalado
+  en Windows contra localhost:8088, sin ejecutar builds.
 - La configuración Angular `docker` compila solo el navegador para Nginx.
   `production` conserva su configuración SSR y `npm start` conserva su proxy local.
   Las rutas de Angular pueden abrirse directamente gracias al fallback a `index.html`;
   las respuestas de error de `/api` se devuelven sin sustituirlas por ese HTML.
-- La siguiente adaptación del launcher deberá ejecutar Compose y apuntar
-  Cloudflare al puerto único, después de confirmar que la app está disponible.
+- El túnel usa el único puerto local existente. No requiere servicios, redes
+  o puertos adicionales. Consulta [túnel, login y Live](tunel-live-login.md).
 
 ## Servicios externos
 

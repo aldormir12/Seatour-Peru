@@ -8,7 +8,7 @@ import { API_URL, AuthService } from '../../services/auth.service';
 describe('Login', () => {
   beforeEach(() => TestBed.configureTestingModule({ imports: [LoginComponent],
     providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }));
-  afterEach(() => { TestBed.inject(HttpTestingController).verify(); TestBed.inject(AuthService).logout(); });
+  afterEach(() => { TestBed.inject(HttpTestingController).verify(); TestBed.inject(AuthService).limpiarSesionLocal(); });
 
   it.each([
     ['CLIENTE', '/app/dashboard'], ['OPERADOR', '/app/operador'], ['ADMIN', '/app/admin']

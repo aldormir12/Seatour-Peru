@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:h2:mem:pagos-test;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000",
+    "spring.datasource.url=jdbc:h2:mem:pagos-test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;LOCK_TIMEOUT=10000",
     "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.open-in-view=false"
 })
 @AutoConfigureMockMvc
@@ -52,6 +52,9 @@ class PagoIntegrationTest {
 
     @BeforeEach
     void preparar() throws Exception {
+        jdbc.update("delete from notificaciones");
+        jdbc.update("delete from comprobantes_reserva");
+        jdbc.update("delete from reserva_modificaciones");
         pagos.deleteAll(); reservas.deleteAll(); salidas.deleteAll(); tours.deleteAll(); barcos.deleteAll(); categorias.deleteAll(); usuarios.deleteAll();
         cliente = usuario("cliente", "CLIENTE"); otro = usuario("otro", "CLIENTE");
         operador = usuario("operador", "OPERADOR"); admin = usuario("admin", "ADMIN");
@@ -64,6 +67,7 @@ class PagoIntegrationTest {
         barcos.saveAndFlush(barco);
         var salida = new SalidaProgramada(); salida.setTour(tour); salida.setEmbarcacion(barco);
         salida.setFecha(LocalDate.now(ZoneId.of("America/Lima")).plusDays(2)); salida.setHoraSalida(LocalTime.NOON);
+        salida.setOperador(usuarios.findByCorreo("operador@example.com").orElseThrow());
         salida.setCuposDisponibles(4); salida.setEstado(EstadoSalida.PROGRAMADA);
         salidaId = salidas.saveAndFlush(salida).getId();
     }

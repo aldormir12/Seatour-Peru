@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
   selector: 'app-salidas', imports: [RouterLink, CurrencyPipe, DatePipe],
   styleUrl: './reservas.css',
   template: `
-    <main><h1>Elige tu próxima salida</h1><p>Horarios de Perú · Precios por pasajero en soles.</p>
+    <main><h1>Elige tu próxima salida</h1><p>Horarios de Perú · Precios por pasajero en soles. Las reservas cierran 2 horas antes de la salida.</p>
     <button type="button" (click)="cargar()" [disabled]="cargando()">Actualizar disponibilidad</button>
     @if (tourId) { <p><a [routerLink]="rutaSalidas">Ver todos los tours</a></p> }
     @if (cargando()) { <p role="status">Cargando salidas...</p> }
@@ -21,10 +21,10 @@ import { AuthService } from '../../services/auth.service';
       <article><h2>{{ s.tourNombre }}</h2><p>{{ s.fecha | date:'dd/MM/yyyy' }} · {{ s.horaSalida.slice(0,5) }}</p>
       <p>{{ s.embarcacionNombre }}</p><p>{{ s.precioPorPasajero | currency:'PEN':'S/ ' }} por pasajero</p>
       <p><strong>{{ reservas.cupos()[s.id] ?? s.cuposDisponibles }} cupos disponibles</strong></p>
-      @if (s.reservable && (reservas.cupos()[s.id] ?? s.cuposDisponibles) > 0) {
+      @if (reservas.admiteNuevaReserva(s) && (reservas.cupos()[s.id] ?? s.cuposDisponibles) > 0) {
         @if (auth.usuario() && !auth.tieneRol('CLIENTE')) { <p>La reserva está disponible para cuentas de cliente.</p> }
         @else { <a class="action" [routerLink]="['/app/reservar', s.id]">Elegir pasajeros</a> }
-      } @else { <span class="badge">No disponible · {{ s.estado }}</span> }
+      } @else { <span class="badge">No disponible · {{ s.estado === 'NO_REALIZADA' ? 'No realizada' : s.estado }}</span> }
       </article>
     } @empty { @if (!cargando() && !error()) { <p>No hay salidas programadas para mostrar.</p> } }
     </div></main>`

@@ -30,7 +30,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @ActiveProfiles("test")
 @TestPropertySource(locations = "classpath:application-test.properties", properties = {
-        "spring.datasource.url=jdbc:h2:mem:salidas-reglas-test;DB_CLOSE_DELAY=-1",
+        "spring.datasource.url=jdbc:h2:mem:salidas-reglas-test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
         "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.open-in-view=false",
         "spring.jpa.show-sql=false"
 })
@@ -41,6 +41,7 @@ class SalidaProgramadaIntegrationTest {
     private static final String MOTIVO = "FALLA_TECNICA";
 
     @Autowired SalidaProgramadaService servicio;
+    @Autowired com.seatour.seatour.service.ModoDemoService modoDemo;
     @Autowired SalidaProgramadaRepository salidas;
     @Autowired ReservaRepository reservas;
     @Autowired TourRepository tours;
@@ -62,6 +63,7 @@ class SalidaProgramadaIntegrationTest {
         Clock fijo = Clock.fixed(HOY.atTime(12, 0).atZone(LIMA).toInstant(), LIMA);
         reloj = mockStatic(Clock.class, CALLS_REAL_METHODS);
         reloj.when(() -> Clock.system(LIMA)).thenReturn(fijo);
+        jdbc.update("delete from notificaciones");
         reservas.deleteAll();
         salidas.deleteAll();
         tours.deleteAll();
@@ -94,13 +96,14 @@ class SalidaProgramadaIntegrationTest {
 
     @AfterEach
     void cerrarReloj() {
+        if (modoDemo.activo()) modoDemo.cambiar(false, new com.seatour.seatour.dto.LoginRespuesta(1L, "Admin", "admin@example.com", "ADMIN"));
         if (reloj != null) reloj.close();
     }
 
     // Sin @Transactional en la prueba: cada llamada usa la transacción real del servicio.
     // Las aserciones vuelven a consultar la BD para comprobar commits y rollbacks.
     @ParameterizedTest
-    @CsvSource({"0,19:00", "45,06:00", "45,19:00"})
+    @CsvSource({"1,12:00", "45,06:00", "45,19:00"})
     void aceptaHorizonteInclusivoYDerivaCuposDeCapacidad(int dias, String hora) {
         var datos = datos(HOY.plusDays(dias), hora, barco);
         datos.setCuposDisponibles(99);
@@ -213,6 +216,11 @@ class SalidaProgramadaIntegrationTest {
         assertEquals(MOTIVO, guardada.getMotivoReprogramacion());
         assertEquals(5, guardada.getCuposDisponibles());
         assertTrue(guardada.isCambioOperativoConsumido());
+        assertEquals(LocalDateTime.of(FECHA.plusDays(3), LocalTime.NOON).minusHours(2),
+                reservas.findAll().get(0).getCancelacionExcepcionalHasta());
+        assertEquals(1, jdbc.queryForObject("select count(*) from notificaciones where tipo = 'SALIDA_REPROGRAMADA'", Integer.class));
+        String mensaje = jdbc.queryForObject("select mensaje from notificaciones where tipo = 'SALIDA_REPROGRAMADA'", String.class);
+        assertTrue(mensaje.contains("Antes:")); assertTrue(mensaje.contains("Ahora:"));
     }
 
     @ParameterizedTest
@@ -468,8 +476,8 @@ class SalidaProgramadaIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({"PROGRAMADA,PROGRAMADA", "PROGRAMADA,COMPLETADA", "EN_CURSO,PROGRAMADA",
-            "EN_CURSO,EN_CURSO", "EN_CURSO,CANCELADA", "COMPLETADA,PROGRAMADA",
-            "COMPLETADA,EN_CURSO", "COMPLETADA,COMPLETADA", "COMPLETADA,CANCELADA",
+            "EN_CURSO,CANCELADA", "COMPLETADA,PROGRAMADA",
+            "COMPLETADA,EN_CURSO", "COMPLETADA,CANCELADA",
             "CANCELADA,PROGRAMADA", "CANCELADA,EN_CURSO", "CANCELADA,COMPLETADA", "CANCELADA,CANCELADA"})
     void rechazaTransicionesNoPermitidas(EstadoSalida origen, EstadoSalida destino) {
         var salida = persistir(HOY, "10:00", origen);
@@ -482,6 +490,7 @@ class SalidaProgramadaIntegrationTest {
     void inicioManualSoloDesdeInicioHastaAntesDelFin(String hora, int esperado) {
         var salida = persistir(HOY, hora, EstadoSalida.PROGRAMADA);
         if (esperado == 200) {
+            reservar(salida, 1, EstadoReserva.PENDIENTE);
             servicio.cambiarEstado(salida.getId(), EstadoSalida.EN_CURSO);
             assertEquals(EstadoSalida.EN_CURSO, leer(salida.getId()).getEstado());
         } else {
@@ -507,7 +516,7 @@ class SalidaProgramadaIntegrationTest {
     void inicioAutomaticoAceptaAtrasadaPeroNoFuturaNiCerrada() {
         var atrasada = persistir(HOY, "08:00", EstadoSalida.PROGRAMADA);
         servicio.iniciarAutomaticamente(atrasada.getId());
-        assertEquals(EstadoSalida.EN_CURSO, leer(atrasada.getId()).getEstado());
+        assertEquals(EstadoSalida.NO_REALIZADA, leer(atrasada.getId()).getEstado());
         var futura = persistir(FECHA, "12:00", EstadoSalida.PROGRAMADA);
         servicio.iniciarAutomaticamente(futura.getId());
         assertEquals(EstadoSalida.PROGRAMADA, leer(futura.getId()).getEstado());
@@ -537,6 +546,12 @@ class SalidaProgramadaIntegrationTest {
         var salida = new SalidaProgramada();
         salida.setTour(tour);
         salida.setEmbarcacion(embarcacion);
+        var responsable = new Usuario();
+        responsable.setNombre("Operador"); responsable.setApellido("Prueba");
+        responsable.setCorreo("operador-" + java.util.UUID.randomUUID() + "@example.com");
+        responsable.setPassword("fixture-no-login"); responsable.setActivo(true);
+        responsable.setRol(roles.findByNombre("OPERADOR").orElseThrow());
+        salida.setOperador(usuarios.saveAndFlush(responsable));
         salida.setFecha(fecha);
         salida.setHoraSalida(LocalTime.parse(hora));
         return salida;
@@ -548,6 +563,7 @@ class SalidaProgramadaIntegrationTest {
 
     private SalidaProgramada reprogramacion(LocalDate fecha, String hora) {
         var salida = datos(fecha, hora, barco);
+        salida.setOperador(salidas.findAll().stream().findFirst().orElseThrow().getOperador());
         salida.setMotivoReprogramacion(MOTIVO);
         return salida;
     }
@@ -572,11 +588,41 @@ class SalidaProgramadaIntegrationTest {
     }
 
     private SalidaProgramada leer(Long id) {
-        return salidas.findById(id).orElseThrow();
+        return salidas.buscarIncluyendoDemo(id).orElseThrow();
     }
 
     private void rechaza(int codigo, org.junit.jupiter.api.function.Executable accion) {
         var error = assertThrows(ResponseStatusException.class, accion);
         assertEquals(codigo, error.getStatusCode().value(), error.getReason());
+    }
+
+    @Test
+    void creacionNormalExige24HorasYDemoConservaExcepciones() {
+        rechaza(400, () -> crear(HOY, "12:01", barco));
+        modoDemo.cambiar(true, new com.seatour.seatour.dto.LoginRespuesta(1L, "Admin", "admin@example.com", "ADMIN"));
+        var demo = crear(HOY.minusDays(1), "03:00", barco);
+        assertTrue(demo.isEsDemo());
+        servicio.iniciarAutomaticamente(demo.getId());
+        assertEquals(EstadoSalida.PROGRAMADA, leer(demo.getId()).getEstado());
+        servicio.cambiarEstado(demo.getId(), EstadoSalida.EN_CURSO);
+        assertEquals(EstadoSalida.EN_CURSO, leer(demo.getId()).getEstado());
+    }
+
+    @Test
+    void demoPermiteInicioAdelantadoSinReservasYNoConsumeNuevasReglas() {
+        modoDemo.cambiar(true, new com.seatour.seatour.dto.LoginRespuesta(1L, "Admin", "admin@example.com", "ADMIN"));
+        var demo = crear(HOY.plusDays(60), "03:00", barco);
+        servicio.cambiarEstado(demo.getId(), EstadoSalida.EN_CURSO);
+        assertEquals(EstadoSalida.EN_CURSO, leer(demo.getId()).getEstado());
+        servicio.finalizarAutomaticamente(demo.getId());
+        assertEquals(EstadoSalida.EN_CURSO, leer(demo.getId()).getEstado());
+    }
+
+    @Test
+    void llegadaSinReservasEsNoRealizadaPeroPendientesConservanInicio() {
+        var conReserva = persistir(HOY, "10:00", EstadoSalida.PROGRAMADA);
+        reservar(conReserva, 1, EstadoReserva.PENDIENTE);
+        servicio.iniciarAutomaticamente(conReserva.getId());
+        assertEquals(EstadoSalida.EN_CURSO, leer(conReserva.getId()).getEstado());
     }
 }

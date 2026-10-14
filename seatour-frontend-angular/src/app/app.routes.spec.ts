@@ -12,7 +12,7 @@ describe('Áreas por rol', () => {
     provideRouter(routes), provideHttpClient(), provideHttpClientTesting()
   ] }));
   afterEach(() => {
-    TestBed.inject(AuthService).logout();
+    TestBed.inject(AuthService).limpiarSesionLocal();
     TestBed.inject(HttpTestingController).verify();
   });
   function login(rol: RolUsuario) {
@@ -73,7 +73,7 @@ describe('Áreas por rol', () => {
     fixture.detectChanges();
     await router.navigateByUrl('/app/perfil');
     await fixture.whenStable();
-    TestBed.inject(AuthService).logout();
+    TestBed.inject(AuthService).limpiarSesionLocal();
     fixture.detectChanges();
     await fixture.whenStable();
     expect(router.url).toContain('/login?');

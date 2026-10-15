@@ -14,6 +14,12 @@ export class RegistroComponent {
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
   readonly cuentaCreada = signal(false);
+  readonly mostrarPassword = signal(false);
+
+  alternarPassword(): void {
+    this.mostrarPassword.update(visible => !visible);
+  }
+
   readonly formulario = inject(FormBuilder).nonNullable.group({
     nombre: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     apellido: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],

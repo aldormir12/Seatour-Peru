@@ -22,7 +22,7 @@
        ========================= -->
   <header class="landing-navbar">
     <!-- MARCA -->
-    <a routerLink="/" class="landing-brand">
+    <a [routerLink]="auth.usuario()?.rol === 'CLIENTE' ? '/app/dashboard' : '/'" class="landing-brand">
       <div class="brand-symbol">
         <svg
           viewBox="0 0 24 24"
@@ -97,7 +97,7 @@
 
       <!-- ACCIONES -->
       <div class="hero-actions">
-        <a href="#rutas-publicas" class="primary-action">
+        <a routerLink="/app/tours" class="primary-action">
           Descubre experiencias
 
           <svg
@@ -264,6 +264,3 @@
     </div>
   </main>
 </div>
-<section id="rutas-publicas" class="public-map" aria-label="Tours y rutas públicas">
-  <app-rutas-interactivas></app-rutas-interactivas>
-</section>

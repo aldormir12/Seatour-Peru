@@ -38,7 +38,7 @@ interface NavLink {
         <!-- MARCA -->
         <a
           class="brand"
-          routerLink="/"
+          [routerLink]="auth.usuario()?.rol === 'CLIENTE' ? '/app/dashboard' : '/'"
         >
 
           <span
@@ -1334,10 +1334,6 @@ export class ReservasNav {
           {
             label: 'Tours',
             route: '/app/tours'
-          },
-          {
-            label: 'Experiencias',
-            route: '/app/rutas'
           },
           {
             label: 'Mis reservas',

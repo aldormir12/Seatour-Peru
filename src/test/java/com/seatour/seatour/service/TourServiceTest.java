@@ -3,6 +3,7 @@ package com.seatour.seatour.service;
 import com.seatour.seatour.dto.TourCreacion;
 import com.seatour.seatour.model.CategoriaTour;
 import com.seatour.seatour.model.Tour;
+import com.seatour.seatour.model.ZonaMaritima;
 import com.seatour.seatour.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,9 +37,10 @@ class TourServiceTest {
         when(categorias.findById(1L)).thenReturn(Optional.of(categoria));
         when(tours.saveAndFlush(any(Tour.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
         var resultado = servicio.crear(new TourCreacion("  avistamiento   de ballenas ", " Paseo ",
-                60, BigDecimal.TEN, true, 1L, "/api/tours/imagenes/fixture.jpg"));
+                60, BigDecimal.TEN, true, 1L, "/api/tours/imagenes/fixture.jpg", ZonaMaritima.MANCORA));
         assertEquals("Avistamiento de ballenas", resultado.nombre());
         assertEquals(1L, resultado.categoriaId());
+        assertEquals(ZonaMaritima.MANCORA, resultado.zonaMaritima());
     }
 
     @Test

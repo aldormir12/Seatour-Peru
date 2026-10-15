@@ -32,6 +32,12 @@ export class LoginComponent {
   cargando = signal(false);
   error = signal<string | null>(null);
 
+  readonly mostrarPassword = signal(false);
+
+  alternarPassword(): void {
+    this.mostrarPassword.update(visible => !visible);
+  }
+
   formulario = this.fb.nonNullable.group({
     correo: [
       '',

@@ -794,7 +794,7 @@
     display: none;
   }
 }
-/* Adaptación: conservar navegación por sesión y mapa público de avance2. */
+/* Conservar la navegación por sesión de avance2. */
 .landing-page {
   height: auto;
   min-height: 100vh;
@@ -831,11 +831,6 @@
   min-height: calc(100svh - 88px);
   padding-top: 48px;
   padding-bottom: 110px;
-}
-
-.public-map {
-  display: block;
-  scroll-margin-top: 20px;
 }
 
 @media (max-width: 700px) {

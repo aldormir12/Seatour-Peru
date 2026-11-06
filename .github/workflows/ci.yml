@@ -1,0 +1,82 @@
+name: SeaTour CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend - Java 21 / H2
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SPRING_PROFILES_ACTIVE: test
+      SPRING_DATASOURCE_URL: 'jdbc:h2:mem:seatour-ci;DB_CLOSE_DELAY=-1;MODE=PostgreSQL'
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ''
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+      SEATOUR_IA_HABILITADA: 'false'
+      SEATOUR_IA_ACCIONES_AUTOMATICAS: 'false'
+      SEATOUR_IA_POLITICA_REVISADA: 'false'
+      SEATOUR_GROQ_CONTEXTUAL_HABILITADO: 'false'
+      SEATOUR_CORREO_HABILITADO: 'false'
+      OPENAI_API_KEY: ''
+      GROQ_API_KEY: ''
+      LIVEKIT_URL: ''
+      LIVEKIT_API_KEY: ''
+      LIVEKIT_API_SECRET: ''
+      SEATOUR_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/tours
+      SEATOUR_EMBARCACIONES_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/embarcaciones
+      # HEAD does not expose an environment placeholder for this property.
+      # Spring relaxed binding overrides its default local filesystem path.
+      SEATOUR_EXPERIENCIAS_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/experiencias
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Prepare temporary storage
+        run: mkdir -p "$SEATOUR_IMAGENES_DIRECTORIO" "$SEATOUR_EMBARCACIONES_IMAGENES_DIRECTORIO" "$SEATOUR_EXPERIENCIAS_IMAGENES_DIRECTORIO"
+      - name: Test with in-memory H2
+        run: bash ./mvnw -B -ntp -Dspring.profiles.active=test test
+      - name: Package after successful tests
+        run: bash ./mvnw -B -ntp -DskipTests package
+
+  frontend:
+    name: Frontend - Node 24 / Vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: seatour-frontend-angular
+    env:
+      CI: 'true'
+      NG_CLI_ANALYTICS: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: seatour-frontend-angular/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test with Vitest
+        run: npm test -- --watch=false
+      - name: Build static frontend
+        run: npm run build -- --configuration docker

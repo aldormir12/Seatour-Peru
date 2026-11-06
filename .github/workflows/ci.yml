@@ -30,11 +30,6 @@ jobs:
       LIVEKIT_URL: ''
       LIVEKIT_API_KEY: ''
       LIVEKIT_API_SECRET: ''
-      SEATOUR_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/tours
-      SEATOUR_EMBARCACIONES_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/embarcaciones
-      # HEAD does not expose an environment placeholder for this property.
-      # Spring relaxed binding overrides its default local filesystem path.
-      SEATOUR_EXPERIENCIAS_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/experiencias
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,10 +42,22 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Prepare temporary storage
+        env:
+          SEATOUR_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/tours
+          SEATOUR_EMBARCACIONES_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/embarcaciones
+          SEATOUR_EXPERIENCIAS_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/experiencias
         run: mkdir -p "$SEATOUR_IMAGENES_DIRECTORIO" "$SEATOUR_EMBARCACIONES_IMAGENES_DIRECTORIO" "$SEATOUR_EXPERIENCIAS_IMAGENES_DIRECTORIO"
       - name: Test with in-memory H2
+        env:
+          SEATOUR_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/tours
+          SEATOUR_EMBARCACIONES_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/embarcaciones
+          SEATOUR_EXPERIENCIAS_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/experiencias
         run: bash ./mvnw -B -ntp -Dspring.profiles.active=test test
       - name: Package after successful tests
+        env:
+          SEATOUR_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/tours
+          SEATOUR_EMBARCACIONES_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/embarcaciones
+          SEATOUR_EXPERIENCIAS_IMAGENES_DIRECTORIO: ${{ runner.temp }}/seatour-ci/experiencias
         run: bash ./mvnw -B -ntp -DskipTests package
 
   frontend:
